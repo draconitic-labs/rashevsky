@@ -11,6 +11,9 @@ if command -v wasm-opt > /dev/null; then
   wasm-opt -O3 --enable-bulk-memory --enable-nontrapping-float-to-int "$here/dist/rashevsky_wasm_bg.wasm" -o "$here/dist/rashevsky_wasm_bg.wasm"
 fi
 cp "$here/index.html" "$here/demo.js" "$here/demo.css" "$here/dist/"
+# BiGG's permission requires its notice in every copy of the model, and the demo is one.
+cp "$root/models/e_coli_core/NOTICE" "$here/dist/NOTICE-e_coli_core.txt"
+cp "$root/LICENSE" "$here/dist/LICENSE.txt"
 cp "$root/desktop/ui/js/fluxmap.js" "$root/desktop/ui/js/core.js" "$here/dist/"
 cp "$root/desktop/ui/fonts/public-sans-wght-normal.woff2" "$root/desktop/ui/fonts/public-sans-OFL.txt" "$here/dist/fonts/"
 ls -la "$here/dist"

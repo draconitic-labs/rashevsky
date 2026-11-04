@@ -26,10 +26,28 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["rpm", "appimage", "deb"],
-    "icon": ["icons/icon-32.png", "icons/icon-128.png", "icons/icon-256.png", "icons/icon-512.png", "icons/icon.png"],
+    "targets": [
+      "rpm",
+      "appimage",
+      "deb"
+    ],
+    "icon": [
+      "icons/icon-32.png",
+      "icons/icon-128.png",
+      "icons/icon-256.png",
+      "icons/icon-512.png",
+      "icons/icon.png"
+    ],
     "category": "Education",
     "shortDescription": "Genome-scale and kinetic metabolic modelling",
-    "longDescription": "Flux balance, knockout screens, flux sampling, thermodynamics, kinetic simulation and metabolic control analysis on SBML models."
+    "longDescription": "Flux balance, knockout screens, flux sampling, thermodynamics, kinetic simulation and metabolic control analysis on SBML models.",
+    "resources": {
+      "../../LICENSE": "LICENSE",
+      "../../THIRD-PARTY-NOTICES.md": "THIRD-PARTY-NOTICES.md",
+      "../../models/e_coli_core/NOTICE": "NOTICE-e_coli_core.txt",
+      "../../models/teusink/NOTICE": "NOTICE-teusink.txt",
+      "../../data/thermo/NOTICE": "NOTICE-thermo.txt",
+      "../../data/biochemistry/NOTICE": "NOTICE-biochemistry.txt"
+    }
   }
 }

@@ -24,6 +24,7 @@ fn main() {
         .manage(commands::AppState::default())
         .invoke_handler(tauri::generate_handler![
             commands::startup,
+            commands::bundled_terms,
             commands::open_bundled,
             commands::open_file,
             commands::download_model,

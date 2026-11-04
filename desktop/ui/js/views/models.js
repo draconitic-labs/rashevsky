@@ -96,5 +96,10 @@ export default {
         h('strong', {}, item.title), h('span', {}, item.detail), !item.bundled && h('span', { class: 'hint' }, 'Downloads once')))),
     );
     on('model', renderCurrent);
+    refs.terms = h('details', { class: 'terms' }, h('summary', {}, 'Terms of the built-in models and data'));
+    el.append(refs.terms);
+    invoke('bundled_terms').then((terms) => {
+      for (const [name, text] of terms) refs.terms.append(h('h3', {}, name), h('pre', {}, text));
+    });
   },
 };

@@ -13,7 +13,9 @@ The engine is under the MIT license. Models and reference data keep their own te
 | `data/biochemistry/*` | Atlas of Human Biochemistry; Reactome release 97 | Apache 2.0 with attribution. See its `NOTICE`. |
 | `desktop/ui/fonts/*` | Public Sans, JetBrains Mono | SIL Open Font License 1.1 |
 
-The bundled `e_coli_core` makes the desktop application and the WebAssembly demo work on first start.
+The bundled `e_coli_core` makes the desktop application and the WebAssembly demo work on first start. BiGG's permission
+requires its notice in every copy, so each build carries it: the desktop binary shows it under Models and its packages
+install it as a file, and the demo serves `NOTICE-e_coli_core.txt` with a link from the page.
 If you use them commercially, replace it or obtain the license above.
 
 ## Fetched by `scripts/fetch_data.py`

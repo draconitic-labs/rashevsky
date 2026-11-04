@@ -17,6 +17,13 @@ use tauri::State;
 
 const CORE_XML: &[u8] = include_bytes!("../../../models/e_coli_core/e_coli_core.xml.gz");
 const CORE_LAYOUT: &str = include_str!("../../../models/e_coli_core/layout.json");
+// BiGG's permission requires its notice in every copy of `e_coli_core`, and this binary is one.
+const TERMS: &[(&str, &str)] = &[
+    ("e_coli_core", include_str!("../../../models/e_coli_core/NOTICE")),
+    ("Teusink 2000", include_str!("../../../models/teusink/NOTICE")),
+    ("Thermodynamic data", include_str!("../../../data/thermo/NOTICE")),
+    ("Atlas of Human Biochemistry", include_str!("../../../data/biochemistry/NOTICE")),
+];
 const TEUSINK_XML: &str = include_str!("../../../models/teusink/BIOMD0000000064.xml");
 const SCENE: &str = include_str!("../../../data/biochemistry/scene.json");
 const RHEA: &str = include_str!("../../../data/biochemistry/rhea-events.json");
@@ -77,6 +84,12 @@ pub fn startup() -> Value {
     }
     let qa = std::env::var_os("RASHEVSKY_QA").is_some();
     json!({"view": view, "file": file, "qa": qa, "models_dir": data_dir()})
+}
+
+/// The terms of the models and data built into the application.
+#[tauri::command]
+pub fn bundled_terms() -> Vec<(&'static str, &'static str)> {
+    TERMS.to_vec()
 }
 
 /// Opens a model bundled with the application.
@@ -839,6 +852,20 @@ pub fn qa_log(line: String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_binary_carries_the_whole_bigg_notice() {
+        let (_, notice) = TERMS[0];
+        for paragraph in [
+            "The Regents of the University of California",
+            "Permission to use, copy, modify and distribute",
+            "Those desiring to incorporate",
+            "In no event shall",
+            "\"as is\" basis",
+        ] {
+            assert!(notice.contains(paragraph), "{paragraph}");
+        }
+    }
 
     #[test]
     fn a_pair_screen_includes_isozymes_that_disable_nothing_alone() {

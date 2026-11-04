@@ -15,4 +15,6 @@ Test in the webview it targets, not a browser:
 then run `rashevsky-web-preview` from the target folder, or drive it with `desktop/scripts/drive.py`.
 
 The demo bundles `e_coli_core` from BiGG Models, which is licensed for educational, research and
-non-profit use. See `models/e_coli_core/NOTICE` before placing it on a commercial site.
+non-profit use. See `models/e_coli_core/NOTICE` before placing it on a commercial site. That notice
+has to travel with the model: `build.sh` copies it to `dist/NOTICE-e_coli_core.txt`, and the page links
+to it as "Model terms". Keep both when installing.
