@@ -294,6 +294,59 @@ enum Command {
         #[arg(long = "set", allow_hyphen_values = true)]
         set: Vec<String>,
     },
+    /// Local steady-state sensitivities of fluxes and states to constant symbols.
+    Sensitivity {
+        model: PathBuf,
+        /// Comma-separated parameter names.
+        #[arg(long)]
+        parameters: String,
+        #[arg(long, default_value_t = 100.0)]
+        integrate: f64,
+        #[arg(long = "set", allow_hyphen_values = true)]
+        set: Vec<String>,
+    },
+    /// First-order and total Sobol indices of one output over parameter ranges.
+    Sobol {
+        model: PathBuf,
+        /// `name=low:high`, or `name=low:high:log` to sample the logarithm (repeatable).
+        #[arg(long = "range", required = true)]
+        ranges: Vec<String>,
+        /// Species, reaction or parameter to read.
+        #[arg(long)]
+        output: String,
+        /// Read the output at this time rather than at the steady state.
+        #[arg(long)]
+        time: Option<f64>,
+        #[arg(long, default_value_t = 100.0)]
+        integrate: f64,
+        #[arg(long, default_value_t = 512)]
+        samples: usize,
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        #[arg(long = "set", allow_hyphen_values = true)]
+        set: Vec<String>,
+    },
+    /// Fits parameters to measurements by Levenberg-Marquardt, with likelihood profiles.
+    Fit {
+        model: PathBuf,
+        /// `name=start`, with a positive start (repeatable).
+        #[arg(long = "start", required = true)]
+        starts: Vec<String>,
+        /// CSV with the header `time,symbol,value,sigma`.
+        #[arg(long)]
+        data: PathBuf,
+        /// Profile this fitted parameter (repeatable).
+        #[arg(long = "profile")]
+        profiles: Vec<String>,
+        /// Profile over this factor either side of the estimate.
+        #[arg(long, default_value_t = 4.0)]
+        factor: f64,
+        /// Grid values per profile.
+        #[arg(long, default_value_t = 15)]
+        points: usize,
+        #[arg(long = "set", allow_hyphen_values = true)]
+        set: Vec<String>,
+    },
     /// Ensemble of stochastic simulations.
     Ssa {
         model: PathBuf,
@@ -333,6 +386,55 @@ fn load_kinetic(path: &PathBuf, set: &[String]) -> Result<KineticModel> {
         km.set_value(name, value.parse().map_err(|_| invalid())?)?;
     }
     Ok(km)
+}
+
+fn parse_range(text: &str) -> Result<rashevsky::kinetic::sensitivity::Range> {
+    let invalid = || rashevsky::Error::Invalid(format!("`{text}` is not name=low:high or name=low:high:log"));
+    let (name, rest) = text.split_once('=').ok_or_else(invalid)?;
+    let parts: Vec<&str> = rest.split(':').collect();
+    let log = match parts.get(2) {
+        None => false,
+        Some(&"log") => true,
+        Some(_) => return Err(invalid()),
+    };
+    if parts.len() < 2 || parts.len() > 3 {
+        return Err(invalid());
+    }
+    Ok(rashevsky::kinetic::sensitivity::Range {
+        name: name.to_string(),
+        low: parts[0].parse().map_err(|_| invalid())?,
+        high: parts[1].parse().map_err(|_| invalid())?,
+        log,
+    })
+}
+
+fn read_observations(path: &PathBuf) -> Result<Vec<rashevsky::kinetic::fit::Observation>> {
+    let text = std::fs::read_to_string(path)
+        .map_err(|e| rashevsky::Error::Invalid(format!("cannot read {}: {e}", path.display())))?;
+    let mut lines = text.lines().enumerate().filter(|(_, l)| !l.trim().is_empty());
+    let header: Vec<&str> = lines.next().map(|(_, l)| l.split(',').map(str::trim).collect()).unwrap_or_default();
+    if header != ["time", "symbol", "value", "sigma"] {
+        return Err(rashevsky::Error::Invalid(format!("{}: the header must be time,symbol,value,sigma", path.display())));
+    }
+    lines
+        .map(|(number, line)| {
+            let invalid = || rashevsky::Error::Invalid(format!("{}: line {} is malformed", path.display(), number + 1));
+            let cells: Vec<&str> = line.split(',').map(str::trim).collect();
+            let [time, symbol, value, sigma] = cells[..] else {
+                return Err(invalid());
+            };
+            let sigma: f64 = sigma.parse().map_err(|_| invalid())?;
+            if sigma <= 0.0 {
+                return Err(invalid());
+            }
+            Ok(rashevsky::kinetic::fit::Observation {
+                time: time.parse().map_err(|_| invalid())?,
+                symbol: symbol.to_string(),
+                value: value.parse().map_err(|_| invalid())?,
+                sigma,
+            })
+        })
+        .collect()
 }
 
 fn chosen_symbols(km: &KineticModel, symbols: Option<String>) -> Vec<String> {
@@ -699,6 +801,56 @@ fn run(cli: Cli) -> Result<()> {
                     "conserved_moieties": c.states.len() - c.moieties.independent.len(),
                 }),
             )
+        }
+        Command::Sensitivity { model, parameters, integrate, set } => {
+            let km = load_kinetic(&model, &set)?;
+            let state = steady_state(&km, &SteadyOptions { integrate_first: integrate, ..SteadyOptions::default() })?;
+            let control = rashevsky::kinetic::control_analysis(&km, &state)?;
+            let names: Vec<String> = parameters.split(',').map(|p| p.trim().to_string()).collect();
+            let local = rashevsky::kinetic::sensitivity::local_steady(&km, &state, &control, &names)?;
+            let rows = |m: &nalgebra_matrix::DMatrix<f64>| -> Vec<Vec<f64>> {
+                (0..m.nrows()).map(|i| (0..m.ncols()).map(|j| m[(i, j)]).collect()).collect()
+            };
+            emit(
+                &out,
+                &serde_json::json!({
+                    "parameters": local.parameters,
+                    "reactions": control.reactions,
+                    "states": control.states,
+                    "flux": rows(&local.flux),
+                    "state": rows(&local.state),
+                }),
+            )
+        }
+        Command::Sobol { model, ranges, output, time, integrate, samples, seed, set } => {
+            use rashevsky::kinetic::sensitivity::{Output, sobol_model};
+            let km = load_kinetic(&model, &set)?;
+            let ranges = ranges.iter().map(|r| parse_range(r)).collect::<Result<Vec<_>>>()?;
+            let reading = match time {
+                Some(time) => Output::AtTime { symbol: output, time },
+                None => Output::Steady { symbol: output, integrate },
+            };
+            emit(&out, &sobol_model(&km, &ranges, samples, seed, &reading)?)
+        }
+        Command::Fit { model, starts, data, profiles, factor, points, set } => {
+            use rashevsky::kinetic::fit::{FitParameter, fit, profile};
+            let km = load_kinetic(&model, &set)?;
+            let parameters = starts
+                .iter()
+                .map(|item| {
+                    let invalid = || rashevsky::Error::Invalid(format!("`{item}` is not name=start"));
+                    let (name, start) = item.split_once('=').ok_or_else(invalid)?;
+                    Ok(FitParameter { name: name.to_string(), start: start.parse().map_err(|_| invalid())? })
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let observations = read_observations(&data)?;
+            let options = rashevsky::kinetic::SimOptions::default();
+            let fitted = fit(&km, &parameters, &observations, &options)?;
+            let curves = profiles
+                .iter()
+                .map(|name| profile(&km, &parameters, &observations, &fitted, name, factor, points, &options))
+                .collect::<Result<Vec<_>>>()?;
+            emit(&out, &serde_json::json!({"fit": fitted, "profiles": curves}))
         }
         Command::Ssa { model, end, steps, runs, seed, tau_epsilon, symbols } => {
             let km = KineticModel::read_sbml(&model)?;

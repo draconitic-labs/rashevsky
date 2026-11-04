@@ -208,3 +208,110 @@ fn a_value_override_changes_the_simulation() {
     let a = run.series(&m, "A").unwrap();
     assert!((a[1] - 2.0 * (-1.4f64).exp()).abs() < 1e-7);
 }
+
+/// `-> S` at `k0` and `S ->` at `k1 S`, with steady state `S = k0 / k1` and flux `k0`.
+const BIRTH_DEATH: &str = r#"<?xml version="1.0"?>
+<sbml xmlns="http://www.sbml.org/sbml/level3/version2/core" level="3" version="2">
+<model id="birth_death"><listOfCompartments><compartment id="c" size="1" constant="true"/></listOfCompartments>
+<listOfSpecies><species id="S" compartment="c" initialConcentration="1" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/></listOfSpecies>
+<listOfParameters><parameter id="k0" value="1.5" constant="true"/><parameter id="k1" value="2" constant="true"/></listOfParameters>
+<listOfReactions>
+<reaction id="birth" reversible="false"><listOfProducts><speciesReference species="S" stoichiometry="1" constant="true"/></listOfProducts>
+<kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><times/><ci>k0</ci><ci>c</ci></apply></math></kineticLaw></reaction>
+<reaction id="death" reversible="false"><listOfReactants><speciesReference species="S" stoichiometry="1" constant="true"/></listOfReactants>
+<kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><times/><ci>k1</ci><ci>S</ci><ci>c</ci></apply></math></kineticLaw></reaction>
+</listOfReactions></model></sbml>"#;
+
+#[test]
+fn local_sensitivities_equal_the_analytic_derivatives() {
+    use rashevsky::kinetic::sensitivity::local_steady;
+    let m = KineticModel::from_sbml_str(BIRTH_DEATH).unwrap();
+    let state = steady_state(&m, &SteadyOptions::default()).unwrap();
+    let control = control_analysis(&m, &state).unwrap();
+    let local = local_steady(&m, &state, &control, &["k0".to_string(), "k1".to_string()]).unwrap();
+    let (k0, k1) = (1.5, 2.0);
+    let birth = control.reactions.iter().position(|r| r == "birth").unwrap();
+    let death = control.reactions.iter().position(|r| r == "death").unwrap();
+    assert!((local.state[(0, 0)] - 1.0 / k1).abs() < 1e-9, "dS/dk0 {}", local.state[(0, 0)]);
+    assert!((local.state[(0, 1)] + k0 / (k1 * k1)).abs() < 1e-9, "dS/dk1 {}", local.state[(0, 1)]);
+    for reaction in [birth, death] {
+        assert!((local.flux[(reaction, 0)] - 1.0).abs() < 1e-9, "dJ/dk0 {}", local.flux[(reaction, 0)]);
+        assert!(local.flux[(reaction, 1)].abs() < 1e-9, "dJ/dk1 {}", local.flux[(reaction, 1)]);
+    }
+}
+
+#[test]
+fn local_sensitivities_match_finite_differences_on_glycolysis() {
+    use rashevsky::kinetic::sensitivity::local_steady;
+    let m = teusink();
+    let options = SteadyOptions::default();
+    let state = steady_state(&m, &options).unwrap();
+    let control = control_analysis(&m, &state).unwrap();
+    let names = ["KmPFKF6P".to_string(), "gR".to_string(), "Lzero".to_string()];
+    let local = local_steady(&m, &state, &control, &names).unwrap();
+    let flux = |name: &str, value: f64| {
+        let mut changed = m.clone();
+        changed.set_value(name, value).unwrap();
+        steady_state(&changed, &options).unwrap().fluxes
+    };
+    let mut seen = 0.0f64;
+    for (column, name) in names.iter().enumerate() {
+        let p = m.initial[m.slot(name).unwrap()];
+        let h = 1e-4 * p;
+        let (up, down) = (flux(name, p + h), flux(name, p - h));
+        for (r, (a, b)) in up.iter().zip(&down).enumerate() {
+            let numeric = (a - b) / (2.0 * h);
+            let scale = numeric.abs().max(1e-3);
+            assert!((local.flux[(r, column)] - numeric).abs() < 1e-5 * scale, "{name} {r}: {} {numeric}", local.flux[(r, column)]);
+            seen = seen.max(numeric.abs());
+        }
+    }
+    assert!(seen > 0.1, "these parameters should move the fluxes, largest {seen}");
+}
+
+#[test]
+fn sobol_of_a_steady_state_matches_the_closed_form_of_a_product() {
+    use rashevsky::kinetic::sensitivity::{Output, Range, sobol, sobol_model};
+    let m = KineticModel::from_sbml_str(BIRTH_DEATH).unwrap();
+    let ranges = [
+        Range { name: "k0".into(), low: 1.0, high: 2.0, log: false },
+        Range { name: "k1".into(), low: 1.0, high: 3.0, log: false },
+    ];
+    // S = X Y with X = k0 and Y = 1 / k1 independent, so the variance decomposes exactly.
+    let (ex, vx) = (1.5f64, 1.0 / 12.0);
+    let ey = 3f64.ln() / 2.0;
+    let vy = 1.0 / 3.0 - ey * ey;
+    let v = vx * vy + ey * ey * vx + ex * ex * vy;
+    let first = [ey * ey * vx / v, ex * ex * vy / v];
+    let total = [first[0] + vx * vy / v, first[1] + vx * vy / v];
+    // The estimator on the closed-form output, at a sample size where its standard error is about 0.0015.
+    let exact = |v: &[f64]| Some(v[0] / v[1]);
+    let large = sobol(&ranges, 2_000_000, 7, &exact).unwrap();
+    for i in 0..2 {
+        assert!((large.first[i] - first[i]).abs() < 0.01, "S{i}: {} vs {}", large.first[i], first[i]);
+        assert!((large.total[i] - total[i]).abs() < 0.01, "T{i}: {} vs {}", large.total[i], total[i]);
+    }
+    // The model on the same samples gives the same numbers, from solved steady states and from a late time point.
+    let closed = sobol(&ranges, 1000, 7, &exact).unwrap();
+    let steady = sobol_model(&m, &ranges, 1000, 7, &Output::Steady { symbol: "S".into(), integrate: 0.0 }).unwrap();
+    let late = sobol_model(&m, &ranges, 1000, 7, &Output::AtTime { symbol: "S".into(), time: 40.0 }).unwrap();
+    assert_eq!(steady.failures, 0);
+    assert_eq!(steady.evaluations, 1000 * 4);
+    for i in 0..2 {
+        assert!((steady.first[i] - closed.first[i]).abs() < 1e-6, "{} {}", steady.first[i], closed.first[i]);
+        assert!((steady.total[i] - closed.total[i]).abs() < 1e-6, "{} {}", steady.total[i], closed.total[i]);
+        assert!((late.first[i] - closed.first[i]).abs() < 1e-5, "{} {}", late.first[i], closed.first[i]);
+        assert!((late.total[i] - closed.total[i]).abs() < 1e-5, "{} {}", late.total[i], closed.total[i]);
+    }
+}
+
+#[test]
+fn sobol_rejects_unusable_ranges() {
+    use rashevsky::kinetic::sensitivity::{Output, Range, sobol_model};
+    let m = KineticModel::from_sbml_str(BIRTH_DEATH).unwrap();
+    let output = Output::Steady { symbol: "S".into(), integrate: 0.0 };
+    let log_at_zero = [Range { name: "k0".into(), low: 0.0, high: 2.0, log: true }];
+    assert!(sobol_model(&m, &log_at_zero, 8, 1, &output).is_err());
+    let unknown = [Range { name: "nope".into(), low: 1.0, high: 2.0, log: false }];
+    assert!(sobol_model(&m, &unknown, 8, 1, &output).is_err());
+}

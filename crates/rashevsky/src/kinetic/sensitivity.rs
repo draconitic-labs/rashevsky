@@ -2,7 +2,8 @@
 
 use super::compile::KineticModel;
 use super::mca::{ControlAnalysis, parameter_elasticities};
-use super::steady::SteadyState;
+use super::sim::{SimOptions, simulate};
+use super::steady::{SteadyOptions, SteadyState, steady_state};
 use crate::error::{Error, Result};
 use nalgebra::DMatrix;
 use rand::{Rng, SeedableRng};
@@ -45,6 +46,7 @@ pub struct Range {
     /// Upper limit.
     pub high: f64,
     /// Sample uniformly in the logarithm rather than the value.
+    #[serde(default)]
     pub log: bool,
 }
 
@@ -141,6 +143,63 @@ pub fn sobol(
         evaluations: n * (d + 2),
         failures: samples - n,
     })
+}
+
+/// The scalar a global analysis of a kinetic model reads from each parameter sample.
+#[derive(Clone, Debug)]
+pub enum Output {
+    /// A symbol at the steady state reached after integrating for `integrate`.
+    Steady {
+        /// Species, reaction or parameter.
+        symbol: String,
+        /// Integration before Newton iteration.
+        integrate: f64,
+    },
+    /// A symbol at a time.
+    AtTime {
+        /// Species, reaction or parameter.
+        symbol: String,
+        /// Time of the reading.
+        time: f64,
+    },
+}
+
+/// Sobol indices of one output of a kinetic model over parameter ranges.
+pub fn sobol_model(
+    model: &KineticModel,
+    ranges: &[Range],
+    samples: usize,
+    seed: u64,
+    output: &Output,
+) -> Result<SobolIndices> {
+    for r in ranges {
+        model.slot(&r.name)?;
+        if r.low >= r.high || (r.log && r.low <= 0.0) {
+            return Err(Error::Invalid(format!("range of `{}` is empty or not positive on a log scale", r.name)));
+        }
+    }
+    let symbol = match output {
+        Output::Steady { symbol, .. } | Output::AtTime { symbol, .. } => symbol,
+    };
+    let slot = model.slot(symbol)?;
+    let evaluate = |values: &[f64]| -> Option<f64> {
+        let mut m = model.clone();
+        for (r, &v) in ranges.iter().zip(values) {
+            m.set_value(&r.name, v).ok()?;
+        }
+        let reading = match output {
+            Output::Steady { integrate, .. } => {
+                let options = SteadyOptions { integrate_first: *integrate, ..SteadyOptions::default() };
+                steady_state(&m, &options).ok()?.values[slot]
+            }
+            Output::AtTime { time, .. } => {
+                let run = simulate(&m, &[0.0, *time], &SimOptions::default()).ok()?;
+                run.values.last()?[slot]
+            }
+        };
+        reading.is_finite().then_some(reading)
+    };
+    sobol(ranges, samples, seed, &evaluate)
 }
 
 #[cfg(test)]

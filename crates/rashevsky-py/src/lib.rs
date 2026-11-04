@@ -526,6 +526,64 @@ impl PyKinetic {
         )
     }
 
+    /// Local steady-state sensitivities to constant symbols; `flux` and `state` have a column per parameter.
+    #[pyo3(signature = (parameters, integrate=100.0))]
+    fn local_sensitivity<'py>(
+        &self,
+        py: Python<'py>,
+        parameters: Vec<String>,
+        integrate: f64,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let m = &self.inner;
+        let (control, local) = py
+            .detach(|| {
+                let options = SteadyOptions { integrate_first: integrate, ..SteadyOptions::default() };
+                let state = kinetic::steady_state(m, &options)?;
+                let control = kinetic::control_analysis(m, &state)?;
+                let local = kinetic::sensitivity::local_steady(m, &state, &control, &parameters)?;
+                Ok::<_, engine::Error>((control, local))
+            })
+            .map_err(err)?;
+        let rows = |a: &rashevsky_matrix::DMatrix<f64>| -> Vec<Vec<f64>> {
+            (0..a.nrows()).map(|i| (0..a.ncols()).map(|j| a[(i, j)]).collect()).collect()
+        };
+        result(
+            py,
+            &json!({
+                "parameters": local.parameters,
+                "reactions": control.reactions,
+                "states": control.states,
+                "flux": rows(&local.flux),
+                "state": rows(&local.state),
+            }),
+        )
+    }
+
+    /// First-order and total Sobol indices of `output`, read at `time` or at the steady state.
+    /// `ranges` lists `{name, low, high, log}`, with `log` optional.
+    #[pyo3(signature = (ranges, output, time=None, integrate=100.0, samples=512, seed=1))]
+    #[allow(clippy::too_many_arguments)]
+    fn sobol<'py>(
+        &self,
+        py: Python<'py>,
+        ranges: &Bound<'py, PyAny>,
+        output: String,
+        time: Option<f64>,
+        integrate: f64,
+        samples: usize,
+        seed: u64,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        use kinetic::sensitivity::{Output, Range, sobol_model};
+        let ranges: Vec<Range> = from_python(ranges)?;
+        let reading = match time {
+            Some(time) => Output::AtTime { symbol: output, time },
+            None => Output::Steady { symbol: output, integrate },
+        };
+        let m = &self.inner;
+        let r = py.detach(|| sobol_model(m, &ranges, samples, seed, &reading)).map_err(err)?;
+        result(py, &r)
+    }
+
     /// Ensemble of stochastic simulations. `tau_epsilon` selects tau-leaping.
     #[pyo3(signature = (end, steps=100, runs=1000, seed=1, tau_epsilon=None, symbols=None))]
     #[allow(clippy::too_many_arguments)]
