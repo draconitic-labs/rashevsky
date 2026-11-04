@@ -240,6 +240,10 @@ pub struct KineticModel {
     pub rate_of_slots: Vec<usize>,
     /// Defining expressions of the initial state, re-evaluated for times before the start.
     pub initial_items: Vec<(usize, C)>,
+    /// Rate per reaction with all derived symbols inlined, when inlining stayed within bounds.
+    pub flat_rates: Vec<Expr>,
+    /// Names of the state variables.
+    pub state_names: Vec<String>,
 }
 
 const NODE_LIMIT: usize = 4_000_000;
@@ -332,44 +336,43 @@ impl Builder<'_> {
     }
 
     fn compile(&mut self, e: &Expr) -> Result<C> {
-        Ok(match e {
-            Expr::Num(v) => C::Num(*v),
-            Expr::Time => C::Time,
-            Expr::Avogadro => C::Num(AVOGADRO),
-            Expr::Sym(s) => {
-                let slot = *self
-                    .slots
-                    .get(s)
-                    .ok_or_else(|| Error::Kinetic(format!("undefined symbol `{s}`")))?;
-                C::Slot(slot)
-            }
-            Expr::RateOf(s) => {
-                let name = format!("rateOf#{s}");
-                let slot = *self
-                    .slots
-                    .get(&name)
-                    .ok_or_else(|| Error::Kinetic(format!("no rate available for `{s}`")))?;
-                C::Slot(slot)
-            }
-            Expr::Apply(op, args) => {
-                let compiled: Vec<C> = args.iter().map(|a| self.compile(a)).collect::<Result<_>>()?;
-                C::Ap(*op, compiled)
-            }
-            Expr::Piecewise(pieces, otherwise) => {
-                let mut compiled = Vec::with_capacity(pieces.len());
-                for (v, c) in pieces {
-                    compiled.push((self.compile(v)?, self.compile(c)?));
-                }
-                let otherwise = match otherwise {
-                    Some(o) => Some(Box::new(self.compile(o)?)),
-                    None => None,
-                };
-                C::Piece(compiled, otherwise)
-            }
-            Expr::Delay(a, b) => C::Delay(Box::new(self.compile(a)?), Box::new(self.compile(b)?)),
-            Expr::Call(name, _) => return Err(Error::Kinetic(format!("function `{name}` was not inlined"))),
-        })
+        compile_expr(e, &self.slots)
     }
+}
+
+/// Resolves the symbols of an inlined expression to slots.
+pub fn compile_expr(e: &Expr, slots: &HashMap<String, usize>) -> Result<C> {
+    Ok(match e {
+        Expr::Num(v) => C::Num(*v),
+        Expr::Time => C::Time,
+        Expr::Avogadro => C::Num(AVOGADRO),
+        Expr::Sym(s) => {
+            let slot = *slots.get(s).ok_or_else(|| Error::Kinetic(format!("undefined symbol `{s}`")))?;
+            C::Slot(slot)
+        }
+        Expr::RateOf(s) => {
+            let name = format!("rateOf#{s}");
+            let slot = *slots.get(&name).ok_or_else(|| Error::Kinetic(format!("no rate available for `{s}`")))?;
+            C::Slot(slot)
+        }
+        Expr::Apply(op, args) => {
+            let compiled: Vec<C> = args.iter().map(|a| compile_expr(a, slots)).collect::<Result<_>>()?;
+            C::Ap(*op, compiled)
+        }
+        Expr::Piecewise(pieces, otherwise) => {
+            let mut compiled = Vec::with_capacity(pieces.len());
+            for (v, c) in pieces {
+                compiled.push((compile_expr(v, slots)?, compile_expr(c, slots)?));
+            }
+            let otherwise = match otherwise {
+                Some(o) => Some(Box::new(compile_expr(o, slots)?)),
+                None => None,
+            };
+            C::Piece(compiled, otherwise)
+        }
+        Expr::Delay(a, b) => C::Delay(Box::new(compile_expr(a, slots)?), Box::new(compile_expr(b, slots)?)),
+        Expr::Call(name, _) => return Err(Error::Kinetic(format!("function `{name}` was not inlined"))),
+    })
 }
 
 fn collect_rate_of(e: &Expr, out: &mut Vec<String>) {
@@ -487,6 +490,39 @@ impl KineticModel {
             funcs: src.functions.iter().map(|f| (f.id.as_str(), f)).collect(),
         };
         build(&mut b, src)
+    }
+
+    /// Overrides the initial value of a symbol and re-evaluates everything that depends on it.
+    /// For a species name the value is an amount when written `S#a`, otherwise what math sees.
+    pub fn set_value(&mut self, name: &str, value: f64) -> Result<()> {
+        let slot = self.slot(name)?;
+        self.initial_items.retain(|(s, _)| *s != slot);
+        self.initial[slot] = value;
+        // When the math value of an amount species is overridden, the amount follows.
+        if let Some(sp) = self.species.iter().find(|s| s.view == slot) {
+            if sp.kind == SpeciesKind::Amount || sp.kind == SpeciesKind::Constant {
+                let size = self.initial[sp.compartment];
+                let amount = if sp.has_only_substance_units { value } else { value * size };
+                let amount_slot = sp.amount;
+                self.initial_items.retain(|(s, _)| *s != amount_slot);
+                self.initial[amount_slot] = amount;
+            }
+        }
+        for _ in 0..self.initial_items.len() + 3 {
+            let mut changed = false;
+            for (s, c) in &self.initial_items {
+                let v = eval(c, &self.initial, 0.0, &NoDelay);
+                let old = self.initial[*s];
+                if v.to_bits() != old.to_bits() && !(v.is_nan() && old.is_nan()) {
+                    self.initial[*s] = v;
+                    changed = true;
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        Ok(())
     }
 
     /// Number of state variables.
@@ -1072,6 +1108,8 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
         fast: src.reactions.iter().map(|r| r.fast).collect(),
         rate_of_slots: b.names.iter().enumerate().filter(|(_, n)| n.starts_with("rateOf#")).map(|(i, _)| i).collect(),
         initial_items: init_items,
+        flat_rates: Vec::new(),
+        state_names: state_names.clone(),
     };
     solve_algebraic_initial(&mut model);
     build_derivatives(&mut model, b, &derived_exprs, &stoich_exprs, &rate_rule, &algebraic_exprs, &algebraic_vars, &state_names)?;
@@ -1345,6 +1383,11 @@ fn build_derivatives(
         }
     }
     let _ = neg;
+    model.flat_rates = model
+        .reactions
+        .iter()
+        .map(|r| flat.get(&r.id).cloned().unwrap_or(Expr::Num(0.0)))
+        .collect();
     model.flat_rhs = rhs;
     model.jacobian = Some(jacobian);
     model.time_derivative = time_derivative;

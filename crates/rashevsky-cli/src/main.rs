@@ -3,7 +3,9 @@
 mod cases;
 
 use clap::{Args, Parser, Subcommand};
+use nalgebra as nalgebra_matrix;
 use rashevsky::cb;
+use rashevsky::kinetic::{KineticModel, SimOptions, SteadyOptions, SteadyState, simulate, steady_state};
 use rashevsky::lp::{self, Backend, Sense};
 use rashevsky::{Model, Result};
 use serde::Serialize;
@@ -170,6 +172,64 @@ enum Command {
         #[arg(long)]
         open_boundaries: bool,
     },
+    /// Time course of a kinetic model.
+    Simulate {
+        model: PathBuf,
+        /// End time.
+        #[arg(long)]
+        end: f64,
+        /// Number of intervals between outputs.
+        #[arg(long, default_value_t = 100)]
+        steps: usize,
+        /// `rodas4` or `bdf`.
+        #[arg(long, default_value = "rodas4")]
+        method: String,
+        #[arg(long, default_value_t = 1e-9)]
+        rtol: f64,
+        #[arg(long, default_value_t = 1e-12)]
+        atol: f64,
+        /// Comma-separated symbols; all species and reactions when absent.
+        #[arg(long)]
+        symbols: Option<String>,
+        /// Override a symbol's initial value as `name=value` (repeatable).
+        #[arg(long = "set", allow_hyphen_values = true)]
+        set: Vec<String>,
+    },
+    /// Steady state of a kinetic model.
+    SteadyState {
+        model: PathBuf,
+        /// Integrate this long before Newton iteration.
+        #[arg(long, default_value_t = 100.0)]
+        integrate: f64,
+        #[arg(long = "set", allow_hyphen_values = true)]
+        set: Vec<String>,
+    },
+    /// Metabolic control analysis at the steady state.
+    Mca {
+        model: PathBuf,
+        #[arg(long, default_value_t = 100.0)]
+        integrate: f64,
+        #[arg(long = "set", allow_hyphen_values = true)]
+        set: Vec<String>,
+    },
+    /// Ensemble of stochastic simulations.
+    Ssa {
+        model: PathBuf,
+        #[arg(long)]
+        end: f64,
+        #[arg(long, default_value_t = 100)]
+        steps: usize,
+        #[arg(long, default_value_t = 1000)]
+        runs: usize,
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        /// Use tau-leaping with this epsilon rather than the exact direct method.
+        #[arg(long)]
+        tau_epsilon: Option<f64>,
+        /// Comma-separated symbols; all species when absent.
+        #[arg(long)]
+        symbols: Option<String>,
+    },
     /// Run SBML Test Suite semantic cases and report each outcome.
     SbmlSuite {
         /// Directory that holds the numbered case folders.
@@ -183,6 +243,30 @@ enum Command {
     },
     /// Run a study described by a case file (see docs/CASES.md).
     Run { case: PathBuf },
+}
+
+fn load_kinetic(path: &PathBuf, set: &[String]) -> Result<KineticModel> {
+    let mut km = KineticModel::read_sbml(path)?;
+    for item in set {
+        let invalid = || rashevsky::Error::Invalid(format!("`{item}` is not name=value"));
+        let (name, value) = item.split_once('=').ok_or_else(invalid)?;
+        km.set_value(name, value.parse().map_err(|_| invalid())?)?;
+    }
+    Ok(km)
+}
+
+fn chosen_symbols(km: &KineticModel, symbols: Option<String>) -> Vec<String> {
+    match symbols {
+        Some(list) => list.split(',').map(|s| s.trim().to_string()).collect(),
+        None => km.species.iter().map(|s| s.id.clone()).chain(km.reactions.iter().map(|r| r.id.clone())).collect(),
+    }
+}
+
+fn steady_json(km: &KineticModel, state: &SteadyState) -> serde_json::Value {
+    let species: BTreeMap<String, f64> = km.species.iter().map(|s| (s.id.clone(), state.values[s.view])).collect();
+    let fluxes: BTreeMap<String, f64> =
+        km.reactions.iter().zip(&state.fluxes).map(|(r, v)| (r.id.clone(), *v)).collect();
+    serde_json::json!({"species": species, "fluxes": fluxes, "residual": state.residual, "newton_iterations": state.iterations})
 }
 
 fn parse_method(text: &str) -> Result<rashevsky::kinetic::Method> {
@@ -410,6 +494,63 @@ fn run(cli: Cli) -> Result<()> {
             let m = Model::read_sbml(model)?;
             let list = rashevsky::tasks::parse_task_list(&std::fs::read_to_string(tasks)?)?;
             emit(&out, &rashevsky::tasks::check_tasks(&m, &list, !open_boundaries)?)
+        }
+        Command::Simulate { model, end, steps, method, rtol, atol, symbols, set } => {
+            let km = load_kinetic(&model, &set)?;
+            let times: Vec<f64> = (0..=steps).map(|k| end * k as f64 / steps as f64).collect();
+            let options = SimOptions { method: parse_method(&method)?, rtol, atol, ..SimOptions::default() };
+            let course = simulate(&km, &times, &options)?;
+            let chosen = chosen_symbols(&km, symbols);
+            let mut series = BTreeMap::new();
+            for name in &chosen {
+                series.insert(name.clone(), course.series(&km, name)?);
+            }
+            emit(&out, &serde_json::json!({
+                "time": course.time,
+                "series": series,
+                "stats": {"steps": course.stats.steps, "rejected": course.stats.rejected, "rhs_evals": course.stats.rhs_evals, "jacobians": course.stats.jacobians},
+            }))
+        }
+        Command::SteadyState { model, integrate, set } => {
+            let km = load_kinetic(&model, &set)?;
+            let state = steady_state(&km, &SteadyOptions { integrate_first: integrate, ..SteadyOptions::default() })?;
+            emit(&out, &steady_json(&km, &state))
+        }
+        Command::Mca { model, integrate, set } => {
+            let km = load_kinetic(&model, &set)?;
+            let state = steady_state(&km, &SteadyOptions { integrate_first: integrate, ..SteadyOptions::default() })?;
+            let c = rashevsky::kinetic::control_analysis(&km, &state)?;
+            let rows = |m: &nalgebra_matrix::DMatrix<f64>| -> Vec<Vec<f64>> {
+                (0..m.nrows()).map(|i| (0..m.ncols()).map(|j| m[(i, j)]).collect()).collect()
+            };
+            emit(&out, &serde_json::json!({
+                "steady_state": steady_json(&km, &state),
+                "reactions": c.reactions,
+                "states": c.states,
+                "flux_control": rows(&c.scaled_flux_control),
+                "concentration_control": rows(&c.scaled_concentration_control),
+                "elasticities": rows(&c.scaled_elasticities),
+                "theorems": c.theorems,
+                "conserved_moieties": c.states.len() - c.moieties.independent.len(),
+            }))
+        }
+        Command::Ssa { model, end, steps, runs, seed, tau_epsilon, symbols } => {
+            let km = KineticModel::read_sbml(&model)?;
+            let times: Vec<f64> = (0..=steps).map(|k| end * k as f64 / steps as f64).collect();
+            let algorithm = match tau_epsilon {
+                Some(epsilon) => rashevsky::kinetic::ssa::Algorithm::TauLeap { epsilon },
+                None => rashevsky::kinetic::ssa::Algorithm::Direct,
+            };
+            let e = rashevsky::kinetic::ssa::ensemble(&km, &times, runs, algorithm, seed)?;
+            let chosen = chosen_symbols(&km, symbols);
+            let mut mean = BTreeMap::new();
+            let mut sd = BTreeMap::new();
+            for name in &chosen {
+                let slot = km.slot(name)?;
+                mean.insert(name.clone(), e.mean.iter().map(|v| v[slot]).collect::<Vec<f64>>());
+                sd.insert(name.clone(), e.sd.iter().map(|v| v[slot]).collect::<Vec<f64>>());
+            }
+            emit(&out, &serde_json::json!({"time": e.time, "runs": e.runs, "mean": mean, "sd": sd}))
         }
         Command::SbmlSuite { root, cases: list, method } => {
             let filter: Option<Vec<String>> = list.map(|l| l.split(',').map(|c| format!("{:0>5}", c.trim())).collect());

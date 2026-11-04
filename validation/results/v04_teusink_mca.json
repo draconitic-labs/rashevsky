@@ -1,0 +1,256 @@
+{
+  "concentration_control_max_abs_difference_vs_copasi": 1.3855887694702584e-06,
+  "copasi_version": "4.48.311 (Source)",
+  "flux_control_max_abs_difference_vs_copasi": 3.418028313717514e-07,
+  "pass": true,
+  "roadrunner_version": "2.11.0",
+  "steady_state_max_rel_difference_fluxes": 6.465336119743693e-15,
+  "steady_state_max_rel_difference_species": 8.119275234352362e-15,
+  "table": [
+    {
+      "curated_model": 88,
+      "pass": true,
+      "published": 88,
+      "quantity": "vGLK",
+      "rashevsky": 88.149526882182,
+      "tolerance": 1
+    },
+    {
+      "curated_model": 129,
+      "pass": true,
+      "published": 129,
+      "quantity": "vADH",
+      "rashevsky": 129.2159089126614,
+      "tolerance": 1
+    },
+    {
+      "curated_model": 6,
+      "pass": true,
+      "published": 6,
+      "quantity": "vGLYCO",
+      "rashevsky": 6.0,
+      "tolerance": 1
+    },
+    {
+      "curated_model": 4.8,
+      "pass": true,
+      "published": 4.8,
+      "quantity": "vTreha",
+      "rashevsky": 4.8,
+      "tolerance": 0.1
+    },
+    {
+      "curated_model": 18.2,
+      "pass": true,
+      "published": 18.2,
+      "quantity": "vG3PDH",
+      "rashevsky": 18.20224632264463,
+      "tolerance": 0.1
+    },
+    {
+      "curated_model": 3.6,
+      "pass": true,
+      "published": 3.6,
+      "quantity": "vSUC",
+      "rashevsky": 3.640449264528964,
+      "tolerance": 0.1
+    },
+    {
+      "curated_model": 1.03,
+      "pass": true,
+      "published": 1.07,
+      "quantity": "G6P",
+      "rashevsky": 1.0332456136818153,
+      "tolerance": 0.01
+    },
+    {
+      "curated_model": 0.11,
+      "pass": true,
+      "published": 0.11,
+      "quantity": "F6P",
+      "rashevsky": 0.1128128145855023,
+      "tolerance": 0.01
+    },
+    {
+      "curated_model": 0.6,
+      "pass": true,
+      "published": 0.6,
+      "quantity": "F16P",
+      "rashevsky": 0.6019076395836988,
+      "tolerance": 0.01
+    },
+    {
+      "curated_model": 0.36,
+      "pass": true,
+      "published": 0.36,
+      "quantity": "P3G",
+      "rashevsky": 0.35648403785929966,
+      "tolerance": 0.01
+    },
+    {
+      "curated_model": 0.04,
+      "pass": true,
+      "published": 0.04,
+      "quantity": "P2G",
+      "rashevsky": 0.044843711119032445,
+      "tolerance": 0.01
+    },
+    {
+      "curated_model": 0.07,
+      "pass": true,
+      "published": 0.07,
+      "quantity": "PEP",
+      "rashevsky": 0.07361684247063711,
+      "tolerance": 0.01
+    },
+    {
+      "curated_model": 8.52,
+      "pass": true,
+      "published": 8.52,
+      "quantity": "PYR",
+      "rashevsky": 8.523152463551924,
+      "tolerance": 0.01
+    },
+    {
+      "curated_model": 0.17,
+      "pass": true,
+      "published": 0.17,
+      "quantity": "ACE",
+      "rashevsky": 0.170114451613503,
+      "tolerance": 0.01
+    },
+    {
+      "curated_model": 2.51,
+      "pass": true,
+      "published": 2.51,
+      "quantity": "ATP",
+      "rashevsky": 2.508390624954272,
+      "tolerance": 0.01
+    },
+    {
+      "curated_model": 1.29,
+      "pass": true,
+      "published": 1.29,
+      "quantity": "ADP",
+      "rashevsky": 1.292100387862083,
+      "tolerance": 0.01
+    },
+    {
+      "curated_model": 0.3,
+      "pass": true,
+      "published": 0.3,
+      "quantity": "AMP",
+      "rashevsky": 0.29950898718364494,
+      "tolerance": 0.01
+    },
+    {
+      "curated_model": 1.55,
+      "pass": true,
+      "published": 1.55,
+      "quantity": "NAD",
+      "rashevsky": 1.5455597670249495,
+      "tolerance": 0.01
+    },
+    {
+      "curated_model": 0.04,
+      "pass": true,
+      "published": 0.04,
+      "quantity": "NADH",
+      "rashevsky": 0.04444023297505004,
+      "tolerance": 0.01
+    }
+  ],
+  "theorems": {
+    "BIOMD0000000061": {
+      "conserved_moieties": 5,
+      "pass": true,
+      "reactions": 24,
+      "residuals": {
+        "concentration_connectivity": 5.907024980682018e-13,
+        "concentration_kernel": 1.644906433284632e-12,
+        "concentration_summation": 1.5394469336236008e-14,
+        "flux_connectivity": 2.374881834646733e-14,
+        "flux_kernel": 1.9996245818058199e-13,
+        "flux_summation": 1.1324274851176597e-14,
+        "unscaled_concentration_connectivity": 1.6409784325673845e-09,
+        "unscaled_flux_connectivity": 8.795398600700883e-11
+      },
+      "states": 25,
+      "title": "Hynne 2001 yeast glycolysis",
+      "worst": 1.644906433284632e-12
+    },
+    "BIOMD0000000064": {
+      "conserved_moieties": 8,
+      "pass": true,
+      "reactions": 17,
+      "residuals": {
+        "concentration_connectivity": 1.579339698737499e-13,
+        "concentration_kernel": 2.6645352591003757e-15,
+        "concentration_summation": 2.5757174171303632e-14,
+        "flux_connectivity": 1.5801144759104862e-13,
+        "flux_kernel": 3.064215547965432e-14,
+        "flux_summation": 8.881784197001252e-15,
+        "unscaled_concentration_connectivity": 5.875318856475678e-12,
+        "unscaled_flux_connectivity": 4.121643994516162e-11
+      },
+      "states": 21,
+      "title": "Teusink 2000 yeast glycolysis",
+      "worst": 1.5801144759104862e-13
+    },
+    "BIOMD0000000071": {
+      "conserved_moieties": 4,
+      "pass": true,
+      "reactions": 14,
+      "residuals": {
+        "concentration_connectivity": 3.0798681233371324e-14,
+        "concentration_kernel": 2.7755575615628914e-16,
+        "concentration_summation": 1.887379141862766e-15,
+        "flux_connectivity": 8.756276426631596e-14,
+        "flux_kernel": 5.384581669432009e-15,
+        "flux_summation": 1.199040866595169e-14,
+        "unscaled_concentration_connectivity": 1.454640428774276e-12,
+        "unscaled_flux_connectivity": 2.0817659739531364e-11
+      },
+      "states": 16,
+      "title": "Bakker 2001 Trypanosoma glycolysis",
+      "worst": 8.756276426631596e-14
+    },
+    "BIOMD0000000172": {
+      "conserved_moieties": 10,
+      "pass": true,
+      "reactions": 19,
+      "residuals": {
+        "concentration_connectivity": 2.7073400493461025e-12,
+        "concentration_kernel": 6.828808658171318e-14,
+        "concentration_summation": 2.8571589538728404e-12,
+        "flux_connectivity": 2.200217901641886e-12,
+        "flux_kernel": 2.5380602071386966e-12,
+        "flux_summation": 2.327249504219253e-12,
+        "unscaled_concentration_connectivity": 9.935995454729462e-10,
+        "unscaled_flux_connectivity": 3.691497249305333e-08
+      },
+      "states": 25,
+      "title": "Pritchard and Kell 2002 yeast glycolysis",
+      "worst": 2.8571589538728404e-12
+    },
+    "BIOMD0000000176": {
+      "conserved_moieties": 10,
+      "pass": true,
+      "reactions": 19,
+      "residuals": {
+        "concentration_connectivity": 4.404430620867752e-12,
+        "concentration_kernel": 1.4688257154820663e-13,
+        "concentration_summation": 1.4299117445659704e-12,
+        "flux_connectivity": 5.80756507305083e-12,
+        "flux_kernel": 3.751832178267023e-12,
+        "flux_summation": 1.7683632336229493e-12,
+        "unscaled_concentration_connectivity": 5.817393621072164e-09,
+        "unscaled_flux_connectivity": 4.9820390162785205e-08
+      },
+      "states": 25,
+      "title": "Conant and Wolfe 2007 yeast glycolysis",
+      "worst": 5.80756507305083e-12
+    }
+  },
+  "worst_species": "NADH"
+}
