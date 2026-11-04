@@ -1,5 +1,6 @@
 //! Parsimonious FBA (Lewis et al. 2010): among fluxes keeping the objective at a fraction of its
 //! optimum, minimize the total absolute flux. Each reaction is split into forward and reverse parts.
+//! The solution's `objective` is that total, as in COBRApy, not the model's objective.
 
 use super::fba::FluxSolution;
 use crate::error::{Error, Result};
@@ -39,11 +40,9 @@ pub fn pfba_with(model: &Model, fraction: f64, backend: &dyn Backend) -> Result<
         coefs.push((j, c));
         coefs.push((n + j, -c));
     }
-    let (lo, hi) = match model.sense.unwrap_or(Sense::Maximize) {
-        Sense::Maximize => (fraction * optimum.objective, f64::INFINITY),
-        Sense::Minimize => (f64::NEG_INFINITY, optimum.objective / fraction.max(1e-300)),
-    };
-    p.add_row(lo, hi, coefs);
+    if let Some((lo, hi)) = super::retained_range(model.sense.unwrap_or(Sense::Maximize), optimum.objective, fraction) {
+        p.add_row(lo, hi, coefs);
+    }
     let mut session = backend.open(&p)?;
     let s = session.solve()?;
     if !s.is_optimal() {

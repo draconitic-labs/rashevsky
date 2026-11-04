@@ -50,13 +50,6 @@ pub struct Reaction {
     pub annotations: Vec<String>,
 }
 
-impl Reaction {
-    /// True if the reaction has exactly one metabolite, which is the form of boundary reactions.
-    pub fn is_boundary(&self) -> bool {
-        self.stoichiometry.len() == 1
-    }
-}
-
 /// A gene.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Gene {
@@ -287,9 +280,30 @@ impl Model {
             .collect()
     }
 
-    /// Exchange reactions: boundary reactions with an extracellular or boundary metabolite.
+    /// Coefficients of a reaction on metabolites that are balanced, leaving out boundary species.
+    fn balanced_terms(&self, j: usize) -> impl Iterator<Item = (usize, f64)> + '_ {
+        self.reactions[j].stoichiometry.iter().copied().filter(|&(i, _)| !self.metabolites[i].boundary)
+    }
+
+    /// True for a reaction that crosses the system's boundary: at most one balanced metabolite, whether
+    /// written `A <->` or through a boundary species as `A_b <-> A`.
+    pub fn is_boundary_reaction(&self, j: usize) -> bool {
+        self.balanced_terms(j).count() <= 1
+    }
+
+    /// The coefficient of an exchange reaction on its one balanced metabolite. Positive flux takes
+    /// metabolite up when this is positive.
+    pub fn exchange_coefficient(&self, j: usize) -> Option<f64> {
+        let mut terms = self.balanced_terms(j);
+        match (terms.next(), terms.next()) {
+            (Some((_, c)), None) => Some(c),
+            _ => None,
+        }
+    }
+
+    /// Exchange reactions: those with exactly one balanced metabolite.
     pub fn exchanges(&self) -> Vec<usize> {
-        self.reactions.iter().enumerate().filter(|(_, r)| r.is_boundary()).map(|(j, _)| j).collect()
+        (0..self.reactions.len()).filter(|&j| self.exchange_coefficient(j).is_some()).collect()
     }
 
     /// Size summary.

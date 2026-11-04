@@ -99,12 +99,13 @@ pub fn room_with(
     p.sense = Some(Sense::Minimize);
     let n = model.reactions.len();
     p.obj.iter_mut().for_each(|c| *c = 0.0);
+    let bounds = super::finite_bounds(model, backend)?;
     for j in 0..n {
         let w = reference[j];
         let wu = w + options.delta * w.abs() + options.epsilon;
         let wl = w - options.delta * w.abs() - options.epsilon;
         let y = p.add_col(1.0, 0.0, 1.0, !options.relax);
-        let (lb, ub) = (model.reactions[j].lb, model.reactions[j].ub);
+        let (lb, ub) = bounds[j];
         // y = 0 keeps v inside the band; y = 1 releases it to the reaction's bounds.
         p.add_row(f64::NEG_INFINITY, wu, vec![(j, 1.0), (y, -(ub - wu).max(0.0))]);
         p.add_row(wl, f64::INFINITY, vec![(j, 1.0), (y, (wl - lb).max(0.0))]);

@@ -83,6 +83,7 @@ pub fn tfa(model: &Model, data: &ThermoData, options: &TfaOptions) -> Result<Tfa
     let bound = |id: &str| -> (f64, f64) {
         data.concentration_bounds.get(id).copied().unwrap_or((options.c_min, options.c_max))
     };
+    let bounds = super::finite_bounds(model, lp::default_backend().as_ref())?;
     // Logarithm of concentration per metabolite that appears in a constrained reaction.
     let mut log_col: BTreeMap<usize, usize> = BTreeMap::new();
     let mut gibbs_col: BTreeMap<usize, usize> = BTreeMap::new();
@@ -110,7 +111,7 @@ pub fn tfa(model: &Model, data: &ThermoData, options: &TfaOptions) -> Result<Tfa
         coefs.push((error, 1.0));
         p.add_row(-energy.dg0, -energy.dg0, coefs);
         // Forward flux needs DrG' <= -eps, reverse flux needs DrG' >= eps.
-        let (lb, ub) = (r.lb, r.ub);
+        let (lb, ub) = bounds[j];
         let zf = p.add_col(0.0, 0.0, 1.0, true);
         let zr = p.add_col(0.0, 0.0, 1.0, true);
         p.add_row(f64::NEG_INFINITY, 0.0, vec![(j, 1.0), (zf, -ub.max(0.0))]);

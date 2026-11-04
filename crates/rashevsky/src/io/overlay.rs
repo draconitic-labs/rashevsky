@@ -196,7 +196,7 @@ pub fn build_overlay(
         let mut exact = false;
         let mut any = false;
         for resource in &r.annotations {
-            if let Some(id) = annotation_value(resource, "reactome")
+            if let Some(id) = annotation_value(resource, "reactome").or_else(|| annotation_value(resource, "reactome.reaction"))
                 && known.contains_key(id)
             {
                 tally.entry(id.to_string()).or_default().reactome.push(j);
@@ -230,11 +230,13 @@ pub fn build_overlay(
     }
     let mut events: BTreeMap<String, OverlayEvent> = BTreeMap::new();
     for (event, t) in tally {
-        let (kind, mut members) = if !t.reactome.is_empty() {
+        let carries = |list: &[usize]| list.iter().any(|&j| fluxes[j].abs() > 1e-9);
+        // An exact match reports alone unless it carries nothing and an EC match does.
+        let (kind, mut members) = if !t.reactome.is_empty() && (carries(&t.reactome) || carries(&t.rhea) || !carries(&t.ec)) {
             let mut m = t.reactome;
             m.extend(t.rhea);
             ("reactome", m)
-        } else if !t.rhea.is_empty() {
+        } else if !t.rhea.is_empty() && (carries(&t.rhea) || !carries(&t.ec)) {
             ("rhea", t.rhea)
         } else {
             ("ec", t.ec)
@@ -301,18 +303,19 @@ pub fn render_svg(scene: &Scene, overlay: &Overlay) -> String {
         );
     }
     // Reactions without flux first, so that flux draws on top.
+    // A drawn reaction shows its largest event, since one model reaction can sit on several events.
+    // The match type is that of the event that sets the value.
     let event_flux = |events: &[String]| -> Option<(f64, &str)> {
-        let mut total = 0.0;
-        let mut best: Option<&str> = None;
+        let mut best: Option<(f64, &str)> = None;
         for e in events {
-            if let Some(o) = overlay.events.get(e) {
-                total += o.flux;
-                if best.is_none() || o.match_type != "ec" {
-                    best = Some(o.match_type.as_str());
-                }
+            if let Some(o) = overlay.events.get(e)
+                && o.flux > 1e-9
+                && best.is_none_or(|(f, m)| o.flux > f || (o.flux == f && m == "ec" && o.match_type != "ec"))
+            {
+                best = Some((o.flux, o.match_type.as_str()));
             }
         }
-        best.filter(|_| total > 1e-9).map(|m| (total, m))
+        best
     };
     for pass in [false, true] {
         for r in &scene.reactions {

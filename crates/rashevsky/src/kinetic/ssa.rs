@@ -1,13 +1,17 @@
 //! Stochastic simulation of reaction networks at low copy numbers.
 //!
-//! [`Algorithm::Direct`] is Gillespie's exact direct method (1977). [`Algorithm::TauLeap`] is the
-//! adaptive explicit tau-leaping of Cao, Gillespie and Petzold (2006), with Poisson increments and a
-//! fallback to direct steps when few reactions are critical; it is an approximation whose error is
-//! set by `epsilon`. Rate rules on non-species symbols and events integrate with the exact trajectory
-//! between firings by a piecewise-constant approximation of the step, so models that use them are
-//! exact only as the propensities change slowly relative to the time between firings.
+//! [`Algorithm::Direct`] is Gillespie's direct method (1977), exact while propensities stay constant
+//! between firings. [`Algorithm::TauLeap`] is the explicit tau-leaping of Cao, Gillespie and Petzold
+//! (2006), an approximation whose error `epsilon` sets, with critical reactions and the step selection
+//! of their equations 32 and 33. Reaction orders for that selection come from the reactant
+//! stoichiometry, which is the true order for mass-action laws.
+//!
+//! A propensity that depends on the time or on a rate rule is held constant over a step of at most
+//! 1/2000 of the run, which makes such models approximate. Models outside what a propensity can
+//! describe are refused: negative or undefined rates, algebraic rules, `delay` and fast reactions.
+//! A reaction whose firing would leave a species below zero has propensity zero, whatever its law says.
 
-use super::compile::{Coef, KineticModel, NoDelay, eval};
+use super::compile::{Coef, KineticModel, NoDelay, Target, eval};
 use crate::error::{Error, Result};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -38,26 +42,12 @@ pub struct Ensemble {
     pub runs: usize,
 }
 
-struct Network {
-    /// Per reaction: `(state, change)`.
-    changes: Vec<Vec<(usize, f64)>>,
-}
-
-fn network(model: &KineticModel) -> Result<Network> {
-    let mut changes: Vec<Vec<(usize, f64)>> = vec![Vec::new(); model.reactions.len()];
-    for e in &model.stoich {
-        let coef = match e.coef {
-            Coef::Const(v) => v,
-            Coef::Slot(s) => model.initial[s],
-        };
-        let conv = e.conversion.map_or(1.0, |s| model.initial[s]);
-        match changes[e.reaction].iter_mut().find(|(s, _)| *s == e.state) {
-            Some(entry) => entry.1 += e.sign * coef * conv,
-            None => changes[e.reaction].push((e.state, e.sign * coef * conv)),
-        }
-    }
-    Ok(Network { changes })
-}
+/// A reaction is critical when fewer than this many firings would use up a reactant (Cao 2006, step 1).
+const CRITICAL_FIRINGS: f64 = 10.0;
+/// Below this many expected firings a leap gains nothing over direct steps (Cao 2006, step 3).
+const LEAP_MINIMUM: f64 = 10.0;
+/// Direct steps taken before a leap is considered again (Cao 2006, step 3).
+const DIRECT_BURST: usize = 100;
 
 fn poisson(rng: &mut ChaCha8Rng, mean: f64) -> f64 {
     if mean <= 0.0 {
@@ -127,29 +117,65 @@ fn ln_gamma(x: f64) -> f64 {
     0.5 * (2.0 * std::f64::consts::PI).ln() + (z + 0.5) * t.ln() - t + a.ln()
 }
 
+/// Reactants of a reaction at the current coefficients, with the molecules one firing takes.
+struct Reactant {
+    state: usize,
+    taken: f64,
+}
+
 struct Trajectory<'a> {
     model: &'a KineticModel,
-    net: &'a Network,
     y: Vec<f64>,
     vals: Vec<f64>,
     t: f64,
     triggers: Vec<bool>,
     pending: Vec<(usize, f64, Option<Vec<f64>>)>,
+    /// Per reaction: `(state, change per firing)`.
+    changes: Vec<Vec<(usize, f64)>>,
+    variable_stoichiometry: bool,
 }
 
 impl Trajectory<'_> {
     fn refresh(&mut self) {
         self.model.eval_state(self.t, &self.y, &mut self.vals, &NoDelay);
+        if self.variable_stoichiometry {
+            self.read_changes();
+        }
     }
 
-    fn propensities(&self, out: &mut [f64]) -> f64 {
+    fn read_changes(&mut self) {
+        for list in &mut self.changes {
+            list.clear();
+        }
+        for e in &self.model.stoich {
+            let coef = match e.coef {
+                Coef::Const(v) => v,
+                Coef::Slot(s) => self.vals[s],
+            };
+            let conversion = e.conversion.map_or(1.0, |s| self.vals[s]);
+            let list = &mut self.changes[e.reaction];
+            match list.iter_mut().find(|(s, _)| *s == e.state) {
+                Some(entry) => entry.1 += e.sign * coef * conversion,
+                None => list.push((e.state, e.sign * coef * conversion)),
+            }
+        }
+    }
+
+    fn propensities(&self, out: &mut [f64]) -> Result<f64> {
         let mut total = 0.0;
         for (j, r) in self.model.reactions.iter().enumerate() {
-            let a = self.vals[r.rate].max(0.0);
-            out[j] = if a.is_finite() { a } else { 0.0 };
+            let a = self.vals[r.rate];
+            if a.is_nan() || a < 0.0 || a.is_infinite() {
+                return Err(Error::Kinetic(format!(
+                    "reaction {} has propensity {a} at t = {}; stochastic simulation needs each direction written as its own reaction",
+                    r.id, self.t
+                )));
+            }
+            let possible = self.changes[j].iter().all(|&(s, c)| c >= 0.0 || self.y[s] + c >= -1e-9);
+            out[j] = if possible { a } else { 0.0 };
             total += out[j];
         }
-        total
+        Ok(total)
     }
 
     /// Advances rate rules by `dt` at the current values.
@@ -161,22 +187,34 @@ impl Trajectory<'_> {
     }
 
     fn fire(&mut self, j: usize, count: f64) {
-        for &(state, change) in &self.net.changes[j] {
+        for &(state, change) in &self.changes[j] {
             self.y[state] += change * count;
         }
     }
 
-    fn check_events(&mut self) {
+    /// Fires every trigger transition and executes what is due now, highest priority first and ties at
+    /// random, re-evaluating the triggers after each execution as SBML specifies.
+    fn check_events(&mut self, rng: &mut ChaCha8Rng) -> Result<()> {
         if self.model.events.is_empty() {
-            return;
+            return Ok(());
         }
         for _ in 0..1000 {
             self.refresh();
-            let current: Vec<bool> =
-                self.model.events.iter().map(|e| eval(&e.trigger, &self.vals, self.t, &NoDelay) != 0.0).collect();
+            let current: Vec<bool> = self
+                .model
+                .events
+                .iter()
+                .map(|e| {
+                    let v = eval(&e.trigger, &self.vals, self.t, &NoDelay);
+                    v != 0.0 && !v.is_nan()
+                })
+                .collect();
             for (k, e) in self.model.events.iter().enumerate() {
                 if current[k] && !self.triggers[k] {
                     let delay = e.delay.as_ref().map_or(0.0, |d| eval(d, &self.vals, self.t, &NoDelay));
+                    if delay < 0.0 || delay.is_nan() {
+                        return Err(Error::Kinetic(format!("event {} has delay {delay} at t = {}", e.id, self.t)));
+                    }
                     let values = e
                         .use_values_from_trigger_time
                         .then(|| e.assignments.iter().map(|(_, c)| eval(c, &self.vals, self.t, &NoDelay)).collect());
@@ -186,137 +224,250 @@ impl Trajectory<'_> {
                 }
             }
             self.triggers = current;
-            let Some(pos) = self.pending.iter().position(|p| p.1 <= self.t) else { return };
+            let mut best: Option<(usize, f64)> = None;
+            let mut ties = 1u32;
+            for (i, p) in self.pending.iter().enumerate() {
+                if p.1 <= self.t {
+                    let e = &self.model.events[p.0];
+                    let priority = e.priority.as_ref().map_or(f64::NEG_INFINITY, |c| eval(c, &self.vals, self.t, &NoDelay));
+                    match best {
+                        None => best = Some((i, priority)),
+                        Some((_, b)) if priority > b => {
+                            best = Some((i, priority));
+                            ties = 1;
+                        }
+                        Some((_, b)) if priority == b => {
+                            ties += 1;
+                            if rng.random_range(0..ties) == 0 {
+                                best = Some((i, priority));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            let Some((pos, _)) = best else { return Ok(()) };
             let (k, _, values) = self.pending.remove(pos);
             let e = &self.model.events[k];
             let values: Vec<f64> = values
                 .unwrap_or_else(|| e.assignments.iter().map(|(_, c)| eval(c, &self.vals, self.t, &NoDelay)).collect());
             for ((target, _), value) in e.assignments.iter().zip(values) {
                 match *target {
-                    super::compile::Target::State(i) => self.y[i] = value,
-                    super::compile::Target::Amount { state, compartment, hosu } => {
+                    Target::State(i) => self.y[i] = value,
+                    Target::Amount { state, compartment, hosu } => {
                         self.y[state] = if hosu { value } else { value * self.vals[compartment] };
                     }
                 }
             }
         }
+        Err(Error::Kinetic(format!("the events did not settle at t = {}", self.t)))
+    }
+
+    /// Reactants of each reaction, from the current change vectors.
+    fn reactants(&self) -> Vec<Vec<Reactant>> {
+        self.changes
+            .iter()
+            .map(|list| list.iter().filter(|(_, c)| *c < 0.0).map(|&(state, c)| Reactant { state, taken: -c }).collect())
+            .collect()
     }
 }
 
-/// Largest step for tau-leaping (Cao, Gillespie and Petzold 2006, equation 8), treating all
-/// reactant species as of first order for the highest-order bound `g = 2`.
-fn leap_size(model: &KineticModel, net: &Network, y: &[f64], a: &[f64], epsilon: f64) -> f64 {
+/// `g_i` of Cao et al. (2006), equation 27: the bound on a propensity's relative change per unit
+/// relative change of species `i`, set by the highest-order reaction taking `i` as a reactant.
+fn relative_change_bound(order: f64, taken: f64, x: f64) -> f64 {
+    let lone = |v: f64| if v > 1.0 { 1.0 / v } else { 0.0 };
+    if order <= 1.0 {
+        1.0
+    } else if order <= 2.0 {
+        if taken >= 2.0 { 2.0 + lone(x - 1.0) } else { 2.0 }
+    } else if taken >= 3.0 {
+        3.0 + lone(x - 1.0) + 2.0 * lone(x - 2.0)
+    } else if taken >= 2.0 {
+        1.5 * (2.0 + lone(x - 1.0))
+    } else {
+        3.0
+    }
+}
+
+/// The leap `tau'` of equation 33, over non-critical reactions and their reactant species.
+fn leap_size(y: &[f64], reactants: &[Vec<Reactant>], changes: &[Vec<(usize, f64)>], a: &[f64], critical: &[bool], epsilon: f64) -> f64 {
     let n = y.len();
     let mut mu = vec![0.0; n];
     let mut sigma = vec![0.0; n];
-    for (j, changes) in net.changes.iter().enumerate() {
-        for &(s, c) in changes {
+    for (j, list) in changes.iter().enumerate() {
+        if critical[j] || a[j] == 0.0 {
+            continue;
+        }
+        for &(s, c) in list {
             mu[s] += c * a[j];
             sigma[s] += c * c * a[j];
         }
     }
+    let mut highest = vec![(0.0f64, 0.0f64); n];
+    for list in reactants {
+        let order: f64 = list.iter().map(|r| r.taken).sum();
+        for r in list {
+            let entry = &mut highest[r.state];
+            if order > entry.0 || (order == entry.0 && r.taken > entry.1) {
+                *entry = (order, r.taken);
+            }
+        }
+    }
     let mut tau = f64::INFINITY;
-    let _ = model;
     for s in 0..n {
-        if sigma[s] == 0.0 {
+        let (order, taken) = highest[s];
+        if order == 0.0 || sigma[s] == 0.0 {
             continue;
         }
-        let bound = (epsilon * y[s].abs() / 2.0).max(1.0);
+        let g = relative_change_bound(order, taken, y[s]);
+        let bound = (epsilon * y[s].abs() / g).max(1.0);
         tau = tau.min(bound / mu[s].abs().max(1e-300)).min(bound * bound / sigma[s]);
     }
     tau
 }
 
-fn realize(
-    model: &KineticModel,
-    net: &Network,
-    times: &[f64],
+/// Settings of one realization.
+struct Plan<'a> {
+    times: &'a [f64],
     algorithm: Algorithm,
-    seed: u64,
-    out: &mut [Vec<f64>],
-) -> Result<()> {
+    thresholds: &'a [f64],
+    /// Longest step over which propensities are held constant.
+    bound: f64,
+}
+
+/// Records every output time at or before the current time; true once all of them are recorded.
+fn record(traj: &mut Trajectory<'_>, times: &[f64], next: &mut usize, out: &mut [Vec<f64>]) -> bool {
+    while *next < times.len() && times[*next] <= traj.t {
+        traj.refresh();
+        out[*next].copy_from_slice(&traj.vals);
+        *next += 1;
+    }
+    *next >= times.len()
+}
+
+fn direct_step(traj: &mut Trajectory<'_>, a: &[f64], total: f64, stop_at: f64, rng: &mut ChaCha8Rng) {
+    let dt = if total > 0.0 { -(1.0 - rng.random::<f64>()).ln() / total } else { f64::INFINITY };
+    if traj.t + dt >= stop_at {
+        // The waiting time is memoryless, so nothing fires before the stop.
+        traj.advance_rules(stop_at - traj.t);
+        traj.t = stop_at;
+        return;
+    }
+    traj.advance_rules(dt);
+    traj.t += dt;
+    let mut pick = rng.random::<f64>() * total;
+    let mut chosen = None;
+    for (j, &rate) in a.iter().enumerate() {
+        if rate > 0.0 {
+            chosen = Some(j);
+            if pick < rate {
+                break;
+            }
+            pick -= rate;
+        }
+    }
+    if let Some(j) = chosen {
+        traj.fire(j, 1.0);
+    }
+}
+
+/// One leap by steps 2 to 6 of Cao et al. (2006). Returns false when direct steps should be used.
+fn leap(traj: &mut Trajectory<'_>, a: &[f64], total: f64, stop_at: f64, epsilon: f64, rng: &mut ChaCha8Rng) -> bool {
+    let reactants = traj.reactants();
+    let critical: Vec<bool> = reactants
+        .iter()
+        .zip(a)
+        .map(|(list, &rate)| {
+            rate > 0.0 && list.iter().map(|r| (traj.y[r.state] / r.taken).floor()).fold(f64::INFINITY, f64::min) < CRITICAL_FIRINGS
+        })
+        .collect();
+    let mut tau_noncritical = leap_size(&traj.y, &reactants, &traj.changes, a, &critical, epsilon);
+    let critical_total: f64 = a.iter().zip(&critical).filter(|&(_, c)| *c).map(|(r, _)| r).sum();
+    let snapshot = traj.y.clone();
+    loop {
+        if tau_noncritical * total < LEAP_MINIMUM {
+            return false;
+        }
+        let tau_critical = if critical_total > 0.0 { -(1.0 - rng.random::<f64>()).ln() / critical_total } else { f64::INFINITY };
+        let remaining = stop_at - traj.t;
+        let tau = tau_noncritical.min(tau_critical).min(remaining);
+        for (j, &rate) in a.iter().enumerate() {
+            if !critical[j] && rate > 0.0 {
+                let count = poisson(rng, rate * tau);
+                traj.fire(j, count);
+            }
+        }
+        if tau_critical <= tau {
+            let mut pick = rng.random::<f64>() * critical_total;
+            let mut chosen = None;
+            for (j, &rate) in a.iter().enumerate() {
+                if critical[j] && rate > 0.0 {
+                    chosen = Some(j);
+                    if pick < rate {
+                        break;
+                    }
+                    pick -= rate;
+                }
+            }
+            if let Some(j) = chosen {
+                traj.fire(j, 1.0);
+            }
+        }
+        // Only species are bound below by zero; parameters with rate rules may be negative.
+        let negative = reactants.iter().flatten().any(|r| traj.y[r.state] < -1e-9);
+        if !negative {
+            traj.advance_rules(tau);
+            traj.t += tau;
+            return true;
+        }
+        traj.y.clone_from(&snapshot);
+        tau_noncritical *= 0.5;
+    }
+}
+
+fn realize(model: &KineticModel, plan: &Plan<'_>, seed: u64, out: &mut [Vec<f64>]) -> Result<()> {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let mut traj = Trajectory {
         model,
-        net,
         y: model.initial_state(),
         vals: model.initial.clone(),
-        t: times[0],
+        t: 0.0,
         triggers: model.events.iter().map(|e| e.initial_value).collect(),
         pending: Vec::new(),
+        changes: vec![Vec::new(); model.reactions.len()],
+        variable_stoichiometry: model.has_varying_stoichiometry(),
     };
+    traj.vals.clone_from(&model.initial);
+    traj.read_changes();
     let mut a = vec![0.0; model.reactions.len()];
-    traj.check_events();
+    traj.check_events(&mut rng)?;
     let mut next_out = 0;
-    let t_end = times[times.len() - 1];
-    let has_rules = !model.rate_rules.is_empty();
-    // Rate rules and events change propensities between firings, so steps are bounded.
-    let bound = if has_rules || !model.events.is_empty() { (t_end - times[0]) / 2000.0 } else { f64::INFINITY };
+    if record(&mut traj, plan.times, &mut next_out, out) {
+        return Ok(());
+    }
+    let mut direct_left = 0usize;
     loop {
         traj.refresh();
-        let total = traj.propensities(&mut a);
-        let (dt, leap) = match algorithm {
-            Algorithm::Direct => {
-                let dt = if total > 0.0 { -(1.0 - rng.random::<f64>()).ln() / total } else { f64::INFINITY };
-                (dt, false)
-            }
-            Algorithm::TauLeap { epsilon } => {
-                let tau = leap_size(model, net, &traj.y, &a, epsilon);
-                if total > 0.0 && tau * total > 10.0 {
-                    (tau, true)
-                } else {
-                    let dt = if total > 0.0 { -(1.0 - rng.random::<f64>()).ln() / total } else { f64::INFINITY };
-                    (dt, false)
-                }
-            }
-        };
+        let total = traj.propensities(&mut a)?;
         let next_pending = traj.pending.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
-        let stop_at = times[next_out].min(next_pending).min(traj.t + bound);
-        if traj.t + dt >= stop_at {
-            // No firing before the next stop.
-            traj.advance_rules(stop_at - traj.t);
-            traj.t = stop_at;
-            traj.check_events();
-            while next_out < times.len() && times[next_out] <= traj.t {
-                traj.refresh();
-                out[next_out].copy_from_slice(&traj.vals);
-                next_out += 1;
+        let threshold = plan.thresholds.iter().copied().find(|&t| t > traj.t).unwrap_or(f64::INFINITY);
+        let stop_at = plan.times[next_out].min(next_pending).min(threshold).min(traj.t + plan.bound);
+        match plan.algorithm {
+            Algorithm::Direct => direct_step(&mut traj, &a, total, stop_at, &mut rng),
+            Algorithm::TauLeap { epsilon } => {
+                if direct_left > 0 {
+                    direct_left -= 1;
+                    direct_step(&mut traj, &a, total, stop_at, &mut rng);
+                } else if total == 0.0 || !leap(&mut traj, &a, total, stop_at, epsilon, &mut rng) {
+                    direct_left = DIRECT_BURST - 1;
+                    direct_step(&mut traj, &a, total, stop_at, &mut rng);
+                }
             }
-            if next_out >= times.len() {
-                return Ok(());
-            }
-            continue;
         }
-        traj.advance_rules(dt);
-        traj.t += dt;
-        if leap {
-            // Poisson increments, halving the leap when an amount would turn negative.
-            let snapshot = traj.y.clone();
-            let mut tau = dt;
-            loop {
-                for (j, &rate) in a.iter().enumerate() {
-                    let count = poisson(&mut rng, rate * tau);
-                    traj.fire(j, count);
-                }
-                if traj.y.iter().all(|&v| v >= -1e-9) {
-                    break;
-                }
-                traj.y.clone_from(&snapshot);
-                tau *= 0.5;
-            }
-        } else {
-            let mut pick = rng.random::<f64>() * total;
-            let mut chosen = a.len() - 1;
-            for (j, &rate) in a.iter().enumerate() {
-                if pick < rate {
-                    chosen = j;
-                    break;
-                }
-                pick -= rate;
-            }
-            traj.fire(chosen, 1.0);
+        traj.check_events(&mut rng)?;
+        if record(&mut traj, plan.times, &mut next_out, out) {
+            return Ok(());
         }
-        traj.check_events();
     }
 }
 
@@ -328,7 +479,32 @@ pub fn ensemble(model: &KineticModel, times: &[f64], runs: usize, algorithm: Alg
     if times.is_empty() || runs == 0 {
         return Err(Error::Invalid("an ensemble needs output times and at least one run".into()));
     }
-    let net = network(model)?;
+    if times[0] < 0.0 || times.windows(2).any(|w| w[1] < w[0]) {
+        return Err(Error::Invalid("output times must not be negative or decrease".into()));
+    }
+    if !model.algebraic.is_empty() {
+        return Err(Error::Kinetic("stochastic simulation does not cover algebraic rules".into()));
+    }
+    if model.has_delay {
+        return Err(Error::Kinetic("stochastic simulation does not cover delay".into()));
+    }
+    if model.has_fast() {
+        return Err(Error::Kinetic("stochastic simulation does not cover fast reactions".into()));
+    }
+    if let Algorithm::TauLeap { epsilon } = algorithm
+        && !(epsilon > 0.0 && epsilon < 1.0)
+    {
+        return Err(Error::Invalid("the tau-leaping epsilon must lie between 0 and 1".into()));
+    }
+    let end = times[times.len() - 1];
+    let continuous = model.reads_time() || !model.rate_rules.is_empty();
+    let thresholds = model.time_thresholds();
+    let plan = Plan {
+        times,
+        algorithm,
+        thresholds: &thresholds,
+        bound: if continuous && end > 0.0 { end / 2000.0 } else { f64::INFINITY },
+    };
     let slots = model.symbols.len();
     let ids: Vec<u64> = (0..runs as u64).collect();
     let chunk = crate::parallel::chunk_size(runs).max(1);
@@ -339,14 +515,7 @@ pub fn ensemble(model: &KineticModel, times: &[f64], runs: usize, algorithm: Alg
         let mut sample = vec![vec![0.0; slots]; times.len()];
         let mut count = 0.0;
         for &id in slice {
-            realize(
-                model,
-                &net,
-                times,
-                algorithm,
-                seed.wrapping_add(id.wrapping_mul(0x9E37_79B9_7F4A_7C15)),
-                &mut sample,
-            )?;
+            realize(model, &plan, seed.wrapping_add(id.wrapping_mul(0x9E37_79B9_7F4A_7C15)), &mut sample)?;
             count += 1.0;
             for k in 0..times.len() {
                 for s in 0..slots {

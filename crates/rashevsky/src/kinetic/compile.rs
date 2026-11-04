@@ -246,6 +246,117 @@ pub struct KineticModel {
     pub state_names: Vec<String>,
 }
 
+/// True when an expression reads the simulation time.
+fn reads_time(c: &C) -> bool {
+    match c {
+        C::Num(_) | C::Slot(_) => false,
+        C::Time => true,
+        C::Ap(_, args) => args.iter().any(reads_time),
+        C::Piece(pieces, otherwise) => {
+            pieces.iter().any(|(v, w)| reads_time(v) || reads_time(w)) || otherwise.as_ref().is_some_and(|o| reads_time(o))
+        }
+        C::Delay(x, lag) => reads_time(x) || reads_time(lag),
+    }
+}
+
+/// True when an expression reads none of `varying` and not the time, so its value never changes.
+fn is_fixed(c: &C, varying: &HashSet<usize>) -> bool {
+    match c {
+        C::Num(_) => true,
+        C::Slot(s) => !varying.contains(s),
+        C::Time | C::Delay(..) => false,
+        C::Ap(_, args) => args.iter().all(|a| is_fixed(a, varying)),
+        C::Piece(pieces, otherwise) => {
+            pieces.iter().all(|(v, w)| is_fixed(v, varying) && is_fixed(w, varying))
+                && otherwise.as_ref().is_none_or(|o| is_fixed(o, varying))
+        }
+    }
+}
+
+/// Collects the fixed values that the time is compared with.
+fn collect_thresholds(c: &C, varying: &HashSet<usize>, initial: &[f64], out: &mut Vec<f64>) {
+    match c {
+        C::Num(_) | C::Slot(_) | C::Time => {}
+        C::Ap(op, args) => {
+            if matches!(op, Op::Gt | Op::Lt | Op::Geq | Op::Leq)
+                && let [a, b] = args.as_slice()
+            {
+                let other = match (a, b) {
+                    (C::Time, other) | (other, C::Time) => Some(other),
+                    _ => None,
+                };
+                if let Some(other) = other
+                    && is_fixed(other, varying)
+                {
+                    out.push(eval(other, initial, 0.0, &NoDelay));
+                }
+            }
+            for a in args {
+                collect_thresholds(a, varying, initial, out);
+            }
+        }
+        C::Piece(pieces, otherwise) => {
+            for (v, w) in pieces {
+                collect_thresholds(v, varying, initial, out);
+                collect_thresholds(w, varying, initial, out);
+            }
+            if let Some(o) = otherwise {
+                collect_thresholds(o, varying, initial, out);
+            }
+        }
+        C::Delay(x, lag) => {
+            collect_thresholds(x, varying, initial, out);
+            collect_thresholds(lag, varying, initial, out);
+        }
+    }
+}
+
+impl KineticModel {
+    /// Slots whose values change during a simulation.
+    pub fn varying_slots(&self) -> HashSet<usize> {
+        let mut varying: HashSet<usize> = self.state_slots.iter().copied().collect();
+        // Derived slots in dependency order, so a slot computed from fixed values stays fixed.
+        for (slot, c) in &self.derived {
+            if !is_fixed(c, &varying) {
+                varying.insert(*slot);
+            }
+        }
+        varying
+    }
+
+    /// Whether any rate, rule or trigger reads the time, so that behaviour changes between firings.
+    pub fn reads_time(&self) -> bool {
+        self.derived.iter().any(|(_, c)| reads_time(c))
+            || self.rate_rules.iter().any(|(_, c)| reads_time(c))
+            || self.events.iter().any(|e| reads_time(&e.trigger))
+    }
+
+    /// Positive times at which a comparison with the time changes value, in increasing order. Rates can
+    /// jump there, so integration stops on them instead of stepping across.
+    pub fn time_thresholds(&self) -> Vec<f64> {
+        let varying = self.varying_slots();
+        let mut found = Vec::new();
+        for (_, c) in self.derived.iter().chain(&self.rate_rules).chain(&self.algebraic) {
+            collect_thresholds(c, &varying, &self.initial, &mut found);
+        }
+        for e in &self.events {
+            collect_thresholds(&e.trigger, &varying, &self.initial, &mut found);
+        }
+        found.retain(|t| t.is_finite() && *t > 0.0);
+        found.sort_by(f64::total_cmp);
+        found.dedup();
+        found
+    }
+
+    /// Stoichiometric coefficients or conversion factors that change during a simulation, by reaction.
+    pub fn has_varying_stoichiometry(&self) -> bool {
+        let varying = self.varying_slots();
+        self.stoich.iter().any(|e| {
+            matches!(e.coef, Coef::Slot(s) if varying.contains(&s)) || e.conversion.is_some_and(|s| varying.contains(&s))
+        })
+    }
+}
+
 const NODE_LIMIT: usize = 4_000_000;
 
 /// Fast reactions run at this multiple of their law, a singular-perturbation stand-in for rapid

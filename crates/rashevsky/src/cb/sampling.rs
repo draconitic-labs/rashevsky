@@ -214,7 +214,8 @@ struct Polytope {
     /// `equalities x free`, right-hand side from the fixed reactions.
     eq: DMatrix<f64>,
     eq_rhs: DVector<f64>,
-    /// Extra inequality on the objective: `coefs . v >= value`, when requested.
+    /// Extra inequality on the objective over free reactions, `coefs . v >= value`, with signs set so
+    /// that it holds for either sense, when requested.
     objective_row: Option<(Vec<f64>, f64)>,
 }
 
@@ -264,29 +265,36 @@ fn build_polytope(model: &Model, fraction: Option<f64>, backend: &dyn lp::Backen
     rows.sort_unstable();
     let eq_ind = DMatrix::from_fn(rows.len(), free.len(), |a, b| eq[(rows[a], b)]);
     let rhs_ind = DVector::from_iterator(rows.len(), rows.iter().map(|&a| rhs[a]));
-    let objective_row = fraction.map(|f| {
-        let lp_problem = model.to_lp();
-        let mut c = vec![0.0; free.len()];
-        for (k, &j) in free.iter().enumerate() {
-            c[k] = lp_problem.obj[j];
+    let mut objective_row = None;
+    if let Some(f) = fraction {
+        let optimum = super::fba::fba_with(model, backend)?;
+        if optimum.status != lp::Status::Optimal {
+            return Err(Error::Solver(format!("FBA status {:?}", optimum.status)));
         }
-        (c, f)
-    });
+        let sense = model.sense.unwrap_or(lp::Sense::Maximize);
+        if let Some((low, high)) = super::retained_range(sense, optimum.objective, f) {
+            let c = model.objective_vector();
+            let fixed_part: f64 = (0..n).filter(|&j| fixed[j].is_finite()).map(|j| c[j] * fixed[j]).sum();
+            let (sign, limit) = if sense == lp::Sense::Maximize { (1.0, low) } else { (-1.0, -high) };
+            let coefs: Vec<f64> = free.iter().map(|&j| sign * c[j]).collect();
+            objective_row = Some((coefs, limit - sign * fixed_part));
+        }
+    }
     Ok(Polytope { free, fixed, lb, ub, eq: eq_ind, eq_rhs: rhs_ind, objective_row })
 }
 
-/// Orthonormal basis of the null space by singular value decomposition.
+/// Orthonormal basis of the null space, from the same elimination that picks the independent rows,
+/// so that the two agree on what counts as zero.
 fn orthonormal_nullspace(a: &DMatrix<f64>) -> DMatrix<f64> {
     let n = a.ncols();
     if a.nrows() == 0 {
         return DMatrix::identity(n, n);
     }
-    // The null space of `A` is the eigenspace of zero for `A' A`.
-    let ata = a.transpose() * a;
-    let eig = ata.symmetric_eigen();
-    let scale = eig.eigenvalues.iter().fold(0.0f64, |m, v| m.max(v.abs())).max(1e-300);
-    let keep: Vec<usize> = (0..n).filter(|&k| eig.eigenvalues[k].abs() < 1e-11 * scale).collect();
-    DMatrix::from_fn(n, keep.len(), |i, k| eig.eigenvectors[(i, keep[k])])
+    let basis = crate::linalg::nullspace(a, 1e-10);
+    if basis.ncols() == 0 {
+        return basis;
+    }
+    basis.qr().q()
 }
 
 /// A point in the interior: the centre of the largest inscribed ball, from a linear program.
@@ -360,16 +368,7 @@ pub fn chrr(model: &Model, options: &SamplerOptions) -> Result<FluxSamples> {
         return Err(Error::Invalid("the flux polytope has dimension zero".into()));
     }
     let objective_coefs = pt.objective_row.as_ref().map(|(c, _)| DVector::from_column_slice(c));
-    let objective_floor = match (&pt.objective_row, options.fraction_of_optimum) {
-        (Some(_), Some(f)) => {
-            let fba = super::fba::fba_with(model, backend.as_ref())?;
-            let c = model.objective_vector();
-            let fixed_part: f64 =
-                (0..model.reactions.len()).filter(|&j| pt.fixed[j].is_finite()).map(|j| c[j] * pt.fixed[j]).sum();
-            Some(f * fba.objective - fixed_part)
-        }
-        _ => None,
-    };
+    let objective_floor = pt.objective_row.as_ref().map(|(_, value)| *value);
 
     let floor = match (&objective_coefs, objective_floor) {
         (Some(c), Some(value)) => Some((c, value)),
@@ -492,8 +491,10 @@ pub fn optgp(model: &Model, options: &SamplerOptions) -> Result<FluxSamples> {
     let mut problem = model.to_lp();
     if let Some(f) = options.fraction_of_optimum {
         let optimum = super::fba::fba_with(model, backend.as_ref())?.objective;
-        let coefs: Vec<(usize, f64)> = model.objective.clone();
-        problem.add_row(f * optimum, f64::INFINITY, coefs);
+        let sense = model.sense.unwrap_or(lp::Sense::Maximize);
+        if let Some((low, high)) = super::retained_range(sense, optimum, f) {
+            problem.add_row(low, high, model.objective.clone());
+        }
     }
     problem.obj.iter_mut().for_each(|c| *c = 0.0);
     let targets: Vec<usize> = pt.free.clone();
@@ -522,9 +523,36 @@ pub fn optgp(model: &Model, options: &SamplerOptions) -> Result<FluxSamples> {
     if warmup.len() < 2 {
         return Err(Error::Solver("no warmup points were found".into()));
     }
-    let center = warmup.iter().fold(DVector::zeros(n_free), |acc, p| acc + p) / warmup.len() as f64;
     let n = orthonormal_nullspace(&pt.eq);
     let d = n.ncols();
+    // Moves run along warmup directions, so the warmups must span the polytope. Vertices of single
+    // reactions can all lie on one face; vertices of random objectives leave it.
+    let span = |points: &[DVector<f64>]| -> usize {
+        let center = points.iter().fold(DVector::zeros(n_free), |acc, p| acc + p) / points.len() as f64;
+        let rows = DMatrix::from_fn(points.len(), n_free, |i, k| points[i][k] - center[k]);
+        (rows * &n).rank(1e-7)
+    };
+    if span(&warmup) < d {
+        let mut rng = ChaCha8Rng::seed_from_u64(options.seed.wrapping_add(1_000));
+        let mut session = backend.open(&problem)?;
+        let mut obj = vec![0.0; problem.n_cols()];
+        for _ in 0..(4 * d).max(16) {
+            for &j in &pt.free {
+                obj[j] = rng.random::<f64>() - 0.5;
+            }
+            session.set_objective(Sense::Maximize, &obj)?;
+            let s = session.solve()?;
+            if s.is_optimal() {
+                warmup.push(DVector::from_iterator(n_free, pt.free.iter().map(|&k| s.x[k])));
+            }
+        }
+        let found = span(&warmup);
+        if found < d {
+            return Err(Error::Solver(format!("the warmup points span {found} of {d} dimensions, so OptGP cannot reach the whole polytope")));
+        }
+    }
+    let center = warmup.iter().fold(DVector::zeros(n_free), |acc, p| acc + p) / warmup.len() as f64;
+    let floor_row = pt.objective_row.as_ref().map(|(c, value)| (DVector::from_column_slice(c), *value));
     let x0: DVector<f64> = if pt.eq.nrows() == 0 {
         DVector::zeros(n_free)
     } else {
@@ -538,6 +566,7 @@ pub fn optgp(model: &Model, options: &SamplerOptions) -> Result<FluxSamples> {
     let n_rxn = model.reactions.len();
     let warmup = &warmup;
     let center = &center;
+    let floor_row = &floor_row;
     let chains: Vec<Vec<Vec<f64>>> = crate::parallel::map_chunks(&ids, 1, |slice| {
         let mut rng = ChaCha8Rng::seed_from_u64(options.seed.wrapping_add(2_000 + slice[0] as u64));
         // Every chain starts at the centre and is pushed off along one warmup direction.
@@ -559,6 +588,17 @@ pub fn optgp(model: &Model, options: &SamplerOptions) -> Result<FluxSamples> {
                         let (tl, th) = if t1 < t2 { (t1, t2) } else { (t2, t1) };
                         lo = lo.max(tl);
                         hi = hi.min(th);
+                    }
+                }
+                if let Some((coefs, value)) = &floor_row {
+                    let slope = coefs.dot(&unit);
+                    if slope.abs() > 1e-13 {
+                        let t = (value - coefs.dot(&v)) / slope;
+                        if slope > 0.0 {
+                            lo = lo.max(t);
+                        } else {
+                            hi = hi.min(t);
+                        }
                     }
                 }
                 if hi > lo {

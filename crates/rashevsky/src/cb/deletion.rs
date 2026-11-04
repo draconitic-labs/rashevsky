@@ -15,7 +15,7 @@ pub struct Deletion {
     pub ids: Vec<String>,
     /// Solver status.
     pub status: Status,
-    /// Objective value; 0 when the deletion makes the model infeasible.
+    /// Objective value; 0 when the deletion makes the model infeasible, infinite when it is unbounded.
     pub growth: f64,
 }
 
@@ -26,6 +26,7 @@ fn solve_with_disabled(model: &Model, session: &mut dyn Session, disabled: &[usi
     let s = session.solve()?;
     let result = match s.status {
         Status::Optimal => (s.status, s.objective),
+        Status::Unbounded => (s.status, f64::INFINITY),
         other => (other, 0.0),
     };
     for &j in disabled {
@@ -123,6 +124,10 @@ pub fn double_reaction_deletion(model: &Model, reactions: Option<&[usize]>) -> R
 
 /// Synthetic lethal gene pairs: each single deletion leaves growth above `threshold`, the pair does not.
 pub fn synthetic_lethal_genes(model: &Model, threshold: f64) -> Result<Vec<Deletion>> {
+    let baseline = super::fba::fba(model)?;
+    if baseline.status != Status::Optimal {
+        return Err(crate::error::Error::Solver(format!("the model before deletions ended with {:?}", baseline.status)));
+    }
     let singles = single_gene_deletion(model, None)?;
     let viable: Vec<usize> = singles.iter().enumerate().filter(|(_, d)| d.growth > threshold).map(|(g, _)| g).collect();
     let doubles = double_gene_deletion(model, Some(&viable))?;

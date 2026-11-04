@@ -79,7 +79,7 @@ fn loops_are_removed_while_exchanges_stay() {
     let plain = cb::fba(&m).unwrap();
     let free = cb::cycle_free(&m, &plain.fluxes).unwrap();
     for (j, r) in m.reactions.iter().enumerate() {
-        if r.is_boundary() {
+        if m.is_boundary_reaction(j) {
             assert!((free[j] - plain.fluxes[j]).abs() < 1e-9, "{}", r.id);
         }
         assert!(free[j].abs() <= plain.fluxes[j].abs() + 1e-9, "{}", r.id);

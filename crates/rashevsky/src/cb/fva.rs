@@ -44,6 +44,11 @@ pub(crate) fn retained_problem(model: &Model, backend: &dyn Backend, fraction: f
         return Err(Error::Invalid("fraction_of_optimum must lie in [0, 1]".into()));
     }
     let mut problem = model.to_lp();
+    if fraction == 0.0 {
+        // Nothing is retained, so the objective need not even have an optimum.
+        problem.obj.iter_mut().for_each(|c| *c = 0.0);
+        return Ok((problem, f64::NAN));
+    }
     let optimum = {
         let mut session = backend.open(&problem)?;
         let s = session.solve()?;
@@ -56,11 +61,9 @@ pub(crate) fn retained_problem(model: &Model, backend: &dyn Backend, fraction: f
         problem.obj.iter().enumerate().filter(|(_, c)| **c != 0.0).map(|(j, c)| (j, *c)).collect();
     // No slack is added: some fluxes respond to the objective ~1000-fold (ICDHyr in e_coli_core
     // moves 920 flux units per unit of growth), so even 1e-9 of slack is visible at 1e-6.
-    let (lb, ub) = match model.sense.unwrap_or(Sense::Maximize) {
-        Sense::Maximize => (fraction * optimum, f64::INFINITY),
-        Sense::Minimize => (f64::NEG_INFINITY, optimum / fraction.max(1e-300)),
-    };
-    problem.add_row(lb, ub, coefs);
+    if let Some((lb, ub)) = super::retained_range(model.sense.unwrap_or(Sense::Maximize), optimum, fraction) {
+        problem.add_row(lb, ub, coefs);
+    }
     problem.obj.iter_mut().for_each(|c| *c = 0.0);
     Ok((problem, optimum))
 }

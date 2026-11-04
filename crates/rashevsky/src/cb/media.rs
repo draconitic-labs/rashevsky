@@ -13,7 +13,7 @@ pub fn medium(model: &Model) -> BTreeMap<String, f64> {
     let mut out = BTreeMap::new();
     for j in model.exchanges() {
         let r = &model.reactions[j];
-        let coef = r.stoichiometry[0].1;
+        let coef = model.exchange_coefficient(j).unwrap_or(-1.0);
         let limit = if coef < 0.0 { -r.lb } else { r.ub };
         if limit > 0.0 {
             out.insert(r.id.clone(), limit);
@@ -28,9 +28,10 @@ pub fn set_medium(model: &mut Model, uptake: &BTreeMap<String, f64>) -> Result<(
         model.reaction_index(id)?;
     }
     for j in model.exchanges() {
+        let coef = model.exchange_coefficient(j).unwrap_or(-1.0);
         let r = &mut model.reactions[j];
         let limit = uptake.get(&r.id).copied().unwrap_or(0.0);
-        if r.stoichiometry[0].1 < 0.0 {
+        if coef < 0.0 {
             r.lb = -limit;
         } else {
             r.ub = limit;
@@ -61,7 +62,7 @@ pub fn minimal_medium(model: &Model, min_growth: f64, minimize_components: bool)
     // Uptake variable u >= -(sign) v for every exchange.
     let mut uptake_cols = Vec::with_capacity(exchanges.len());
     for &j in &exchanges {
-        let sign = model.reactions[j].stoichiometry[0].1.signum();
+        let sign = model.exchange_coefficient(j).unwrap_or(-1.0).signum();
         let limit = if sign < 0.0 { -model.reactions[j].lb } else { model.reactions[j].ub };
         let u = p.add_col(1.0, 0.0, limit.max(0.0), false);
         // Uptake is flux in the direction that adds metabolite: u >= sign * v.

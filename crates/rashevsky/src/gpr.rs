@@ -85,17 +85,20 @@ enum Token {
 }
 
 fn tokenize(text: &str) -> Vec<Token> {
-    let spaced = text.replace('(', " ( ").replace(')', " ) ");
-    spaced
+    let spaced = text.replace('(', " ( ").replace(')', " ) ").replace('&', " & ").replace('|', " | ");
+    let mut tokens: Vec<Token> = spaced
         .split_whitespace()
         .map(|w| match w {
             "(" => Token::Open,
             ")" => Token::Close,
-            _ if w.eq_ignore_ascii_case("and") || w == "&&" || w == "&" => Token::And,
-            _ if w.eq_ignore_ascii_case("or") || w == "||" || w == "|" => Token::Or,
+            _ if w.eq_ignore_ascii_case("and") || w == "&" => Token::And,
+            _ if w.eq_ignore_ascii_case("or") || w == "|" => Token::Or,
             _ => Token::Id(w.to_string()),
         })
-        .collect()
+        .collect();
+    // `&&` and `||` arrive as doubled operators.
+    tokens.dedup_by(|a, b| matches!((a, b), (Token::And, Token::And) | (Token::Or, Token::Or)));
+    tokens
 }
 
 struct Parser<'a, F: FnMut(&str) -> usize> {

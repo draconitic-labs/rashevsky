@@ -232,13 +232,20 @@ fn evaluate(
                     vec![row]
                 }
             };
+            // A metabolite on both sides of an equation is one coefficient.
             for row in rows {
-                p.rows[row].push((col, coef));
+                match p.rows[row].iter_mut().find(|(c, _)| *c == col) {
+                    Some(entry) => entry.1 += coef,
+                    None => p.rows[row].push((col, coef)),
+                }
             }
         }
     }
     for (rid, lb, ub) in &task.changed {
-        let j = model.reaction_index(rid)?;
+        let j = match model.reaction_index(rid) {
+            Ok(j) => j,
+            Err(e) => return Ok(Err(e.to_string())),
+        };
         p.col_lb[j] = *lb;
         p.col_ub[j] = *ub;
     }
@@ -258,8 +265,8 @@ pub fn check_tasks(model: &Model, tasks: &[Task], close_boundaries: bool) -> Res
     base.obj.iter_mut().for_each(|c| *c = 0.0);
     base.sense = Some(Sense::Maximize);
     if close_boundaries {
-        for (j, r) in model.reactions.iter().enumerate() {
-            if r.stoichiometry.len() == 1 && r.stoichiometry[0].1.abs() == 1.0 {
+        for j in 0..model.reactions.len() {
+            if model.exchange_coefficient(j).is_some_and(|c| c.abs() == 1.0) {
                 base.col_lb[j] = 0.0;
                 base.col_ub[j] = 0.0;
             }

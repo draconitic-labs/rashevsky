@@ -56,7 +56,8 @@ pub fn model_view(model: &Model, curated_layout: bool) -> ModelView {
     let reactions = model
         .reactions
         .iter()
-        .map(|r| {
+        .enumerate()
+        .map(|(j, r)| {
             let mut gene_ids = Vec::new();
             r.gpr.genes(&mut gene_ids);
             gene_ids.sort_unstable();
@@ -81,7 +82,7 @@ pub fn model_view(model: &Model, curated_layout: bool) -> ModelView {
                 rule: r.gpr.to_rule(&|g| model.genes[g].id.clone()),
                 genes: gene_ids.iter().map(|&g| model.genes[g].id.clone()).collect(),
                 subsystem: r.subsystem.clone(),
-                boundary: r.is_boundary(),
+                boundary: model.is_boundary_reaction(j),
             }
         })
         .collect();
@@ -93,8 +94,8 @@ pub fn model_view(model: &Model, curated_layout: bool) -> ModelView {
         .collect();
     medium.sort_by(|a, b| b["limit"].as_f64().partial_cmp(&a["limit"].as_f64()).unwrap_or(std::cmp::Ordering::Equal));
     let (mut balanced, mut unknown, mut imbalanced) = (0, 0, 0);
-    for (j, r) in model.reactions.iter().enumerate() {
-        if r.is_boundary() {
+    for j in 0..model.reactions.len() {
+        if model.is_boundary_reaction(j) {
             continue;
         }
         match model.imbalance(j) {
@@ -147,7 +148,7 @@ pub fn computed_layout(model: &Model, reactions: &[usize]) -> Value {
         };
         entries.insert(
             r.id.clone(),
-            json!({"s": list(-1.0), "p": list(1.0), "m": [p.x, p.y], "boundary": r.is_boundary()}),
+            json!({"s": list(-1.0), "p": list(1.0), "m": [p.x, p.y], "boundary": model.is_boundary_reaction(p.index)}),
         );
     }
     json!({"world": [layout.width, layout.height], "nodes": nodes, "regions": [], "reactions": entries, "source": "force-directed"})

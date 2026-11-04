@@ -15,11 +15,11 @@ use nalgebra::DMatrix;
 
 /// Reactions that are not boundary reactions, by index.
 pub fn internal_reactions(model: &Model) -> Vec<usize> {
-    model.reactions.iter().enumerate().filter(|(_, r)| !r.is_boundary()).map(|(j, _)| j).collect()
+    (0..model.reactions.len()).filter(|&j| !model.is_boundary_reaction(j)).collect()
 }
 
 /// Adds the ll-FBA constraints to `p`. `big_m` bounds the fluxes and potentials used in the big-M rows.
-fn add_loopless_constraints(model: &Model, p: &mut Problem, big_m: f64) {
+fn add_loopless_constraints(model: &Model, p: &mut Problem, big_m: f64, bounds: &[(f64, f64)]) {
     let internal = internal_reactions(model);
     let mut s = DMatrix::<f64>::zeros(model.metabolites.len(), internal.len());
     for (k, &j) in internal.iter().enumerate() {
@@ -36,7 +36,7 @@ fn add_loopless_constraints(model: &Model, p: &mut Problem, big_m: f64) {
         let g = p.add_col(0.0, -big_m, big_m, false);
         g_cols.push(g);
         // a = 1 -> v >= 0 and G <= -1; a = 0 -> v <= 0 and G >= 1.
-        let (lb, ub) = (model.reactions[j].lb, model.reactions[j].ub);
+        let (lb, ub) = bounds[j];
         p.add_row(f64::NEG_INFINITY, 0.0, vec![(j, 1.0), (a, -ub.max(0.0))]);
         p.add_row(lb.min(0.0), f64::INFINITY, vec![(j, 1.0), (a, lb.min(0.0))]);
         p.add_row(f64::NEG_INFINITY, big_m - 1.0, vec![(g, 1.0), (a, big_m)]);
@@ -59,7 +59,8 @@ pub fn loopless_fba(model: &Model, big_m: f64) -> Result<FluxSolution> {
 /// ll-FBA with a chosen backend, which must solve mixed-integer programs.
 pub fn loopless_fba_with(model: &Model, big_m: f64, backend: &dyn Backend) -> Result<FluxSolution> {
     let mut p = model.to_lp();
-    add_loopless_constraints(model, &mut p, big_m);
+    let bounds = super::finite_bounds(model, backend)?;
+    add_loopless_constraints(model, &mut p, big_m, &bounds);
     let mut session = backend.open(&p)?;
     let s = session.solve()?;
     Ok(FluxSolution {
@@ -85,17 +86,17 @@ pub fn cycle_free_with(model: &Model, fluxes: &[f64], backend: &dyn Backend) -> 
     p.sense = Some(Sense::Minimize);
     for (j, r) in model.reactions.iter().enumerate() {
         let v = fluxes[j];
-        if r.is_boundary() {
+        if model.is_boundary_reaction(j) {
             p.col_lb[j] = v;
             p.col_ub[j] = v;
             p.obj[j] = 0.0;
         } else if v >= 0.0 {
-            p.col_lb[j] = 0.0;
-            p.col_ub[j] = v;
+            p.col_lb[j] = r.lb.max(0.0);
+            p.col_ub[j] = v.min(r.ub);
             p.obj[j] = 1.0;
         } else {
-            p.col_lb[j] = v;
-            p.col_ub[j] = 0.0;
+            p.col_lb[j] = v.max(r.lb);
+            p.col_ub[j] = r.ub.min(0.0);
             p.obj[j] = -1.0;
         }
     }

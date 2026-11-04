@@ -481,6 +481,8 @@ fn apply(model: &mut Model, edits: &Edits) -> Result<()> {
     }
     if let Some(obj) = &edits.objective {
         model.set_objective(obj, if edits.minimize { Sense::Minimize } else { Sense::Maximize })?;
+    } else if edits.minimize {
+        model.sense = Some(Sense::Minimize);
     }
     for id in &edits.ko_reaction {
         model.set_bounds(id, 0.0, 0.0)?;
@@ -496,6 +498,15 @@ fn apply(model: &mut Model, edits: &Edits) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// A solution a further analysis builds on must be optimal.
+fn optimal(s: cb::FluxSolution) -> Result<cb::FluxSolution> {
+    if s.status == lp::Status::Optimal {
+        Ok(s)
+    } else {
+        Err(rashevsky::Error::Solver(format!("the reference flux solve ended with {:?}", s.status)))
+    }
 }
 
 fn load(path: &PathBuf, edits: &Edits) -> Result<Model> {
@@ -559,7 +570,7 @@ fn run(cli: Cli) -> Result<()> {
             let mut unknown = Vec::new();
             let mut balanced = 0usize;
             for (j, r) in m.reactions.iter().enumerate() {
-                if r.is_boundary() {
+                if m.is_boundary_reaction(j) {
                     continue;
                 }
                 match m.imbalance(j) {
@@ -605,7 +616,17 @@ fn run(cli: Cli) -> Result<()> {
                 Some(list) => Some(list.split(',').map(|id| m.reaction_index(id.trim())).collect::<Result<Vec<_>>>()?),
             };
             let ranges = cb::fva(&m, &cb::FvaOptions { fraction_of_optimum: fraction, reactions: targets })?;
-            emit(&out, &ranges)
+            // JSON has no infinity, so an open side is reported by name as well as by a null.
+            let rows: Vec<serde_json::Value> = ranges
+                .iter()
+                .map(|r| {
+                    serde_json::json!({
+                        "reaction": r.reaction, "id": r.id, "minimum": r.minimum, "maximum": r.maximum,
+                        "unbounded_below": r.minimum == f64::NEG_INFINITY, "unbounded_above": r.maximum == f64::INFINITY,
+                    })
+                })
+                .collect();
+            emit(&out, &rows)
         }
         Command::Loopless { model, edits, big_m } => {
             let m = load(&model, &edits)?;
@@ -614,20 +635,20 @@ fn run(cli: Cli) -> Result<()> {
         }
         Command::CycleFree { model, edits } => {
             let m = load(&model, &edits)?;
-            let base = cb::fba(&m)?;
+            let base = optimal(cb::fba(&m)?)?;
             let free = cb::cycle_free(&m, &base.fluxes)?;
             let s = cb::FluxSolution { fluxes: free, shadow_prices: Vec::new(), reduced_costs: Vec::new(), ..base };
             emit(&out, &fluxes(&m, s))
         }
         Command::Moma { model, edits, linear } => {
             let (reference, perturbed) = load_reference_and_perturbed(&model, &edits)?;
-            let wt = cb::pfba(&reference, 1.0)?;
+            let wt = optimal(cb::pfba(&reference, 1.0)?)?;
             let s = if linear { cb::linear_moma(&perturbed, &wt.fluxes)? } else { cb::moma(&perturbed, &wt.fluxes)? };
             emit(&out, &fluxes(&perturbed, s))
         }
         Command::Room { model, edits, delta, epsilon, relax } => {
             let (reference, perturbed) = load_reference_and_perturbed(&model, &edits)?;
-            let wt = cb::pfba(&reference, 1.0)?;
+            let wt = optimal(cb::pfba(&reference, 1.0)?)?;
             let s = cb::room(&perturbed, &wt.fluxes, cb::RoomOptions { delta, epsilon, relax })?;
             emit(&out, &fluxes(&perturbed, s))
         }
@@ -671,7 +692,7 @@ fn run(cli: Cli) -> Result<()> {
                 Some(path) => serde_json::from_str(&std::fs::read_to_string(path)?)?,
                 None => BTreeMap::new(),
             };
-            let s = cb::pfba(&m, 1.0)?;
+            let s = optimal(cb::pfba(&m, 1.0)?)?;
             let objective = m.objective.iter().map(|&(j, c)| c * s.fluxes[j]).sum::<f64>();
             let overlay = rashevsky::io::overlay::build_overlay(&m, &s.fluxes, Some(objective), &scene, &rhea_events)?;
             if let Some(path) = svg {
@@ -689,11 +710,11 @@ fn run(cli: Cli) -> Result<()> {
             let name = subsystem.clone().unwrap_or_else(|| m.id.clone());
             let map_doc = rashevsky::io::escher::map_json(&m, &layout, &name);
             std::fs::write(map, serde_json::to_string(&map_doc)?)?;
-            let s = cb::pfba(&m, 1.0)?;
+            let s = optimal(cb::pfba(&m, 1.0)?)?;
             std::fs::write(data, serde_json::to_string_pretty(&rashevsky::io::escher::reaction_data(&m, &s.fluxes))?)?;
             emit(
                 &out,
-                &serde_json::json!({"nodes": layout.metabolites.len() + layout.reactions.len(), "reactions": layout.reactions.len(), "objective": s.objective}),
+                &serde_json::json!({"nodes": layout.metabolites.len() + layout.reactions.len(), "reactions": layout.reactions.len(), "objective": m.objective.iter().map(|&(j, c)| c * s.fluxes[j]).sum::<f64>()}),
             )
         }
         Command::Sample { model, edits, method, chains, samples, thinning, burn_in, seed, fraction, full } => {
