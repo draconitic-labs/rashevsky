@@ -16,7 +16,7 @@
       "module_relative_difference": 1.642968977719058e-14,
       "pass": true,
       "protein_mass_limit": 0.0909114635212829,
-      "protein_mass_used": 0.09091146352128293
+      "protein_mass_used": 0.0909114634969025
     },
     {
       "certificate_gap": 1.6488268430481355e-10,
@@ -31,7 +31,7 @@
       "module_relative_difference": 3.032253061381452e-15,
       "pass": true,
       "protein_mass_limit": 0.0909114635212829,
-      "protein_mass_used": 0.09091146352128254
+      "protein_mass_used": 0.09091146345539376
     },
     {
       "certificate_gap": 4.3272551763884196e-10,
@@ -46,7 +46,7 @@
       "module_relative_difference": 1.3275733698548262e-14,
       "pass": true,
       "protein_mass_limit": 0.0909114635212829,
-      "protein_mass_used": 0.09091146352128304
+      "protein_mass_used": 0.09091146345978944
     },
     {
       "certificate_gap": 2.355699769855605e-10,
@@ -61,7 +61,7 @@
       "module_relative_difference": 1.1447535479188212e-14,
       "pass": true,
       "protein_mass_limit": 0.0909114635212829,
-      "protein_mass_used": 0.09091146352128396
+      "protein_mass_used": 0.06292325136155755
     },
     {
       "certificate_gap": 3.8033647569779655e-10,
@@ -76,7 +76,7 @@
       "module_relative_difference": 7.708309217526588e-15,
       "pass": true,
       "protein_mass_limit": 0.04545573176064145,
-      "protein_mass_used": 0.04545573176064144
+      "protein_mass_used": 0.045455731740806
     },
     {
       "certificate_gap": 9.649077504857406e-11,
@@ -91,7 +91,7 @@
       "module_relative_difference": 1.1662133876151449e-14,
       "pass": true,
       "protein_mass_limit": 0.1818229270425658,
-      "protein_mass_used": 0.18182292704256567
+      "protein_mass_used": 0.18182292700909397
     },
     {
       "certificate_gap": 2.1215568818072742e-10,
@@ -106,7 +106,7 @@
       "module_relative_difference": 4.0199231630222605e-15,
       "pass": true,
       "protein_mass_limit": 0.0909114635212829,
-      "protein_mass_used": 0.09091146352128288
+      "protein_mass_used": 0.09091146349486594
     }
   ],
   "enzymes": 1259,

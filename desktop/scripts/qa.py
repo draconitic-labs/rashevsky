@@ -37,8 +37,12 @@ def main() -> int:
         s.key("k", settle=1.4)
         s.shot(OUT / "knockout.png")
         s.key("Escape", settle=0.5)
+        s.click(967, 923, settle=1.0)  # Restore all, so that what follows starts from the whole network
         s.key("2", settle=0.6)
-        s.click(*RUN_BUTTON, settle=2.5)
+        s.click(1151, 53, settle=0.5)  # At once: two at a time
+        s.key("Down", settle=0.2)
+        s.key("Return", settle=0.5)
+        s.click(*RUN_BUTTON, settle=8)
         s.shot(OUT / "screen.png")
         s.key("3", settle=2.5)
         s.shot(OUT / "ranges.png")

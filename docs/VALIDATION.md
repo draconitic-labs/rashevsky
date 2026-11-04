@@ -36,7 +36,7 @@ Each script below also runs alone, from `validation/`, and prints what it finds.
 | Loopless objective | 0.873922 | 0.873922 | pass |
 | CycleFreeFlux exchanges | | difference 1.2e-13 | pass |
 | Single gene deletions (137) | | difference 1.1e-14 | pass |
-| Single reaction deletions (95) | | difference 9.8e-15 | pass |
+| Single reaction deletions (95) | | difference 1.4e-14 | pass |
 | Double gene deletions (9,316) | | difference 8.9e-12 | pass |
 | MOMA distance after deleting PGI | 220.4801 (OSQP) | 220.4805 (HiGHS QP) | pass |
 | Linear MOMA distance | 70.964998 | 70.964998 | pass |
@@ -59,7 +59,7 @@ Reference: Monk et al. 2017, Supplementary Note 4 and Supplementary Data 11, wit
 | Rashevsky | 19,233 | 295 | 1,246 | 2,843 | 93.475 % |
 
 1 of 23,617 rows differ from the call in the supplement: b3564 on Xylose, published growth 0.000, computed 0.717.
- COBRApy gives the same value on this row from the same BiGG file (0.7171), so the difference lies between the BiGG file of 2019 and the paper's model, not in the engine. Over the two conditions compared with COBRApy on all 1,516 genes, the largest difference is 2.9e-10.
+ COBRApy gives the same value on this row from the same BiGG file (0.7171), so the difference lies between the BiGG file of 2019 and the paper's model, not in the engine. Over the two conditions compared with COBRApy on all 1,516 genes, the largest difference is 4.9e-11.
 
 ![Accuracy per carbon source](figures/keio.png)
 
@@ -67,7 +67,7 @@ Reference: Monk et al. 2017, Supplementary Note 4 and Supplementary Data 11, wit
 
 `validation/v03_human_gem.py`
 
-Human-GEM v2.1.1: 12,748 reactions, 8,374 metabolites, 2,870 genes, read in 0.62 s. Essential tasks of Robinson et al. 2020: 57 of 57 pass, with the verdict on every task equal to that of RAVEN's Python port on the same files (4.5 s against 30.8 s with GLPK). The verification list gives 21 of 21, same verdicts.
+Human-GEM v2.1.1: 12,748 reactions, 8,374 metabolites, 2,870 genes, read in 0.59 s. Essential tasks of Robinson et al. 2020: 57 of 57 pass, with the verdict on every task equal to that of RAVEN's Python port on the same files (4.1 s against 30.5 s with GLPK). The verification list gives 21 of 21, same verdicts.
 
 Of 11,094 internal reactions, 10,863 (97.9 %) balance in elements and charge and 223 do not, the same set as COBRApy's `check_mass_balance`. Another 8 involve a metabolite without a formula. This engine reports those as undetermined, and COBRApy counts them as imbalanced.
 
@@ -149,8 +149,8 @@ Semantic cases: 1,823 in the suite, 1,700 applicable. The 123 left out use the `
 
 | Integrator | Passed | Percent | Seconds |
 | --- | --- | --- | --- |
-| Rodas4 | 1,700 of 1,700 | 100.00 | 112 |
-| BDF | 1,700 of 1,700 | 100.00 | 28 |
+| Rodas4 | 1,700 of 1,700 | 100.00 | 89 |
+| BDF | 1,700 of 1,700 | 100.00 | 21 |
 
 Of these, 34 are flux balance cases and 35 use fast reactions, simulated by the singular perturbation of `docs/MODEL.md`. Random tie-breaking between events uses a fixed seed.
 
@@ -177,8 +177,10 @@ Case 01399 at Level 2 Version 5: the suite's file for that version omits `fast="
 
 The 39 `StochasticTimeCourse` cases of the DSMTS (Evans, Gillespie and Wilkinson 2008), with 40,000 realizations each. The suite accepts a mean `Z` in (-3, 3) and a variance `Y` in (-5, 5) at each time point, and states that a correct simulator can fail a few points. The limit used here is 3 per case, with a flagged case repeated once on an independent seed, because the points of a case are strongly correlated and one excursion can flag many of them.
 
-- Flagged on the first seed: .
+- Flagged on the first seed: none.
 - Still over the limit on the second seed: none.
+
+**Case 00003 is decided by its exact law, not by this criterion.** It is a birth-death process (Kendall 1948) whose kurtosis reaches 96, while `Y` assumes the sampling error of a normal population and so overstates significance by a factor of `sqrt((kurtosis - 1) / 2)`. Whether its `Y` stays under the limit therefore depends on the random stream: this run flags 2 of its points, and earlier runs with other streams went over the limit on both seeds. Compared with the exact variance using its exact sampling error at 2,000,000 realizations, the largest `|z|` is 3.30 for the variance and 2.30 for the mean, with a limit of 4.
 
 The other cases of the stochastic folder test the `distrib` package, which this engine does not implement.
 
@@ -194,7 +196,7 @@ The other cases of the stochastic folder test the `distrib` package, which this 
 | OptGP against COBRApy OptGP | 0.074 | NADTRHD |
 | CHRR against OptGP | 0.048 | ACALD |
 
-Diagnostics: CHRR split R-hat 1.002, smallest effective sample size 1410, largest Geweke z 3.8, in 0.44 s. OptGP R-hat 1.001, effective size 2852, Geweke z 3.4, in 1.64 s. A Rust test checks uniformity on a simplex against its exact mean and variance, and convergence on `e_coli_core` for several seeds.
+Diagnostics: CHRR split R-hat 1.002, smallest effective sample size 1410, largest Geweke z 3.8, in 0.40 s. OptGP R-hat 1.001, effective size 2852, Geweke z 3.4, in 1.46 s. A Rust test checks uniformity on a simplex against its exact mean and variance, and convergence on `e_coli_core` for several seeds.
 
 ## Outputs
 
@@ -245,7 +247,7 @@ TFA on `e_coli_core` with 48 eQuilibrator energies: growth 0.873922 against 0.87
 
 ### Review
 
-A fresh-context review read the numerics cold against the papers and against independent implementations. It reported 39 groups of defects, each with a failing input, and each is now a regression test: `crates/rashevsky/tests/kinetic_edges.rs`, `constraint_edges.rs` and `overlay.rs`, with the models in `crates/rashevsky/tests/models`. On the same system, a birth-death species of true mean 1 beside a large population reads 1.45 with this engine's tau-leaping and 1.81 with GillesPy2's, so that bias belongs to the explicit method (`docs/MODEL.md`).
+A fresh-context review read the numerics cold against the papers and against independent implementations. Three rounds reported 39, 28 and 10 groups of defects, each with a failing input, and each is now a regression test: `crates/rashevsky/tests/kinetic_edges.rs`, `constraint_edges.rs` and `overlay.rs`, with the models in `crates/rashevsky/tests/models`. On the same system, a birth-death species of true mean 1 beside a large population reads 1.45 with this engine's tau-leaping and 1.81 with GillesPy2's, so that bias belongs to the explicit method (`docs/MODEL.md`).
 
 ### Sensitivity and estimation
 
@@ -259,11 +261,11 @@ Rust tests, with Python and command-line tests of the same calls. Local sensitiv
 
 | Task | Rashevsky | COBRApy |
 | --- | --- | --- |
-| Read e_coli_core | 0.01 s | 0.16 s |
-| Read iML1515 | 0.17 s | 2.48 s |
-| Read Human-GEM | 0.68 s | 10.35 s |
-| FVA of iML1515, 2,712 reactions | 2.3 s | 7.2 s |
-| All single gene deletions of iML1515 | 3.3 s | 3.0 s |
+| Read e_coli_core | 0.01 s | 0.15 s |
+| Read iML1515 | 0.14 s | 2.38 s |
+| Read Human-GEM | 0.80 s | 11.57 s |
+| FVA of iML1515, 2,712 reactions | 2.4 s | 7.5 s |
+| All single gene deletions of iML1515 | 3.8 s | 3.2 s |
 
-FVA of iML1515 agrees with COBRApy to 1.8e-06. Essential tasks of Human-GEM take 4.7 s, a 100-minute time course of the Teusink model at 1,000 points 0.18 s, and 10,000 CHRR samples of `e_coli_core` 0.45 s, each including reading the file.
+FVA of iML1515 agrees with COBRApy to 1.8e-06. Essential tasks of Human-GEM take 5.5 s, a 100-minute time course of the Teusink model at 1,000 points 0.16 s, and 10,000 CHRR samples of `e_coli_core` 0.55 s, each including reading the file.
 

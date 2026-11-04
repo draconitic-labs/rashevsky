@@ -51,7 +51,7 @@
       "rashevsky": 6.787057500000002
     },
     "moma_distance": {
-      "cobrapy_osqp": 220.48007086047917,
+      "cobrapy_osqp": 220.4800708604807,
       "knockout": "PGI",
       "pass": true,
       "rashevsky_highs_qp": 220.4804840370879,
@@ -68,7 +68,7 @@
       "points": 20
     },
     "room_objective": {
-      "cobrapy_highs": 29.999999999997932,
+      "cobrapy_highs": 29.999999999999453,
       "cobrapy_status": "optimal",
       "pass": true,
       "rashevsky": 30.0
@@ -79,7 +79,7 @@
       "pass": true
     },
     "single_reaction_deletion": {
-      "max_abs_difference": 9.769962616701378e-15,
+      "max_abs_difference": 1.354472090042691e-14,
       "pass": true,
       "reactions": 95
     }

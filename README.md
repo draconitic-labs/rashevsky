@@ -23,16 +23,16 @@ Each row is a named published result or another tool on the same input, with the
 | Check | Reference | Result |
 | --- | --- | --- |
 | `e_coli_core` growth | 0.8739 1/h, BiGG and COBRApy | 0.873922, equal to COBRApy within 1e-11 |
-| Flux variability | COBRApy, tolerance 1e-6 | largest difference 3e-11 on `e_coli_core` |
+| Flux variability | COBRApy, tolerance 1e-6 on `e_coli_core`, 1e-5 on iML1515 | largest difference 4e-12 and 1.8e-6 |
 | iML1515 gene essentiality | Keio screens, Monk et al. 2017: 93.4 % | 93.48 % of 23,617 phenotypes; 1 row differs from the paper, traced to the model file |
 | Human-GEM | 57 essential tasks, Robinson et al. 2020 | 57 of 57, same verdicts as RAVEN |
 | Recon3D | COBRApy | same objective within 1e-15, all 2,248 gene deletions within 5e-14 relative |
-| Enzyme constraints | Published `eciML1515`, 7 conditions | within 3e-14 of an optimum certified by a dual bound |
+| Enzyme constraints | Published `eciML1515`, 7 conditions | within 2e-14 of an optimum certified by a dual bound |
 | Yeast glycolysis | Teusink et al. 2000, libRoadRunner | same steady state within 1e-14 |
-| Control coefficients | COPASI | largest difference 3e-7 for flux, 1.4e-6 for concentration |
+| Control coefficients | COPASI | largest difference 4e-7 for flux, 2e-6 for concentration |
 | Control theorems | exact | hold to 6e-12 on five published models |
-| SBML semantic suite | SBML Test Suite 3.5.0 | 1,700 of 1,700 applicable cases, with either integrator |
-| Stochastic suite | DSMTS | 38 of 39 by the suite's criterion; case 00003 exceeds it because of its kurtosis, and matches its exact law |
+| SBML semantic suite | SBML Test Suite 3.5.0 | 1,700 of 1,700 applicable cases, with either integrator, and after writing and re-reading each model |
+| Stochastic suite | DSMTS | all 39 cases; case 00003 is decided by its exact law, because its kurtosis of 96 makes the suite's variance test depend on the random stream |
 
 ## Install
 
@@ -90,6 +90,8 @@ model.single_gene_deletion()                              # {gene: growth}
 glycolysis = rv.KineticModel.read_sbml("models/teusink/BIOMD0000000064.xml")
 glycolysis.simulate(end=20, method="bdf", symbols=["G6P", "ATP"])
 glycolysis.mca()["flux_control"]
+glycolysis.local_sensitivity(["gR"])["flux"]
+glycolysis.sobol([{"name": "gR", "low": 2, "high": 10}], "vGLK", samples=512)["total"]
 ```
 
 [notebooks/knockout_screen.ipynb](notebooks/knockout_screen.ipynb) ranks every single and double deletion for succinate production.

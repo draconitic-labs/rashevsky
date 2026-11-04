@@ -15,7 +15,7 @@ import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BINARY = pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "src-tauri" / "target")) / "release" / "rashevsky-desktop"
-SCRATCH = pathlib.Path(os.environ.get("RASHEVSKY_DRIVE", pathlib.Path.home() / ".cache/rashevsky-work/drive"))
+SCRATCH = pathlib.Path(os.environ.get("XDG_CACHE_HOME", pathlib.Path.home() / ".cache")) / "rashevsky-qa"
 
 
 class Session:

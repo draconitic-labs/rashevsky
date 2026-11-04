@@ -5,7 +5,7 @@
 # service restarts itself when a new dbus-daemon appears. A virtual KWin still makes that service restart
 # once, which drops any remote session, so do not run this while connected through RustDesk.
 set -euo pipefail
-out="${1:-$HOME/.cache/rashevsky-work/launcher}"
+out="${1:-${XDG_CACHE_HOME:-$HOME/.cache}/rashevsky-qa/launcher}"
 mkdir -p "$out"
 if [[ "${RASHEVSKY_LAUNCHER_INNER:-}" != "1" ]]; then
   for entry in "$HOME/.local/share/applications/rashevsky.desktop" "$(xdg-user-dir DESKTOP)/Rashevsky.desktop"; do

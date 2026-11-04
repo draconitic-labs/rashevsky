@@ -8,10 +8,16 @@
     "method": "bdf",
     "passed": 1700,
     "percent": 100.0,
-    "seconds": 28.41742777824402,
+    "seconds": 21.0921893119812,
     "total_cases": 1823
   },
-  "case_00003_exact_law_check": null,
+  "case_00003_exact_law_check": {
+    "max_abs_mean_z": 2.2996789714071317,
+    "max_abs_variance_z": 3.3008915024047436,
+    "max_kurtosis": 95.72799521815524,
+    "pass": true,
+    "runs": 2000000
+  },
   "other_forms": {
     "l2v1": {
       "applicable": 1051,
@@ -84,7 +90,7 @@
     "method": "rodas4",
     "passed": 1700,
     "percent": 100.0,
-    "seconds": 112.43952631950378,
+    "seconds": 89.36723971366882,
     "total_cases": 1823
   },
   "stochastic": {
@@ -419,7 +425,7 @@
           "runs": 40000,
           "seed": 20261104,
           "y_failures": 0,
-          "z_failures": 0
+          "z_failures": 1
         }
       ],
       "pass": true
@@ -467,7 +473,7 @@
           "runs": 40000,
           "seed": 20261104,
           "y_failures": 0,
-          "z_failures": 2
+          "z_failures": 0
         }
       ],
       "pass": true

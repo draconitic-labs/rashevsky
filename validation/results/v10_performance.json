@@ -1,38 +1,38 @@
 {
   "benchmarks": {
     "Human-GEM": {
-      "cobrapy_fba_seconds": 0.033363281982019544,
-      "cobrapy_read_seconds": 10.347823274001712,
-      "rashevsky_read_and_fba_seconds": 0.9684680479986127,
-      "rashevsky_read_seconds": 0.6777976700104773
+      "cobrapy_fba_seconds": 0.07906756200827658,
+      "cobrapy_read_seconds": 11.572982295008842,
+      "rashevsky_read_and_fba_seconds": 1.097562280978309,
+      "rashevsky_read_seconds": 0.7970881749934051
     },
-    "core_chrr_10000_samples_seconds": 0.44706144600058906,
+    "core_chrr_10000_samples_seconds": 0.5515352619986515,
     "e_coli_core": {
-      "cobrapy_fba_seconds": 0.00011904697748832405,
-      "cobrapy_read_seconds": 0.16236057999776676,
-      "rashevsky_read_and_fba_seconds": 0.014408110990189016,
-      "rashevsky_read_seconds": 0.01190811098786071
+      "cobrapy_fba_seconds": 0.00012408100883476436,
+      "cobrapy_read_seconds": 0.14668183401226997,
+      "rashevsky_read_and_fba_seconds": 0.012784898019162938,
+      "rashevsky_read_seconds": 0.014949986012652516
     },
-    "human_gem_essential_tasks_seconds": 4.713757276011165,
+    "human_gem_essential_tasks_seconds": 5.5268315830035135,
     "iML1515": {
-      "cobrapy_fba_seconds": 0.004082317987922579,
-      "cobrapy_read_seconds": 2.475668239989318,
-      "rashevsky_read_and_fba_seconds": 0.23917180197895505,
-      "rashevsky_read_seconds": 0.16872481198515743
+      "cobrapy_fba_seconds": 0.00431516399839893,
+      "cobrapy_read_seconds": 2.376878137991298,
+      "rashevsky_read_and_fba_seconds": 0.21893490201910026,
+      "rashevsky_read_seconds": 0.14306261501042172
     },
     "iML1515_fva": {
-      "cobrapy_glpk_4_processes_seconds": 7.227110509003978,
+      "cobrapy_glpk_4_processes_seconds": 7.499756061995868,
       "max_abs_difference": 1.7540003663323354e-06,
-      "rashevsky_seconds": 2.3014925559982657,
+      "rashevsky_seconds": 2.4030496049963403,
       "reactions": 2712,
       "worst_reaction": "I2FE2SR"
     },
     "iML1515_single_gene_deletion": {
-      "cobrapy_glpk_4_processes_seconds": 3.0377619179780595,
+      "cobrapy_glpk_4_processes_seconds": 3.1899601579934824,
       "genes": 1516,
-      "rashevsky_seconds": 3.33439031499438
+      "rashevsky_seconds": 3.811274856008822
     },
-    "teusink_time_course_100_min_1000_points_seconds": 0.18347199802519754
+    "teusink_time_course_100_min_1000_points_seconds": 0.16177913700812496
   },
   "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
   "logical_cores": 12,

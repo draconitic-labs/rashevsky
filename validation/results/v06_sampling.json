@@ -4,7 +4,7 @@
     "max_split_rhat": 1.0020541248026944,
     "min_ess": 1410.2515848369042
   },
-  "chrr_seconds": 0.443574405,
+  "chrr_seconds": 0.402606813,
   "cobrapy_valid_samples": 10000,
   "limit": 0.15,
   "max_mean_difference_in_flux_sd": {
@@ -26,7 +26,7 @@
     "max_split_rhat": 1.0010131695486302,
     "min_ess": 2852.4193181205014
   },
-  "optgp_seconds": 1.644030423,
+  "optgp_seconds": 1.4594863390000001,
   "pass": true,
   "polytope_dimension": 24,
   "reactions_compared": 87
