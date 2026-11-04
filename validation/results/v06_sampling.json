@@ -1,0 +1,33 @@
+{
+  "chrr_diagnostics": {
+    "max_geweke_z": 3.0046736841526767,
+    "max_split_rhat": 1.006230469698504,
+    "min_ess": 833.8758503991721
+  },
+  "chrr_seconds": 0.239103923,
+  "cobrapy_valid_samples": 10000,
+  "limit": 0.15,
+  "max_mean_difference_in_flux_sd": {
+    "chrr_vs_cobrapy": {
+      "reaction": "FBA",
+      "value": 0.08913965641905842
+    },
+    "chrr_vs_optgp": {
+      "reaction": "ACKr",
+      "value": 0.05478331978839993
+    },
+    "optgp_vs_cobrapy": {
+      "reaction": "RPI",
+      "value": 0.07657711891317037
+    }
+  },
+  "optgp_diagnostics": {
+    "max_geweke_z": 2.8492610168520303,
+    "max_split_rhat": 1.0037821283843895,
+    "min_ess": 890.4328946829522
+  },
+  "optgp_seconds": 1.5792430579999999,
+  "pass": true,
+  "polytope_dimension": 24,
+  "reactions_compared": 87
+}

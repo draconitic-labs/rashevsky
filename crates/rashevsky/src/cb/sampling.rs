@@ -293,7 +293,13 @@ fn orthonormal_nullspace(a: &DMatrix<f64>) -> DMatrix<f64> {
 }
 
 /// A point in the interior: the centre of the largest inscribed ball, from a linear program.
-fn chebyshev_center(pt: &Polytope, null: &DMatrix<f64>, x0: &DVector<f64>, backend: &dyn lp::Backend) -> Result<DVector<f64>> {
+fn chebyshev_center(
+    pt: &Polytope,
+    null: &DMatrix<f64>,
+    x0: &DVector<f64>,
+    floor: Option<(&DVector<f64>, f64)>,
+    backend: &dyn lp::Backend,
+) -> Result<DVector<f64>> {
     let d = null.ncols();
     let mut p = Problem { sense: Some(Sense::Maximize), ..Problem::default() };
     for _ in 0..d {
@@ -309,6 +315,13 @@ fn chebyshev_center(pt: &Polytope, null: &DMatrix<f64>, x0: &DVector<f64>, backe
         let mut lower: Vec<(usize, f64)> = (0..d).filter(|&c| row[c].abs() > 1e-13).map(|c| (c, -row[c])).collect();
         lower.push((radius, norm));
         p.add_row(f64::NEG_INFINITY, x0[k] - pt.lb[k], lower);
+    }
+    if let Some((c, value)) = floor {
+        // c' (x0 + N z) - r |N' c| >= value
+        let row = null.transpose() * c;
+        let mut coefs: Vec<(usize, f64)> = (0..d).filter(|&k| row[k].abs() > 1e-13).map(|k| (k, row[k])).collect();
+        coefs.push((radius, -row.norm()));
+        p.add_row(value - c.dot(x0), f64::INFINITY, coefs);
     }
     let mut session = backend.open(&p)?;
     let s = session.solve()?;
@@ -343,12 +356,12 @@ pub fn chrr(model: &Model, options: &SamplerOptions) -> Result<FluxSamples> {
         let y = gram.lu().solve(&pt.eq_rhs).ok_or_else(|| Error::Solver("singular equality system".into()))?;
         eq.transpose() * y
     };
-    let mut basis = orthonormal_nullspace(eq);
+    let orthonormal = orthonormal_nullspace(eq);
+    let mut basis = orthonormal.clone();
     let d = basis.ncols();
     if d == 0 {
         return Err(Error::Invalid("the flux polytope has dimension zero".into()));
     }
-    let mut z = chebyshev_center(&pt, &basis, &x0, backend.as_ref())?;
     let objective_coefs = pt.objective_row.as_ref().map(|(c, _)| DVector::from_column_slice(c));
     let objective_floor = match (&pt.objective_row, options.fraction_of_optimum) {
         (Some(_), Some(f)) => {
@@ -362,6 +375,12 @@ pub fn chrr(model: &Model, options: &SamplerOptions) -> Result<FluxSamples> {
         }
         _ => None,
     };
+
+    let floor = match (&objective_coefs, objective_floor) {
+        (Some(c), Some(value)) => Some((c, value)),
+        _ => None,
+    };
+    let mut z = chebyshev_center(&pt, &basis, &x0, floor, backend.as_ref())?;
 
     // Coordinate hit-and-run in the current basis; `v = x0 + basis z`.
     let run = |basis: &DMatrix<f64>,
@@ -408,14 +427,16 @@ pub fn chrr(model: &Model, options: &SamplerOptions) -> Result<FluxSamples> {
         }
     };
 
-    // Rounding: move to isotropic position from sampled covariance, repeated until near isotropic.
+    // Rounding: with `w = N' (v - x0)` in the fixed orthonormal coordinates, the covariance `C` of
+    // samples gives `T` with `T T' = C`, and moves then run along the columns of `N T`, in which the
+    // polytope is close to isotropic. Each round samples better than the last, so few are needed.
     let mut rng = ChaCha8Rng::seed_from_u64(options.seed);
-    let rounds = 6;
+    let rounds = 4;
     let round_samples = (8 * d).clamp(200, 4000);
     for _ in 0..rounds {
         let mut cloud: Vec<DVector<f64>> = Vec::with_capacity(round_samples);
         let thin = (4 * d).max(10);
-        let mut collect = |v: &DVector<f64>| cloud.push(basis.transpose() * (v - &x0));
+        let mut collect = |v: &DVector<f64>| cloud.push(orthonormal.transpose() * (v - &x0));
         run(&basis, &z, &mut rng, round_samples * thin, thin, &mut collect);
         let n_c = cloud.len() as f64;
         let mean = cloud.iter().fold(DVector::zeros(d), |acc, p| acc + p) / n_c;
@@ -425,26 +446,19 @@ pub fn chrr(model: &Model, options: &SamplerOptions) -> Result<FluxSamples> {
             cov += &e * e.transpose();
         }
         cov /= n_c - 1.0;
-        let eig = cov.clone().symmetric_eigen();
+        let eig = cov.symmetric_eigen();
         let largest = eig.eigenvalues.iter().fold(0.0f64, |m, v| m.max(*v)).max(1e-300);
-        // Directions with variance far below the largest stay scaled to keep the map invertible.
+        // Directions with vanishing sampled variance keep a small scale, so `T` stays invertible.
         let scales = eig.eigenvalues.map(|v| v.max(1e-12 * largest).sqrt());
         let transform = &eig.eigenvectors * DMatrix::from_diagonal(&scales);
-        let new_basis = &basis * &transform;
         let inverse = transform.clone().lu().try_inverse().ok_or_else(|| Error::Solver("singular rounding transform".into()))?;
+        basis = &orthonormal * &transform;
         z = &inverse * &mean;
-        // Use the rotated basis, whose coordinates are near isotropic in the polytope.
-        let ratio = scales.iter().fold(0.0f64, |m, v| m.max(*v)) / scales.iter().fold(f64::INFINITY, |m, v| m.min(*v));
-        basis = new_basis;
-        // Re-orthonormalization is not wanted: the scaled basis is the point of rounding.
-        if ratio < 1.5 {
-            break;
-        }
     }
 
     // Production chains, each from the rounded centre with its own stream.
     let ids: Vec<usize> = (0..options.chains).collect();
-    let thin = options.thinning.max(1) * d.max(1) / d.max(1);
+    let thin = options.thinning.max(1);
     let n_rxn = model.reactions.len();
     let chains: Vec<Vec<Vec<f64>>> = crate::parallel::map_chunks(&ids, 1, |slice| {
         let mut rng = ChaCha8Rng::seed_from_u64(options.seed.wrapping_add(1_000 + slice[0] as u64));

@@ -172,6 +172,58 @@ enum Command {
         #[arg(long)]
         open_boundaries: bool,
     },
+    /// Uniform flux samples with convergence diagnostics.
+    Sample {
+        model: PathBuf,
+        #[command(flatten)]
+        edits: Edits,
+        /// `chrr` or `optgp`.
+        #[arg(long, default_value = "chrr")]
+        method: String,
+        #[arg(long, default_value_t = 4)]
+        chains: usize,
+        /// Samples per chain.
+        #[arg(long, default_value_t = 1000)]
+        samples: usize,
+        #[arg(long, default_value_t = 100)]
+        thinning: usize,
+        #[arg(long, default_value_t = 2000)]
+        burn_in: usize,
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        /// Keep at least this fraction of the optimal objective.
+        #[arg(long)]
+        fraction: Option<f64>,
+        /// Include the samples in the output, not only the diagnostics.
+        #[arg(long)]
+        full: bool,
+    },
+    /// Thermodynamics-based flux analysis with energies from a JSON file.
+    Tfa {
+        model: PathBuf,
+        energies: PathBuf,
+        #[command(flatten)]
+        edits: Edits,
+        /// Lower concentration bound in mol/L.
+        #[arg(long, default_value_t = 1e-6)]
+        c_min: f64,
+        /// Upper concentration bound in mol/L.
+        #[arg(long, default_value_t = 0.02)]
+        c_max: f64,
+        /// Allowed error in standard uncertainties of the energies.
+        #[arg(long, default_value_t = 2.0)]
+        sigmas: f64,
+    },
+    /// Enzyme-constrained FBA with kcat and molecular weight data from a JSON file.
+    Ecfba {
+        model: PathBuf,
+        enzymes: PathBuf,
+        #[command(flatten)]
+        edits: Edits,
+        /// Replace the protein pool of the file, in g/gDW.
+        #[arg(long)]
+        pool: Option<f64>,
+    },
     /// Time course of a kinetic model.
     Simulate {
         model: PathBuf,
@@ -494,6 +546,58 @@ fn run(cli: Cli) -> Result<()> {
             let m = Model::read_sbml(model)?;
             let list = rashevsky::tasks::parse_task_list(&std::fs::read_to_string(tasks)?)?;
             emit(&out, &rashevsky::tasks::check_tasks(&m, &list, !open_boundaries)?)
+        }
+        Command::Sample { model, edits, method, chains, samples, thinning, burn_in, seed, fraction, full } => {
+            let m = load(&model, &edits)?;
+            let options = cb::SamplerOptions {
+                chains,
+                samples_per_chain: samples,
+                thinning,
+                burn_in,
+                seed,
+                fraction_of_optimum: fraction,
+            };
+            let started = std::time::Instant::now();
+            let result = match method.as_str() {
+                "chrr" => cb::chrr(&m, &options)?,
+                "optgp" => cb::optgp(&m, &options)?,
+                other => return Err(rashevsky::Error::Invalid(format!("unknown sampler `{other}`"))),
+            };
+            let seconds = started.elapsed().as_secs_f64();
+            if full {
+                emit(&out, &result)
+            } else {
+                emit(&out, &serde_json::json!({
+                    "reactions": result.reactions,
+                    "dimension": result.dimension,
+                    "diagnostics": result.diagnostics,
+                    "seconds": seconds,
+                }))
+            }
+        }
+        Command::Tfa { model, energies, edits, c_min, c_max, sigmas } => {
+            let m = load(&model, &edits)?;
+            let data: cb::ThermoData = serde_json::from_str(&std::fs::read_to_string(energies)?)?;
+            let options = cb::TfaOptions { c_min, c_max, sigmas, ..cb::TfaOptions::default() };
+            let s = cb::tfa(&m, &data, &options)?;
+            emit(&out, &serde_json::json!({
+                "fluxes": fluxes(&m, s.flux),
+                "concentrations": s.concentrations,
+                "gibbs": s.gibbs,
+            }))
+        }
+        Command::Ecfba { model, enzymes, edits, pool } => {
+            let m = load(&model, &edits)?;
+            let mut data: cb::EnzymeData = serde_json::from_str(&std::fs::read_to_string(enzymes)?)?;
+            if let Some(p) = pool {
+                data.protein_pool = p;
+            }
+            let s = cb::enzyme_constrained_fba(&m, &data)?;
+            emit(&out, &serde_json::json!({
+                "fluxes": fluxes(&m, s.flux),
+                "usage": s.usage,
+                "pool_used": s.pool_used,
+            }))
         }
         Command::Simulate { model, end, steps, method, rtol, atol, symbols, set } => {
             let km = load_kinetic(&model, &set)?;
