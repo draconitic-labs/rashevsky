@@ -162,6 +162,14 @@ enum Command {
         #[command(flatten)]
         edits: Edits,
     },
+    /// Evaluate a metabolic task list (RAVEN and Human-GEM format).
+    Tasks {
+        model: PathBuf,
+        tasks: PathBuf,
+        /// Keep the model's own boundary reactions open.
+        #[arg(long)]
+        open_boundaries: bool,
+    },
     /// Run a study described by a case file (see docs/CASES.md).
     Run { case: PathBuf },
 }
@@ -268,14 +276,14 @@ fn run(cli: Cli) -> Result<()> {
         Command::Balance { model } => {
             let m = Model::read_sbml(model)?;
             let mut report = BTreeMap::new();
-            let mut unknown = 0usize;
+            let mut unknown = Vec::new();
             let mut balanced = 0usize;
             for (j, r) in m.reactions.iter().enumerate() {
                 if r.is_boundary() {
                     continue;
                 }
                 match m.imbalance(j) {
-                    None => unknown += 1,
+                    None => unknown.push(r.id.clone()),
                     Some(map) if map.is_empty() => balanced += 1,
                     Some(map) => {
                         report.insert(r.id.clone(), map);
@@ -378,6 +386,11 @@ fn run(cli: Cli) -> Result<()> {
             let m = load(&model, &edits)?;
             let options: cb::DfbaOptions = serde_json::from_str(&std::fs::read_to_string(settings)?)?;
             emit(&out, &cb::dfba(&m, &options)?)
+        }
+        Command::Tasks { model, tasks, open_boundaries } => {
+            let m = Model::read_sbml(model)?;
+            let list = rashevsky::tasks::parse_task_list(&std::fs::read_to_string(tasks)?)?;
+            emit(&out, &rashevsky::tasks::check_tasks(&m, &list, !open_boundaries)?)
         }
         Command::Run { case } => cases::run(&case, &out),
     }

@@ -1,0 +1,38 @@
+{
+  "balanced_percent_of_internal": 97.91779340183884,
+  "balanced_reactions": 10863,
+  "essential_agree_with_raven": true,
+  "essential_failed": [],
+  "essential_passed": 57,
+  "essential_tasks": 57,
+  "formula_missing": 8,
+  "formula_missing_reported_imbalanced_by_cobrapy": 8,
+  "imbalanced_only_in_cobrapy": [],
+  "imbalanced_only_in_rashevsky": [],
+  "imbalanced_reactions": 223,
+  "internal_reactions": 11094,
+  "load_seconds": 0.7005701065063477,
+  "model": {
+    "compartments": 9,
+    "exchanges": 1654,
+    "genes": 2870,
+    "id": "HumanGEM",
+    "metabolites": 8374,
+    "name": "Generic genome-scale metabolic model of Homo sapiens",
+    "objective": [
+      [
+        "MAR13082",
+        1.0
+      ]
+    ],
+    "reactions": 12748
+  },
+  "pass": true,
+  "raven_essential_passed": 57,
+  "raven_verification_passed": 21,
+  "seconds_essential_rashevsky": 4.7607293128967285,
+  "seconds_essential_raven_glpk": 35.56676888465881,
+  "verification_agree_with_raven": true,
+  "verification_passed": 21,
+  "verification_tasks": 21
+}
