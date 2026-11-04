@@ -63,11 +63,11 @@ pub(crate) fn retained_problem(
         .filter(|(_, c)| **c != 0.0)
         .map(|(j, c)| (j, *c))
         .collect();
-    // Loosen by the solver's feasibility tolerance so that a fraction of 1 stays feasible.
-    let margin = 1e-9 * (1.0 + optimum.abs());
+    // No slack is added: some fluxes respond to the objective ~1000-fold (ICDHyr in e_coli_core
+    // moves 920 flux units per unit of growth), so even 1e-9 of slack is visible at 1e-6.
     let (lb, ub) = match model.sense.unwrap_or(Sense::Maximize) {
-        Sense::Maximize => (fraction * optimum - margin, f64::INFINITY),
-        Sense::Minimize => (f64::NEG_INFINITY, optimum / fraction.max(1e-300) + margin),
+        Sense::Maximize => (fraction * optimum, f64::INFINITY),
+        Sense::Minimize => (f64::NEG_INFINITY, optimum / fraction.max(1e-300)),
     };
     problem.add_row(lb, ub, coefs);
     problem.obj.iter_mut().for_each(|c| *c = 0.0);

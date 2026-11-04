@@ -9,6 +9,7 @@ pub mod cb;
 pub mod error;
 pub mod gpr;
 pub mod kinetic;
+pub mod linalg;
 pub mod lp;
 pub mod model;
 pub mod parallel;
