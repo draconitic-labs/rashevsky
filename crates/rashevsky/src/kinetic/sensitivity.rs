@@ -3,7 +3,7 @@
 use super::compile::{KineticModel, NoDelay};
 use super::mca::ControlAnalysis;
 use super::sim::{SimOptions, simulate};
-use super::steady::{SteadyOptions, SteadyState, steady_state};
+use super::steady::{SteadyOptions, SteadyState, steady_state, stoichiometric_matrix};
 use crate::error::{Error, Result};
 use nalgebra::{DMatrix, DVector};
 use rand::{Rng, SeedableRng};
@@ -17,6 +17,10 @@ use serde::{Deserialize, Serialize};
 /// The partial derivatives at the frozen state come from a
 /// fourth-order central difference through [`KineticModel::set_value`], so a parameter counts everywhere
 /// it reaches: laws, stoichiometries, compartment sizes and other values assigned from it.
+///
+/// That holds while the conserved totals follow from the start alone. Where events write the state, or the
+/// parameter changes what is conserved by changing the stoichiometry, the sensitivity comes from a central
+/// difference of steady states solved again.
 #[derive(Clone, Debug)]
 pub struct LocalSensitivity {
     /// Parameter names.
@@ -66,6 +70,25 @@ pub fn local_steady(
         }
         let p = model.initial[slot];
         let h = 1e-3 * if p == 0.0 { 1.0 } else { p.abs() };
+        let with_value = |value: f64| -> Result<KineticModel> {
+            let mut m = model.clone();
+            m.set_value(name, value)?;
+            Ok(m)
+        };
+        let changes_structure = stoichiometric_matrix(&with_value(p + h)?) != stoichiometric_matrix(model);
+        if !model.events.is_empty() || changes_structure {
+            let small = 1e-4 * if p == 0.0 { 1.0 } else { p.abs() };
+            let options = SteadyOptions { integrate_first: state.time, ..SteadyOptions::default() };
+            let up = steady_state(&with_value(p + small)?, &options)?;
+            let down = steady_state(&with_value(p - small)?, &options)?;
+            for j in 0..n_reactions {
+                flux[(j, column)] = (up.fluxes[j] - down.fluxes[j]) / (2.0 * small);
+            }
+            for i in 0..n_states {
+                response[(i, column)] = (up.y[i] - down.y[i]) / (2.0 * small);
+            }
+            continue;
+        }
         let at = |offset: f64| frozen_rates(model, state, name, p + offset * h);
         let (a, b, c, d) = (at(-2.0)?, at(-1.0)?, at(1.0)?, at(2.0)?);
         let stencil = |w: f64, x: f64, y: f64, z: f64| (w - 8.0 * x + 8.0 * y - z) / (12.0 * h);

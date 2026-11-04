@@ -165,7 +165,15 @@ pub struct Rodas4 {
     mass: Vec<f64>,
     h: f64,
     stats: Stats,
+    /// Steps in a row taken at the smallest size with the error over its limit.
+    forced: u32,
 }
+
+/// A step this small relative to the time is at the limit of what the arithmetic can resolve, and a jump in
+/// the right-hand side there can only be stepped across.
+const SMALLEST_STEP: f64 = 4e-14;
+/// So many forced steps in a row mean something other than a jump, such as a solution that blows up.
+const FORCED_STEPS: u32 = 200;
 
 impl Rodas4 {
     /// A new integrator; call [`Integrator::restart`] before stepping.
@@ -306,7 +314,7 @@ impl Integrator for Rodas4 {
             return Ok(());
         }
         if self.h <= 0.0 {
-            self.h = initial_step(sys, self.t, &self.y, &self.f, tol, 4.0).max(1e-14).max(4e-14 * self.t.abs());
+            self.h = initial_step(sys, self.t, &self.y, &self.f, tol, 4.0).max(1e-14).max(SMALLEST_STEP * self.t.abs());
         }
         let mut jac = DMatrix::zeros(n, n);
         sys.jacobian(self.t, &self.y, &mut jac);
@@ -322,8 +330,9 @@ impl Integrator for Rodas4 {
             return Ok(());
         }
         let mut last_planned = None;
+        let smallest = SMALLEST_STEP * self.t.abs();
         for _ in 0..tol.max_steps {
-            let mut h = self.h.min(tol.h_max);
+            let mut h = self.h.min(tol.h_max).max(smallest);
             let clipped = h >= remaining * (1.0 - 1e-12) || remaining - h <= rounding;
             if clipped {
                 last_planned = Some(self.h);
@@ -332,8 +341,17 @@ impl Integrator for Rodas4 {
             if h.abs() < 1e-14 * self.t.abs().max(1e-300) {
                 return Err(Error::Integrator(format!("step size underflow at t = {}", self.t)));
             }
+            let at_smallest = h <= 1.5 * smallest;
             match self.attempt(sys, h, &jac, &fx, tol)? {
-                Some((ynew, err)) if err <= 1.0 => {
+                Some((ynew, err)) if err <= 1.0 || at_smallest => {
+                    if err > 1.0 {
+                        self.forced += 1;
+                        if self.forced > FORCED_STEPS {
+                            return Err(Error::Integrator(format!("step size underflow at t = {}", self.t)));
+                        }
+                    } else {
+                        self.forced = 0;
+                    }
                     let t_new = if clipped { t_limit } else { self.t + h };
                     let mut fnew = vec![0.0; n];
                     sys.rhs(t_new, &ynew, &mut fnew);
@@ -406,6 +424,8 @@ pub struct Bdf {
     jac: Option<DMatrix<f64>>,
     jac_current: bool,
     stats: Stats,
+    /// Steps in a row taken at the smallest size with the error over its limit.
+    forced: u32,
 }
 
 fn compute_r(order: usize, factor: f64) -> DMatrix<f64> {
@@ -570,7 +590,7 @@ impl Integrator for Bdf {
             self.stats.rhs_evals += 1;
             self.h = initial_step(sys, self.t, &self.y, &f, tol, 1.0)
                 .max(1e-14)
-                .max(4e-14 * self.t.abs())
+                .max(SMALLEST_STEP * self.t.abs())
                 .min(t_limit - self.t);
             for k in 0..n {
                 self.d[1][k] = f[k] * self.h * mass[k];
@@ -667,9 +687,16 @@ impl Integrator for Bdf {
                 (v.iter().zip(&scale).map(|(a, s)| (c * a / s) * (c * a / s)).sum::<f64>() / n as f64).sqrt()
             };
             let err_norm = weighted(&d_new, self.err_const[order]);
-            if err_norm > 1.0 {
+            let smallest = SMALLEST_STEP * self.t.abs();
+            if err_norm > 1.0 && h <= 1.5 * smallest {
+                // Too small a step to shrink further: keep it and let the order rise as usual.
+                self.forced += 1;
+                if self.forced > FORCED_STEPS {
+                    return Err(Error::Integrator(format!("step size underflow at t = {}", self.t)));
+                }
+            } else if err_norm > 1.0 {
                 self.stats.rejected += 1;
-                let factor = (safety * err_norm.powf(-1.0 / (order as f64 + 1.0))).max(0.2);
+                let factor = (safety * err_norm.powf(-1.0 / (order as f64 + 1.0))).max(0.2).max(smallest / h);
                 self.h *= factor;
                 self.change_d(factor);
                 self.n_equal = 0;
@@ -677,6 +704,9 @@ impl Integrator for Bdf {
                 continue;
             }
             // Accepted.
+            if err_norm <= 1.0 {
+                self.forced = 0;
+            }
             self.stats.steps += 1;
             self.jac_current = false;
             self.t_prev = self.t;

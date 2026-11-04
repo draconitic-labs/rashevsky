@@ -6,7 +6,7 @@
 //! transition, delays and priorities are evaluated as specified, each executed event re-evaluates all
 //! triggers, and integration restarts from the new state.
 
-use super::compile::{C, DelayContext, KineticModel, PreStart, eval};
+use super::compile::{C, DelayContext, KineticModel, PreStart, TimeSteps, eval};
 use super::ode::{Bdf, Integrator, OdeSystem, Rodas4, Stats, Tolerances};
 use crate::error::{Error, Result};
 use nalgebra::DMatrix;
@@ -55,6 +55,10 @@ pub struct TimeCourse {
     pub values: Vec<Vec<f64>>,
     /// Integrator work.
     pub stats: Stats,
+    /// When each event execution happened.
+    pub event_times: Vec<f64>,
+    /// When the latest event still pending at the end of the run would execute.
+    pub pending_until: Option<f64>,
 }
 
 impl TimeCourse {
@@ -297,6 +301,10 @@ struct Driver<'a> {
     /// Times at which a rate can jump, and at which a trigger can change.
     rate_thresholds: Vec<f64>,
     trigger_thresholds: Vec<f64>,
+    steps: TimeSteps,
+    /// Last output time.
+    end: f64,
+    event_times: Vec<f64>,
 }
 
 /// How far either side of a rate threshold integration stops. The state moves by a negligible amount
@@ -371,8 +379,14 @@ impl Driver<'_> {
                     }
                 }
             }
-            let Some((i, _)) = best else { return Ok(changed) };
+            let Some((i, _)) = best else {
+                if changed && self.steps.dynamic {
+                    self.find_thresholds(t, y)?;
+                }
+                return Ok(changed);
+            };
             let due = self.pending.remove(i);
+            self.event_times.push(t);
             let e = &self.model.events[due.event];
             let values: Vec<f64> = match due.values {
                 Some(v) => v,
@@ -453,6 +467,14 @@ impl Driver<'_> {
         self.pending.iter().map(|p| p.exec_time).fold(f64::INFINITY, f64::min)
     }
 
+    /// Computes the times of jumps from the current values.
+    fn find_thresholds(&mut self, t: f64, y: &[f64]) -> Result<()> {
+        let vals = self.sys.values(t, y);
+        self.rate_thresholds = self.steps.rate_times(&vals, t, self.end)?;
+        self.trigger_thresholds = self.steps.trigger_times(&vals, t, self.end)?;
+        Ok(())
+    }
+
     /// Integrates to `limit`, keeping the history that `delay` reads.
     fn integrate_to(&mut self, limit: f64) -> Result<()> {
         while self.int.time() < limit {
@@ -470,6 +492,8 @@ impl Driver<'_> {
     fn move_to(&mut self, at: f64) -> Result<()> {
         let mut y = self.int.state().to_vec();
         self.push_history(at, &y);
+        // An algebraic variable can jump with the rate.
+        self.project_algebraic(at, &mut y)?;
         if self.handle_events(at, &mut y)? {
             self.equilibrate(at, &mut y)?;
             self.push_history(at, &y);
@@ -670,10 +694,14 @@ pub fn simulate(model: &KineticModel, times: &[f64], options: &SimOptions) -> Re
         trig: model.events.iter().map(|e| e.initial_value).collect(),
         pending: Vec::new(),
         rng: ChaCha8Rng::seed_from_u64(options.seed),
-        rate_thresholds: model.rate_thresholds(times[times.len() - 1]),
-        trigger_thresholds: model.trigger_thresholds(times[times.len() - 1]),
+        rate_thresholds: Vec::new(),
+        trigger_thresholds: Vec::new(),
+        steps: model.time_steps(),
+        end: times[times.len() - 1],
+        event_times: Vec::new(),
     };
     driver.sys.t0 = t0;
+    driver.find_thresholds(t0, &y)?;
     driver.equilibrate(t0, &mut y)?;
     driver.handle_events(t0, &mut y)?;
     driver.equilibrate(t0, &mut y)?;
@@ -685,6 +713,8 @@ pub fn simulate(model: &KineticModel, times: &[f64], options: &SimOptions) -> Re
         time: Vec::with_capacity(times.len()),
         values: Vec::with_capacity(times.len()),
         stats: Stats::default(),
+        event_times: Vec::new(),
+        pending_until: None,
     };
     for &t in times {
         driver.advance(t)?;
@@ -692,5 +722,8 @@ pub fn simulate(model: &KineticModel, times: &[f64], options: &SimOptions) -> Re
         out.values.push(driver.sys.values(t, driver.int.state()));
     }
     out.stats = driver.int.stats();
+    out.pending_until =
+        driver.pending.iter().map(|p| p.exec_time).fold(None, |a: Option<f64>, b| Some(a.map_or(b, |a| a.max(b))));
+    out.event_times = driver.event_times;
     Ok(out)
 }

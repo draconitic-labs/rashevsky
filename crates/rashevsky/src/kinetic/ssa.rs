@@ -14,7 +14,7 @@
 //! or reactant coefficients that are not whole numbers. A reaction whose firing would leave a species
 //! below zero has propensity zero, whatever its law says.
 
-use super::compile::{Coef, KineticModel, NoDelay, eval};
+use super::compile::{Coef, KineticModel, NoDelay, TimeSteps, eval};
 use crate::error::{Error, Result};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -59,7 +59,7 @@ const LARGEST_AMOUNT: f64 = 1e18;
 
 /// True for a value that counts molecules.
 fn is_whole(v: f64) -> bool {
-    (v - v.round()).abs() <= 1e-9 * v.abs().max(1.0)
+    (v - v.round()).abs() <= 1e-9 * v.round().abs()
 }
 
 fn poisson(rng: &mut ChaCha8Rng, mean: f64) -> f64 {
@@ -148,6 +148,10 @@ struct Trajectory<'a> {
     variable_stoichiometry: bool,
     /// States that some reaction takes from, which must stay whole numbers.
     counted: &'a [usize],
+    /// Times of jumps ahead, in increasing order.
+    thresholds: Vec<f64>,
+    /// Whether an event has fired since the times of jumps were found.
+    fired: bool,
 }
 
 impl Trajectory<'_> {
@@ -191,6 +195,28 @@ impl Trajectory<'_> {
             total += out[j];
         }
         Ok(total)
+    }
+
+    /// The longest step over which rate rules can hold their rates without going unstable, from how fast
+    /// each rule's rate responds to its own variable.
+    fn rule_time_scale(&self) -> f64 {
+        let mut scale = f64::INFINITY;
+        let mut y = self.y.clone();
+        let mut vals = self.vals.clone();
+        for (i, c) in &self.model.rate_rules {
+            let base = eval(c, &self.vals, self.t, &NoDelay);
+            let small = 1e-6 * y[*i].abs().max(1.0);
+            let saved = y[*i];
+            y[*i] = saved + small;
+            self.model.eval_state(self.t, &y, &mut vals, &NoDelay);
+            let moved = eval(c, &vals, self.t, &NoDelay);
+            y[*i] = saved;
+            let response = ((moved - base) / small).abs();
+            if response > 0.0 {
+                scale = scale.min(0.25 / response);
+            }
+        }
+        scale
     }
 
     /// Advances rate rules by `dt` at the current values.
@@ -268,6 +294,7 @@ impl Trajectory<'_> {
             let values: Vec<f64> = values
                 .unwrap_or_else(|| e.assignments.iter().map(|(_, c)| eval(c, &self.vals, self.t, &NoDelay)).collect());
             self.model.apply_event(k, &values, self.t, &mut self.y, &NoDelay);
+            self.fired = true;
             if let Some(&state) = self.counted.iter().find(|&&state| !is_whole(self.y[state])) {
                 return Err(Error::Kinetic(format!(
                     "event {} sets {} to {}, which is not a whole number of molecules",
@@ -391,6 +418,8 @@ fn leap_size(
 struct Plan<'a> {
     times: &'a [f64],
     algorithm: Algorithm,
+    /// The conditions on the time, and the times of their jumps from the initial values.
+    steps: &'a TimeSteps,
     thresholds: &'a [f64],
     /// Longest step over which propensities are held constant.
     bound: f64,
@@ -509,6 +538,15 @@ fn leap(
     }
 }
 
+/// The times of all jumps ahead of `from`, from current values.
+fn jump_times(steps: &TimeSteps, values: &[f64], from: f64, end: f64) -> Result<Vec<f64>> {
+    let mut times = steps.rate_times(values, from, end)?;
+    times.extend(steps.trigger_times(values, from, end)?);
+    times.sort_by(f64::total_cmp);
+    times.dedup();
+    Ok(times)
+}
+
 fn realize(model: &KineticModel, plan: &Plan<'_>, seed: u64, out: &mut [Vec<f64>]) -> Result<()> {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let mut traj = Trajectory {
@@ -521,6 +559,8 @@ fn realize(model: &KineticModel, plan: &Plan<'_>, seed: u64, out: &mut [Vec<f64>
         changes: vec![Vec::new(); model.reactions.len()],
         variable_stoichiometry: model.has_varying_stoichiometry(),
         counted: plan.counted,
+        thresholds: plan.thresholds.to_vec(),
+        fired: false,
     };
     traj.vals.clone_from(&model.initial);
     traj.read_changes();
@@ -531,13 +571,19 @@ fn realize(model: &KineticModel, plan: &Plan<'_>, seed: u64, out: &mut [Vec<f64>
         return Ok(());
     }
     let mut direct_left = 0usize;
+    let end = plan.times[plan.times.len() - 1];
     for _ in 0..STEP_BUDGET {
         traj.refresh();
+        if traj.fired && plan.steps.dynamic {
+            traj.thresholds = jump_times(plan.steps, &traj.vals, traj.t, end)?;
+        }
+        traj.fired = false;
         let total = traj.propensities(&mut a)?;
         let next_pending = traj.pending.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
-        let next = plan.thresholds.partition_point(|&t| t <= traj.t);
-        let threshold = plan.thresholds.get(next).copied().unwrap_or(f64::INFINITY);
-        let stop_at = plan.times[next_out].min(next_pending).min(threshold).min(traj.t + plan.bound);
+        let next = traj.thresholds.partition_point(|&t| t <= traj.t);
+        let threshold = traj.thresholds.get(next).copied().unwrap_or(f64::INFINITY);
+        let bound = if model.rate_rules.is_empty() { plan.bound } else { plan.bound.min(traj.rule_time_scale()) };
+        let stop_at = plan.times[next_out].min(next_pending).min(threshold).min(traj.t + bound);
         match plan.algorithm {
             Algorithm::Direct => direct_step(&mut traj, &a, total, stop_at, &mut rng),
             Algorithm::TauLeap { epsilon } => {
@@ -644,14 +690,13 @@ pub fn ensemble(model: &KineticModel, times: &[f64], runs: usize, algorithm: Alg
     }
     let end = times[times.len() - 1];
     let continuous = !model.rate_rules.is_empty() || model.triggers_mix_time_and_state();
-    let mut thresholds = model.rate_thresholds(end);
-    thresholds.extend(model.trigger_thresholds(end));
-    thresholds.sort_by(f64::total_cmp);
-    thresholds.dedup();
+    let steps = model.time_steps();
+    let thresholds = jump_times(&steps, &model.initial, 0.0, end)?;
     let orders = propensity_orders(model, &model.initial);
     let plan = Plan {
         times,
         algorithm,
+        steps: &steps,
         thresholds: &thresholds,
         bound: if continuous && end > 0.0 { end / 2000.0 } else { f64::INFINITY },
         orders: (!model.has_varying_stoichiometry()).then_some(orders.as_slice()),

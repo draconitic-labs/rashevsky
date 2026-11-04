@@ -43,6 +43,9 @@ pub fn read_str(xml: &str) -> Result<Document> {
     }
     let level: u32 = parse_num(root.attr("level"), "level")?;
     let version: u32 = parse_num(root.attr("version"), "version")?;
+    if level < 2 {
+        return Err(Error::Sbml("SBML Level 1 is not supported; convert the file to Level 2 or 3".into()));
+    }
     let model = root.child("model").ok_or_else(|| Error::Sbml("no <model> element".into()))?;
     let model = read_model(model, level)?;
     Ok(Document { level, version, packages, model })

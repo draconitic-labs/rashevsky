@@ -228,10 +228,16 @@ from time zero, `t + h - t` can differ measurably from `h`, so the BDF differenc
 
 **Jumps in rates**: a comparison or rounding of an expression of the time alone marks where the right-hand side can jump,
 whatever its form: `time > c`, `2 * time > c`, `lt(a, time, b)`, a rule `T = time`, `abs(time - c) < w`, `floor(time / p)`. A
-comparison affine in the time by its form has its root solved, wherever that lies. Anything else is examined at 20,000 points
-over the run and refined by bisection, so a window narrower than `1/20000` of the run can still be missed there. Integration
-stops `4e-14 (1 + t)` before each such time, moves across without a step, and restarts just after it, so that no stage of a step
-straddles the jump. Discontinuities that depend on the state are left to step-size control.
+comparison affine in the time by its form has its root solved, wherever that lies. Anything else is examined on a grid of
+160,000 points over the run, doubled until the number of jumps stops changing, and refined by bisection; a run that never
+settles on a number is an error, and a single window narrower than the finest grid can still be missed. A state that only events
+change, such as the time of the next dose, holds still between them, so these times are computed from current values and again
+after each event. Integration stops `4e-14 (1 + t)` before each such time, moves across without a step, and restarts just after
+it, so that no stage of a step straddles the jump.
+
+Discontinuities that depend on the state are left to step-size control. A step cannot shrink below `4e-14 t`, the limit of what
+the arithmetic resolves, and at that size it is taken even over its error limit, since a jump can only be stepped across. Two
+hundred such steps in a row, as with a solution that blows up, are an error.
 
 ### Events
 
@@ -251,17 +257,20 @@ still be missed. A negative delay is an error. `delay` history keeps the value o
 
 The stoichiometric matrix factors as `N = L Nr`, with `Nr` the independent rows found by full pivoting and
 `L = N Nr' (Nr Nr')^-1` (Reder 1988). Dependent species follow from the independent ones through the conserved totals.
-The system integrates for a chosen time first, extended past the last time a rate or trigger can jump, and damped Newton then
-solves `Nr v(y(s)) = 0` at that time, running until it stops improving. A last Newton step that is not small means the iteration
-is running away, as with `S' = 1 / (1 + S)`, where the residual falls but no root exists, and that is an error. An event that
-would fire between the integrated state and the root is an error too.
+The system integrates for a chosen time first, extended past the last time a rate or trigger can jump and past any event still
+pending. If events are still firing in the second half of the run, or rates still change with the time, it extends tenfold, up to
+twice, and then there is no steady state, which is an error. Rates count as settled when no jump lies ahead on a long grid and they
+read the same at times spread over decades, relative to their own size. Damped Newton then solves `Nr v(y(s)) = 0`, running until it
+stops improving. A last Newton step that is not small means the iteration is running away, as with `S' = 1 / (1 + S)`, where the
+residual falls but no root exists, and that is an error. An event that would fire between the integrated state and the root is an
+error too.
 
 The result reports the largest real part of the eigenvalues of the Jacobian over the independent amounts. Newton can reach any
 root, so a root that is unstable or has a negative amount extends the integration tenfold, up to twice, before it is reported: an
 unstable root is returned with `stable = false`, as on a limit cycle, and one with negative amounts is an error. `delay` reads the
 present at a steady state, where those eigenvalues do not decide stability, so a delayed model reports no eigenvalue and counts as
-stable only if the integration reached the root. Rates that still depend on the time at several times with no common period are an
-error, and so is a stoichiometric coefficient or conversion factor that varies.
+stable only if the integration reached the root, relative to the size of its state. A stoichiometric coefficient or conversion
+factor that varies is an error.
 
 ### Metabolic control analysis
 
@@ -283,8 +292,10 @@ The engine reports residuals of the theorems in the scaled form in which they ar
 start. With `d0 = dy0/dp - L dy0_ind/dp`, the part of that move the dynamics cannot undo, such as a conserved total:
 `ds/dp = -(Nr E L)^-1 (b + Nr E d0)`, `dy/dp = d0 + L ds/dp`, `dJ/dp = dv/dp + E dy/dp`. The partial derivatives come from a
 fourth-order central difference with `h = 1e-3 |p|` through the override mechanism, so that a parameter counts everywhere it
-reaches: laws, stoichiometries, compartment sizes, starting values and values assigned from it. A name that does not exist,
-varies during a simulation or is set by a rule is an error.
+reaches: laws, stoichiometries, compartment sizes, starting values and values assigned from it. In a model with events, or for a
+parameter that changes the stoichiometry and with it what is conserved, the conserved totals do not follow from the start alone,
+so the sensitivity is a central difference of steady states solved again. A name that does not exist, varies during a simulation or
+is set by a rule is an error.
 
 **Global**: first-order Sobol indices from the estimator of Saltelli et al. (2010) and total indices from Jansen's
 (1999) formula, with `n (d + 2)` evaluations. The output is a symbol at the steady state or at a time. A sample that fails to
@@ -319,7 +330,8 @@ mean 1, beside a large population that sets the leap, reads 1.45 here and 1.81 i
 Use the direct method for such species.
 
 A propensity may jump at the times of the integrators' analysis above, where a step ends, and is read just past each one, since
-`time > 5` is still false at 5. One that depends on a rate rule is held constant over steps of at most `T/2000`, which is an
+`time > 5` is still false at 5. Those times follow the current values, so repeated doses all fire. A propensity that depends on a
+rate rule is held constant over steps of at most `T/2000`, and at most a quarter of the rule's own time scale, which is an
 approximation. These are errors: negative or undefined propensities, rates that vary continuously with the time, algebraic rules,
 `delay`, fast reactions, cascading events that do not settle, amounts or reactant coefficients that are not whole numbers, and runs
 whose amounts pass `1e18` or that exceed `1e8` steps.

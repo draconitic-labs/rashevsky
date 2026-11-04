@@ -316,22 +316,40 @@ struct TimeUse {
     /// Derived slots that read the time and not the state, in evaluation order.
     timed: Vec<(usize, C)>,
     timed_set: HashSet<usize>,
+    /// States that only events change, and what derives from them with no other state.
+    moved_by_events: HashSet<usize>,
 }
 
 impl TimeUse {
     fn of(model: &KineticModel) -> Self {
-        let mut state_like: HashSet<usize> = model.state_slots.iter().copied().collect();
+        // A state that only events change holds still between them, so a comparison of the time with it
+        // has a root that can be computed, valid until the next event.
+        let held: HashSet<usize> = (0..model.state_slots.len())
+            .filter(|i| {
+                !model.stoich.iter().any(|e| e.state == *i)
+                    && !model.rate_rules.iter().any(|(s, _)| s == i)
+                    && !model.algebraic.iter().any(|(s, _)| s == i)
+            })
+            .map(|i| model.state_slots[i])
+            .collect();
+        let mut state_like: HashSet<usize> = model.state_slots.iter().copied().filter(|s| !held.contains(s)).collect();
         let mut timed = Vec::new();
         let mut timed_set = HashSet::new();
+        let mut moved_by_events = held;
         for (slot, c) in &model.derived {
             if depends_on_state(c, &state_like) {
                 state_like.insert(*slot);
-            } else if reads_time_through(c, &timed_set) {
-                timed.push((*slot, c.clone()));
-                timed_set.insert(*slot);
+            } else {
+                if depends_on_state(c, &moved_by_events) {
+                    moved_by_events.insert(*slot);
+                }
+                if reads_time_through(c, &timed_set) {
+                    timed.push((*slot, c.clone()));
+                    timed_set.insert(*slot);
+                }
             }
         }
-        Self { state_like, timed, timed_set }
+        Self { state_like, timed, timed_set, moved_by_events }
     }
 
     /// True for a step-like expression of the time alone: a comparison or a rounding. Its value is
@@ -411,21 +429,23 @@ impl TimeUse {
     }
 }
 
-/// Grid over the run on which a step-like expression that is not linear in the time is examined.
-const SCAN_POINTS: usize = 20_000;
+/// First grid over the run on which a step-like expression not affine in the time is examined.
+const SCAN_POINTS: usize = 160_000;
+/// Finest such grid. The grid doubles until the number of jumps stops changing.
+const SCAN_LIMIT: usize = 5_120_000;
 
-/// Times at which step-like expressions of the time change value, up to `end`. A comparison linear in the
-/// time has its root solved, whatever the size of the run. Anything else, such as `abs` or `floor`, is
-/// examined on a grid and refined by bisection, so a window narrower than `end / 20000` can be missed.
-fn step_times(model: &KineticModel, time_use: &TimeUse, steps: &[C], end: f64) -> Vec<f64> {
+/// The times at which step-like expressions of the time change value, found from current values.
+fn step_times(time_use: &TimeUse, steps: &[C], base: &[f64], from: f64, end: f64) -> Result<Vec<f64>> {
+    if steps.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut vals = base.to_vec();
     let evaluate = |c: &C, t: f64, vals: &mut Vec<f64>| -> f64 {
-        vals.clone_from(&model.initial);
         for (slot, definition) in &time_use.timed {
             vals[*slot] = eval(definition, vals, t, &NoDelay);
         }
         eval(c, vals, t, &NoDelay)
     };
-    let mut vals = Vec::new();
     let mut found = Vec::new();
     let mut scan: Vec<&C> = Vec::new();
     for c in steps {
@@ -442,36 +462,91 @@ fn step_times(model: &KineticModel, time_use: &TimeUse, steps: &[C], end: f64) -
             _ => scan.push(c),
         }
     }
-    if end > 0.0 {
+    if end > from {
         for c in scan {
-            let mut before = evaluate(c, 0.0, &mut vals);
-            for k in 1..=SCAN_POINTS {
-                let t = end * k as f64 / SCAN_POINTS as f64;
-                let now = evaluate(c, t, &mut vals);
-                if now != before && !(now.is_nan() && before.is_nan()) {
-                    let (mut low, mut high) = (end * (k - 1) as f64 / SCAN_POINTS as f64, t);
-                    for _ in 0..70 {
-                        if high - low <= 1e-14 * (1.0 + high.abs()) {
-                            break;
-                        }
-                        let middle = 0.5 * (low + high);
-                        if evaluate(c, middle, &mut vals) == before {
-                            low = middle;
-                        } else {
-                            high = middle;
-                        }
-                    }
-                    found.push(high);
+            let mut points = SCAN_POINTS;
+            let mut previous: Option<Vec<f64>> = None;
+            loop {
+                let jumps = scan_jumps(c, from, end, points, &evaluate, &mut vals);
+                if previous.as_ref().is_some_and(|p| p.len() == jumps.len()) {
+                    found.extend(jumps);
+                    break;
                 }
-                before = now;
+                if points >= SCAN_LIMIT {
+                    return Err(Error::Kinetic(format!(
+                        "a condition on the time changes too often to resolve over a run to {end}; shorten the run"
+                    )));
+                }
+                previous = Some(jumps);
+                points *= 2;
             }
         }
     }
-    found
+    Ok(found)
 }
 
-fn tidy_thresholds(mut found: Vec<f64>) -> Vec<f64> {
-    found.retain(|t| t.is_finite() && *t > 0.0);
+/// Where an expression changes value on a grid, each refined by bisection well inside the margin that
+/// integration keeps around a jump.
+fn scan_jumps(
+    c: &C,
+    from: f64,
+    end: f64,
+    points: usize,
+    evaluate: &impl Fn(&C, f64, &mut Vec<f64>) -> f64,
+    vals: &mut Vec<f64>,
+) -> Vec<f64> {
+    let at = |k: usize| from + (end - from) * k as f64 / points as f64;
+    let mut jumps = Vec::new();
+    let mut before = evaluate(c, from, vals);
+    for k in 1..=points {
+        let t = at(k);
+        let now = evaluate(c, t, vals);
+        if now != before && !(now.is_nan() && before.is_nan()) {
+            let (mut low, mut high) = (at(k - 1), t);
+            for _ in 0..70 {
+                if high - low <= 1e-14 * (1.0 + high.abs()) {
+                    break;
+                }
+                let middle = 0.5 * (low + high);
+                if evaluate(c, middle, vals) == before {
+                    low = middle;
+                } else {
+                    high = middle;
+                }
+            }
+            jumps.push(high);
+        }
+        before = now;
+    }
+    jumps
+}
+
+/// The step-like conditions on the time in a model, from which the times of jumps follow.
+pub struct TimeSteps {
+    time_use: TimeUse,
+    rate: Vec<C>,
+    trigger: Vec<C>,
+    /// Whether an event can move a jump, so that the times need computing again after one fires.
+    pub dynamic: bool,
+}
+
+impl TimeSteps {
+    /// Times after `from` and up to `end` at which a rate or rule can jump, in increasing order, so that
+    /// integration does not step across them. `values` are current slot values. A comparison affine in the
+    /// time has its root solved, even beyond `end`. Other forms are examined on a grid.
+    pub fn rate_times(&self, values: &[f64], from: f64, end: f64) -> Result<Vec<f64>> {
+        Ok(tidy_thresholds(step_times(&self.time_use, &self.rate, values, from, end)?, from))
+    }
+
+    /// Times after `from` and up to `end` at which a trigger's time dependence can change its value. A step
+    /// ends on each, so that a window cannot fall between the points examined.
+    pub fn trigger_times(&self, values: &[f64], from: f64, end: f64) -> Result<Vec<f64>> {
+        Ok(tidy_thresholds(step_times(&self.time_use, &self.trigger, values, from, end)?, from))
+    }
+}
+
+fn tidy_thresholds(mut found: Vec<f64>, from: f64) -> Vec<f64> {
+    found.retain(|t| t.is_finite() && *t > from);
     found.sort_by(f64::total_cmp);
     found.dedup();
     found
@@ -509,27 +584,19 @@ impl KineticModel {
             || self.events.iter().any(|e| reads_time(&e.trigger))
     }
 
-    /// Positive times up to `end` at which a rate or rule can jump, in increasing order, so that
-    /// integration does not step across them. Roots of comparisons linear in the time are found beyond
-    /// `end` as well.
-    pub fn rate_thresholds(&self, end: f64) -> Vec<f64> {
+    /// The step-like conditions on the time in this model.
+    pub fn time_steps(&self) -> TimeSteps {
         let time_use = TimeUse::of(self);
-        let mut steps = Vec::new();
+        let mut rate = Vec::new();
         for (_, c) in self.derived.iter().chain(&self.rate_rules).chain(&self.algebraic) {
-            time_use.collect_steps(c, &mut steps);
+            time_use.collect_steps(c, &mut rate);
         }
-        tidy_thresholds(step_times(self, &time_use, &steps, end))
-    }
-
-    /// Positive times up to `end` at which a trigger's time dependence can change its value, in
-    /// increasing order. A step ends on each, so that a window cannot fall between the points examined.
-    pub fn trigger_thresholds(&self, end: f64) -> Vec<f64> {
-        let time_use = TimeUse::of(self);
-        let mut steps = Vec::new();
+        let mut trigger = Vec::new();
         for e in &self.events {
-            time_use.collect_steps(&e.trigger, &mut steps);
+            time_use.collect_steps(&e.trigger, &mut trigger);
         }
-        tidy_thresholds(step_times(self, &time_use, &steps, end))
+        let dynamic = rate.iter().chain(&trigger).any(|c| depends_on_state(c, &time_use.moved_by_events));
+        TimeSteps { time_use, rate, trigger, dynamic }
     }
 
     /// Reactions whose rate changes with the time other than in jumps at fixed times.

@@ -426,7 +426,7 @@ fn steady_states_look_past_events_and_hidden_jumps() {
     assert!((value("ss_ev") - 5.0).abs() < 1e-9, "event after the horizon");
     assert!((value("o_hid") - 5.0).abs() < 1e-9, "time - 1000 > 0");
     let relaxation = steady_state(&model("ss_relax"), &SteadyOptions::default()).unwrap_err().to_string();
-    assert!(relaxation.contains("fires"), "{relaxation}");
+    assert!(relaxation.contains("firing"), "{relaxation}");
     let periodic = steady_state(&model("o_per"), &SteadyOptions::default()).unwrap_err().to_string();
     assert!(periodic.contains("depend on the time"), "{periodic}");
 }
@@ -574,4 +574,136 @@ fn sobol_of_an_unresponsive_output_is_zero_and_unstable_samples_do_not_count() {
     // Above it there is no attractor to read.
     let wide = [Range { name: "b".into(), low: 1.0, high: 3.0, log: false }];
     assert!(sobol_model(&m, &wide, 16, 1, &output).is_err());
+}
+
+fn third(name: &str) -> KineticModel {
+    model(&format!("third_{name}"))
+}
+
+fn third_x(name: &str) -> Result<f64, String> {
+    let m = third(name);
+    let s = steady_state(&m, &SteadyOptions::default()).map_err(|e| e.to_string())?;
+    Ok(s.values[m.slot("X").unwrap()])
+}
+
+#[test]
+fn repeated_doses_have_no_steady_state() {
+    // A daily dose with decay is a sawtooth, whether the event or a window in a rate does the dosing.
+    for name in ["pd1", "pd2"] {
+        assert!(third_x(name).unwrap_err().contains("firing"), "{name}");
+    }
+    assert!(third_x("t1_pulse").unwrap_err().contains("depend on the time"));
+}
+
+#[test]
+fn steady_states_wait_for_what_comes_late() {
+    for (name, why) in [("t2b_delay", "a pending event"), ("sg2", "a window at 500"), ("sg1", "a switch at 500")] {
+        let x = third_x(name).unwrap();
+        assert!((x - 50.0).abs() < 1e-9, "{why}: {x}");
+    }
+}
+
+#[test]
+fn small_forcing_counts_as_forcing() {
+    assert!(third_x("um1").unwrap_err().contains("depend on the time"));
+}
+
+#[test]
+fn delayed_stability_does_not_depend_on_the_units() {
+    for name in ["dl1", "dl2", "dl3"] {
+        let s = steady_state(&third(name), &SteadyOptions::default()).unwrap();
+        assert!(!s.stable, "{name}");
+    }
+}
+
+#[test]
+fn a_trigger_reading_a_delayed_value_does_not_stop_a_steady_state() {
+    assert!((third_x("de1").unwrap() - 20.0).abs() < 1e-6);
+}
+
+#[test]
+fn stochastic_repeated_doses_all_fire_however_long_the_run() {
+    for end in [1990.0, 3000.0, 10000.0] {
+        let (mean, _) = mean_at_end(&third("t4_event"), "X", end, 1, 5, Algorithm::Direct);
+        assert!((mean - end).abs() < 1e-6, "{end}: {mean}");
+    }
+}
+
+#[test]
+fn a_stiff_rate_rule_in_a_stochastic_run_stays_stable() {
+    // dP/dt = k (S - P), which a fixed step of end / 2000 would make unstable.
+    let m = third("rr1");
+    let (s, _) = mean_at_end(&m, "S", 4100.0, 1, 5, Algorithm::Direct);
+    let (p, _) = mean_at_end(&m, "P", 4100.0, 1, 5, Algorithm::Direct);
+    assert!((p - s).abs() < 2.0, "{p} {s}");
+}
+
+#[test]
+fn periodic_windows_are_counted_over_long_runs() {
+    // A quarter hour of infusion each day gives 25 per day, at either integrator.
+    for method in [Method::Rodas4, Method::Bdf] {
+        let x = end_value(&third("t3_count"), "X", 8760.0, 1, method);
+        assert!((x - 9125.0).abs() < 1e-3, "{method:?}: {x}");
+    }
+    let doses = end_value(&third("t3_event"), "X", 8760.0, 1, Method::Rodas4);
+    assert_eq!(doses, 366.0);
+    let (mean, sd) = mean_at_end(&third("t3_count"), "X", 8760.0, 1, 20, Algorithm::Direct);
+    assert!((mean - 9125.0).abs() < 5.0 * sd / 20f64.sqrt() + 1.0, "{mean}");
+    let x = end_value(&third("wn1"), "X", 1000.0, 1, Method::Rodas4);
+    assert!((x - 2.0).abs() < 1e-5, "{x}");
+}
+
+#[test]
+fn a_window_moved_by_an_event_is_stopped_at() {
+    // Half an hour at rate 10 every 24 h: ten pulses by t = 240.6, whatever the output spacing.
+    for steps in [1, 1000] {
+        let x = end_value(&third("mw1"), "X", 240.6, steps, Method::Rodas4);
+        assert!((x - 50.0).abs() < 1e-5, "{steps} outputs: {x}");
+    }
+}
+
+#[test]
+fn a_jump_at_the_limit_of_the_step_size_is_stepped_across() {
+    for method in [Method::Rodas4, Method::Bdf] {
+        let x = end_value(&third("sw3"), "X", 200.0, 1, method);
+        assert!((x - 1000.0).abs() < 1e-5, "{method:?}: {x}");
+        let a = end_value(&third("u2"), "A", 20000.0, 1, method);
+        assert!((a - 0.181_818_181_8).abs() < 1e-6, "{method:?}: {a}");
+    }
+    let a = end_value(&third("u9"), "A", 200000.0, 1, Method::Rodas4);
+    assert!((a - 0.181_818_181_8).abs() < 1e-6, "{a}");
+    let s = end_value(&third("al1"), "S", 10.0, 1, Method::Bdf);
+    assert!((s - 2.0).abs() < 1e-6, "{s}");
+}
+
+#[test]
+fn sensitivities_solve_again_where_totals_move_some_other_way() {
+    // A -> n B with a net law: dA/dn = 1/9.
+    let local = {
+        let m = third("q_s2");
+        let state = steady_state(&m, &SteadyOptions::default()).unwrap();
+        let control = control_analysis(&m, &state).unwrap();
+        local_steady(&m, &state, &control, &["n".to_string()]).unwrap()
+    };
+    assert!((local.state[(0, 0)] - 1.0 / 9.0).abs() < 1e-6, "{}", local.state[(0, 0)]);
+    let on = |name: &str, parameter: &str| {
+        let m = third(name);
+        let state = steady_state(&m, &SteadyOptions::default()).unwrap();
+        let control = control_analysis(&m, &state).unwrap();
+        local_steady(&m, &state, &control, &[parameter.to_string()]).unwrap().state[(0, 0)]
+    };
+    assert!((on("sv1", "dose") - 1.0 / 3.0).abs() < 1e-6);
+    assert!(on("sv2", "T").abs() < 1e-6);
+}
+
+#[test]
+fn a_tiny_fractional_amount_is_not_a_whole_molecule() {
+    let m = third("wh1");
+    assert!(ensemble(&m, &[0.0, 5.0], 2, Algorithm::Direct, 1).unwrap_err().to_string().contains("whole number"));
+}
+
+#[test]
+fn sbml_level_1_is_refused_with_a_reason() {
+    let text = r#"<?xml version="1.0"?><sbml xmlns="http://www.sbml.org/sbml/level1" level="1" version="2"><model name="m"/></sbml>"#;
+    assert!(KineticModel::from_sbml_str(text).unwrap_err().to_string().contains("Level 1"));
 }

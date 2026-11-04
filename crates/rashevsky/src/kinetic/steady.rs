@@ -9,10 +9,11 @@
 //! part of the Jacobian's eigenvalues: a positive one means the state is not an attractor, as on a
 //! limit cycle. `delay` reads the present at a steady state, where eigenvalues of the delay-free system
 //! do not decide stability, so a delayed model counts as stable only if the integration reached the root.
-//! Rates that still depend on the time at the end of the integration have no steady state, and an event
-//! that would fire on the way to the root, or a Newton iteration that runs away, are errors too.
+//! The integration extends while events still fire or are pending and while rates still change with the
+//! time. If that does not end, there is no steady state, and that is an error, as are an event that would
+//! fire on the way to the root and a Newton iteration that runs away.
 
-use super::compile::{Coef, KineticModel, NoDelay, eval};
+use super::compile::{Coef, KineticModel, NoDelay, TimeSteps, eval};
 use super::ode::OdeSystem;
 use super::sim::{KineticSystem, Method, SimOptions, simulate};
 use crate::error::{Error, Result};
@@ -229,33 +230,43 @@ fn has_negative_amount(model: &KineticModel, state: &SteadyState) -> bool {
     model.species.iter().any(|s| state.values[s.amount] < -1e-9 * scale)
 }
 
-/// Rejects a model whose rates still change with the time at `t`, reading them at times that do not share
-/// a period.
-fn check_time_settled(model: &KineticModel, y: &[f64], t: f64) -> Result<()> {
+/// Rates of change and reaction rates at a time, for a frozen state.
+fn rates_at(model: &KineticModel, sys: &KineticSystem<'_>, y: &[f64], t: f64) -> Vec<f64> {
+    let mut dy = vec![0.0; y.len()];
+    sys.rhs(t, y, &mut dy);
+    let vals = sys.values(t, y);
+    dy.extend(model.reactions.iter().map(|r| vals[r.rate]));
+    dy
+}
+
+/// Whether the rates at `y` no longer change with the time after `t`: no jump lies ahead on a long grid, and
+/// they read the same at times spread over decades, compared relative to their own size.
+fn time_has_settled(model: &KineticModel, steps: &TimeSteps, y: &[f64], t: f64) -> Result<bool> {
     if !model.reads_time() {
-        return Ok(());
+        return Ok(true);
     }
     let sys = KineticSystem::new(model, false);
-    let n = y.len();
-    let mut now = vec![0.0; n];
-    let mut later = vec![0.0; n];
-    sys.rhs(t, y, &mut now);
-    let scale = now.iter().fold(1.0f64, |acc, v| acc.max(v.abs()));
-    for offset in [0.37, 1.0, std::f64::consts::E, std::f64::consts::PI * 3.0, 17.3, 101.7] {
-        for at in [t + offset, 2.0 * t + offset] {
-            sys.rhs(at, y, &mut later);
-            if now.iter().zip(&later).any(|(a, b)| (a - b).abs() > 1e-8 * scale) {
-                return Err(Error::Kinetic(format!(
-                    "the rates still depend on the time at t = {t}, so there is no steady state"
-                )));
-            }
-        }
+    let vals = sys.values(t, y);
+    let far = 100.0 * t + 1000.0;
+    if !steps.rate_times(&vals, t, far)?.is_empty() || !steps.trigger_times(&vals, t, far)?.is_empty() {
+        return Ok(false);
     }
-    Ok(())
+    let now = rates_at(model, &sys, y, t);
+    let mut offset = 0.37;
+    while offset < 1e7 + t * 1e4 {
+        let later = rates_at(model, &sys, y, t + offset);
+        let size = now.iter().chain(&later).fold(0.0f64, |acc, v| acc.max(v.abs()));
+        if now.iter().zip(&later).any(|(a, b)| (a - b).abs() > 1e-8 * size) {
+            return Ok(false);
+        }
+        offset *= 1.73;
+    }
+    Ok(true)
 }
 
 /// Rejects a root that an event would stop the system from reaching.
-fn check_events_quiet(model: &KineticModel, integrated: &[f64], root: &SteadyState) -> Result<()> {
+fn check_events_quiet(analysed: &KineticModel, integrated: &[f64], root: &SteadyState) -> Result<()> {
+    let model = analysed;
     if model.events.is_empty() {
         return Ok(());
     }
@@ -281,9 +292,10 @@ pub fn steady_state(model: &KineticModel, options: &SteadyOptions) -> Result<Ste
     let m = moieties(model)?;
     let frozen = model.has_delay.then(|| model.without_delays());
     let analysed = frozen.as_ref().unwrap_or(model);
-    let integrate = |until: f64| -> Result<Vec<f64>> {
+    let steps = analysed.time_steps();
+    let integrate = |until: f64| -> Result<(Vec<f64>, Vec<f64>, Option<f64>)> {
         if until <= 0.0 {
-            return Ok(model.initial_state());
+            return Ok((model.initial_state(), Vec::new(), None));
         }
         let run = simulate(
             model,
@@ -291,29 +303,54 @@ pub fn steady_state(model: &KineticModel, options: &SteadyOptions) -> Result<Ste
             &SimOptions { method: Method::Rodas4, rtol: 1e-8, atol: 1e-10, ..SimOptions::default() },
         )?;
         let vals = &run.values[1];
-        Ok(model.state_slots.iter().map(|&s| vals[s]).collect())
+        Ok((model.state_slots.iter().map(|&s| vals[s]).collect(), run.event_times, run.pending_until))
     };
-    // Everything that changes with the time alone must have happened by the end of the integration.
+    // Everything that happens at fixed times must have happened by the end of the integration.
     let reach = options.integrate_first.max(1.0);
-    let last_jump =
-        model.rate_thresholds(reach).into_iter().chain(model.trigger_thresholds(reach)).fold(0.0f64, f64::max);
+    let last_jump = steps
+        .rate_times(&model.initial, 0.0, reach)?
+        .into_iter()
+        .chain(steps.trigger_times(&model.initial, 0.0, reach)?)
+        .fold(0.0f64, f64::max);
     let mut horizon = if options.integrate_first > 0.0 { options.integrate_first.max(2.0 * last_jump) } else { 0.0 };
     let mut fallback = None;
-    for extension in 0..=EXTENSIONS {
+    let mut last_error = None;
+    let mut extensions = 0;
+    let mut extend = |horizon: &mut f64, reason: String| -> Result<()> {
+        if *horizon <= 0.0 || extensions == EXTENSIONS {
+            return Err(Error::Kinetic(reason));
+        }
+        extensions += 1;
+        *horizon *= 10.0;
+        Ok(())
+    };
+    for _ in 0..12 {
         // A run that diverges during an extension has told us all it can: the root found before is unstable.
-        let y = match integrate(horizon) {
-            Ok(y) => y,
+        let (y, event_times, pending) = match integrate(horizon) {
+            Ok(run) => run,
             Err(e) => return fallback.ok_or(e),
         };
-        check_time_settled(analysed, &y, horizon)?;
-        let state = newton(analysed, &m, &y, horizon, options);
-        match state {
+        if let Some(until) = pending {
+            horizon = horizon.max(1.5 * until + 1.0);
+            continue;
+        }
+        if event_times.iter().any(|&t| t > 0.5 * horizon) {
+            let reason = format!("events are still firing at t = {horizon}, so there is no steady state");
+            extend(&mut horizon, reason)?;
+            continue;
+        }
+        if !time_has_settled(analysed, &steps, &y, horizon)? {
+            let reason = format!("the rates still depend on the time at t = {horizon}, so there is no steady state");
+            extend(&mut horizon, reason)?;
+            continue;
+        }
+        match newton(analysed, &m, &y, horizon, options) {
             Ok(mut state) => {
-                check_events_quiet(model, &y, &state)?;
+                check_events_quiet(analysed, &y, &state)?;
                 if model.has_delay {
                     let distance = y.iter().zip(&state.y).fold(0.0f64, |a, (p, q)| a.max((p - q).abs()));
-                    let size = state.y.iter().fold(1.0f64, |a, v| a.max(v.abs()));
-                    state.stable = distance <= 1e-4 * size;
+                    let size = state.y.iter().fold(0.0f64, |a, v| a.max(v.abs()));
+                    state.stable = distance <= 1e-4 * size + 1e-10;
                     state.largest_eigenvalue = f64::NAN;
                 }
                 let negative = has_negative_amount(model, &state);
@@ -325,15 +362,20 @@ pub fn steady_state(model: &KineticModel, options: &SteadyOptions) -> Result<Ste
                 }
             }
             Err(e) => {
-                if horizon <= 0.0 || extension == EXTENSIONS {
-                    return fallback.ok_or(e);
+                if horizon <= 0.0 {
+                    return Err(e);
                 }
+                last_error = Some(e);
             }
         }
-        if horizon <= 0.0 {
+        if extend(&mut horizon, String::new()).is_err() {
             break;
         }
-        horizon *= 10.0;
+    }
+    if let Some(e) = last_error
+        && fallback.is_none()
+    {
+        return Err(e);
     }
     fallback.ok_or_else(|| Error::Kinetic("the only steady state found has negative amounts".into()))
 }
