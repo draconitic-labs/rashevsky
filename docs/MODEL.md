@@ -10,11 +10,20 @@ models. Kinetic models carry the units their SBML defines.
 
 A model has metabolites `i`, reactions `j`, a stoichiometric matrix `S` with `S_ij < 0` for substrates,
 bounds `l <= v <= u`, and gene-protein-reaction rules. SBML species with `boundaryCondition="true"` are
-exempt from the balance. Reading: SBML Levels 2 and 3 with FBC versions 1 to 3 (`fbc:fluxBound`,
-`fbc:lowerFluxBound`, `fbc:geneProductAssociation`), the groups package for subsystems, COBRA-style
-`GENE_ASSOCIATION` notes as a fallback. Initial assignments and rules that define flux bounds or
-stoichiometries are evaluated by the kinetic compiler of section 4. Writing: SBML Level 3 Version 1,
-declaring FBC version 2 and groups only when a model uses them.
+exempt from the balance. A reaction with one balanced metabolite is an exchange, whether written `A <->` or through
+a boundary species as `A_b <-> A`, and its uptake direction comes from the coefficient on that metabolite.
+
+Reading: SBML Levels 2 and 3 with FBC versions 1 to 3 (`fbc:fluxBound`, including the operations `less` and `greater`;
+`fbc:geneAssociation`; `fbc:lowerFluxBound`; `fbc:geneProductAssociation`), the groups package for subsystems, and the
+COBRA conventions before FBC (`LOWER_BOUND`, `UPPER_BOUND` and `OBJECTIVE_COEFFICIENT` among kinetic law parameters,
+`GENE_ASSOCIATION` in notes). Stoichiometry expressions, initial assignments and rules that define flux bounds or
+stoichiometries are evaluated by the kinetic compiler of section 4. FBC version 3 user constraints and quadratic objective
+terms are refused for flux analyses, as is any model using a package it marks as required, other than FBC and groups.
+Identifiers are kept as written: a COBRA escape such as `__45__` is not decoded.
+
+Writing: SBML Level 3 Version 1, declaring FBC version 2 and groups only when a model uses them, with annotations kept.
+Level 2 defaults become explicit, and a Level 2 stoichiometry expression becomes an assignment rule on a named species
+reference.
 
 ### Gene deletions
 
@@ -33,6 +42,9 @@ HiGHS keeps matrix entries above 1e-12 (`small_matrix_value`). Its default of 1e
 models: `eciML1515` has 17 entries at or below it, and solving that file with the default overstates anaerobic growth by
 2e-5, because the affected enzymes become free.
 
+Rows that multiply a flux bound by a binary variable (ll-FBA, ROOM, TFA) need finite bounds. An infinite bound is replaced
+by the largest flux the network allows, found by linear programming, and a reaction with no such limit is an error.
+
 **HiGHS** (Huangfu and Hall 2018) solves linear, mixed-integer and convex quadratic programs, through its
 C API. Feasibility tolerances are 1e-9, the relative MIP gap 1e-6. Each worker thread keeps one session
 and re-solves from the previous basis after a change of bounds or objective.
@@ -50,12 +62,15 @@ which guarantees termination.
 
 **FBA** (Orth, Thiele and Palsson 2010): `max c'v` subject to `S v = 0`, `l <= v <= u`.
 
-**Parsimonious FBA** (Lewis et al. 2010): with `z*` the FBA optimum and `f` a retained fraction, minimize
-`sum (v+_j + v-_j)` subject to `S (v+ - v-) = 0` and `c'(v+ - v-) >= f z*`, on separate forward and reverse
-parts of each flux.
+**Retaining an objective**: with `z*` the optimum and `f` the retained fraction, a maximized objective must reach
+`min(f z*, z* / f)` and a minimized one must stay under `max(f z*, z* / f)`. For a positive optimum this is the usual
+`f z*` and `z* / f`, and it also holds for a negative one. At `f = 0` no row is added.
+
+**Parsimonious FBA** (Lewis et al. 2010): minimize `sum (v+_j + v-_j)` subject to `S (v+ - v-) = 0` and the retained
+objective, on separate forward and reverse parts of each flux. The solution's `objective` is this total, as in COBRApy.
 
 **Flux variability** (Mahadevan and Schilling 2003): minimum and maximum of each `v_j` subject to
-`S v = 0`, `l <= v <= u`, `c'v >= f z*`. No slack is added to that last row: some fluxes respond ~1000-fold
+`S v = 0`, `l <= v <= u` and the retained objective. No slack is added to that last row: some fluxes respond ~1000-fold
 to the objective (`ICDHyr` in `e_coli_core` moves 920 units per unit of growth), so 1e-9 of slack is
 visible at 1e-6. LPs share a session per worker (Gudmundsson and Thiele 2010).
 
@@ -64,7 +79,8 @@ potential `G_j`, with `-M(1 - a_j)`-style rows `v_j <= u_j a_j`, `v_j >= l_j (1 
 `G_j >= 1 - (M + 1) a_j`, and `N_int' G = 0` over a null-space basis of the internal stoichiometry.
 
 **CycleFreeFlux** (Desouki et al. 2015): given `v`, minimize `sum |w_j|` over internal reactions subject to
-`S w = 0`, `w_j` between 0 and `v_j`, and boundary and objective reactions fixed at their values in `v`.
+`S w = 0`, `w_j` between 0 and `v_j` within its own bounds, and boundary and objective reactions fixed at their values
+in `v`.
 
 **MOMA** (Segre, Vitkup and Church 2002): minimize `sum (v_j - w_j)^2` over the perturbed network for a
 reference `w`, as a convex QP. **Linear MOMA** minimizes `sum |v_j - w_j|`.
@@ -80,16 +96,18 @@ of a target flux.
 minimizes the number of open exchanges with binaries, then total uptake among them.
 
 **Dynamic FBA** (Mahadevan, Edwards and Doyle 2002; Varma and Palsson 1994): static optimization. Over a step
-`dt` the fluxes are constant, with uptake `v_i >= -vmax_i S_i / (K_i + S_i)` and capped so that a substrate
-cannot be exhausted within the step. Then `X(t + dt) = X e^(mu dt)` and
-`S_i(t + dt) = S_i + v_i X (e^(mu dt) - 1) / mu`. The scheme is exact while fluxes stay constant and first-order
-once they change.
+`dt` the fluxes are constant. With `c_i` the exchange's coefficient on its metabolite, uptake is `u_i = c_i v_i`,
+limited by `vmax_i S_i / (K_i + S_i)` and never beyond the model's own bounds. Then `X(t + dt) = X e^(mu dt)` and
+`S_i(t + dt) = S_i - u_i I`, with `I = X (e^(mu dt) - 1) / mu`. Every followed species, kinetic or not, is capped at
+`u_i I <= S_i`. Since `I` depends on `mu` and `mu` on the cap, the two are iterated to a consistent step, which holds
+biomass to the yield at any step size. The scheme is exact while fluxes stay constant and first-order once they change.
+Each step reports its solver status, and an unbounded problem is an error.
 
 ### Flux sampling
 
 Reactions whose FVA range is under 1e-9 are fixed, the remaining fluxes are written `v = x0 + N z` over an
-orthonormal null-space basis, and FVA ranges serve as bounds. Keeping an objective fraction adds its
-half-space.
+orthonormal null-space basis, from the same elimination that selects independent rows, and FVA ranges serve as bounds.
+Keeping an objective fraction adds its half-space, for either sense. With no fraction, the objective is free.
 
 **CHRR** (Haraldsdottir et al. 2017): coordinate hit-and-run from the centre of the largest inscribed ball,
 found by a linear program, along columns of a rounded basis. *This implementation rounds differently from
@@ -98,8 +116,9 @@ of `60 d` points (Lovasz and Vempala 2006), rather than using the maximum-volume
 only mixing: the target stays uniform.
 
 **OptGP** (Megchelenbrink, Huynen and Marchiori 2014): chains of artificial-centering hit-and-run from the
-centre of FVA-derived warmup points, with projection onto the null space every 100 moves. *A heuristic
-sampler*: since artificial centering adapts its directions, it has no exact guarantee of uniformity, so read
+centre of FVA-derived warmup points, with projection onto the null space every 100 moves. Moves run along warmup
+directions, so if those vertices do not span the polytope, vertices of random objectives are added, and it is an error
+if they still do not. *A heuristic sampler*: since artificial centering adapts its directions, it has no exact guarantee of uniformity, so read
 its output with the diagnostics below.
 
 **Diagnostics**: split R-hat (Gelman et al. 2013), effective sample size from autocorrelations summed over
@@ -123,17 +142,18 @@ unconstrained.
 
 ### Enzyme constraints
 
-GECKO-style (Sanchez et al. 2017). Enzyme `k` has a usage `e_k` in mmol/gDW, so with turnover numbers in 1/h and
-molecular weights in g/mmol:
+GECKO-style (Sanchez et al. 2017). Each catalysis `c` (one reaction by one isozyme or complex) has an allocation `a_c` in
+mmol/gDW. Enzyme `k` has a usage `e_k`. With turnover numbers in 1/h, molecular weights in g/mmol and `n_ck` copies of
+enzyme `k` in the complex of `c`:
 
-    v_j <= sum_k kcat+_jk e_k,   v_j >= -sum_k kcat-_jk e_k,   sum_k MW_k e_k <= P,   e_k <= abundance_k
+    v_j <= sum_c kcat+_c a_c,   v_j >= -sum_c kcat-_c a_c,   sum_c n_ck a_c <= e_k,   sum_k MW_k e_k <= P,   e_k <= abundance_k
 
-A published GECKO file can also be read as it stands, since it encodes enzymes as metabolites and reactions. Both
-routes reach the same optimum on `eciML1515` (`validation/v12_ecmodel.py`). A complex enters as one enzyme whose
-weight is what its subunits take per catalytic cycle, `MW = kcat sum_s c_s MW_s`, with `c_s = n_s / kcat`.
+Reactions therefore share a promiscuous enzyme, and a complex takes all of its subunits, as in the paper's single
+utilization constraint per enzyme. A published GECKO file can also be read as it stands, since it encodes enzymes as
+metabolites and reactions, with coefficients `n_ck / kcat`. Both routes reach the same optimum on `eciML1515`
+(`validation/v12_ecmodel.py`).
 
-Turnover numbers, weights and the pool `P` are inputs. The module holds no biological data, and validation
-covers its arithmetic only.
+Turnover numbers, weights and the pool `P` are inputs, and the module holds no biological data.
 
 ### Metabolic tasks
 
@@ -146,8 +166,9 @@ balance row reach `S v` in `[-UB, -LB]`, an output in `[LB, UB]`. Extra reaction
 
 ### Compilation
 
-SBML core Levels 2 and 3. Function definitions are inlined, local parameters replaced by their values, and
-symbols resolved to slots in a value array. Each species has two slots, the value math sees (a concentration, or
+SBML core Levels 2 and 3. Function definitions are inlined, and symbols resolved to slots in a value array. A local
+parameter gets a slot named `reaction.parameter`, so that it can be overridden, fitted and analysed like a global one.
+MathML and SBML core are recognized under any namespace prefix. Each species has two slots, the value math sees (a concentration, or
 an amount with `hasOnlySubstanceUnits`) and its amount. The state is:
 
 - the amount of each species not otherwise determined;
@@ -164,7 +185,11 @@ determines, preferring symbols that no event assigns. Algebraic variables start 
 restored by Newton iteration after every event.
 
 **Initial values**: compartment sizes, attributes, initial assignments and assignment rules are one system of
-definitions, evaluated repeatedly until they stop changing, which resolves them in any order.
+definitions, evaluated repeatedly until they stop changing, which resolves them in any order. Algebraic rules alternate
+with them, since each can read what the other determines.
+
+**Overrides** (`--set`, `set_value`): rebuild the initial values from the compiled ones, with parameters and sizes first and
+species values after, so that the order of overrides does not matter. A symbol that a rule determines cannot be overridden.
 
 **`delay(x, tau)`**: from a stored history of accepted steps, with cubic Hermite interpolation of the state.
 Before the start time, the initial definitions are re-evaluated at that earlier time and rates are zero, which
@@ -173,13 +198,14 @@ This is a method of steps with interpolation, and it is not designed for state-d
 
 **Fast reactions** (removed from SBML in Level 3 Version 2): *a stand-in*, the singular perturbation of
 multiplying the law by `1e8`, with the fast subsystem brought to equilibrium in pseudo-time at the start and after
-events. The residual of the equilibrium condition is of the order of `1e-8`.
+events. A law whose largest partial derivative at the start is more than 1000 times from one is rescaled so that
+this derivative becomes `1e8`, which makes the method independent of the law's size. The residual of the equilibrium
+condition is of the order of `1e-8`.
 
 **Jacobians** come from symbolic differentiation (`kinetic/diff.rs`) of the right-hand side with all derived values
-inlined; `piecewise` differentiates branch by branch, step-like operators to zero, and `delay` is treated as
-independent of the current state, so its contribution is absent from the Jacobian (which affects only the rate of
-convergence of the integrators). Past a size limit of 4 million nodes the integrators fall back on forward
-differences.
+inlined; `piecewise` differentiates branch by branch and step-like operators to zero. A model with `delay` uses forward
+differences, since the symbolic form leaves `delay` out and would cost a Rosenbrock method its order. So does a model past
+a size limit of 4 million nodes.
 
 ### Integrators
 
@@ -193,7 +219,11 @@ algebraic variables.
 order 1 to 5 on a quasi-constant step, with backward differences, `kappa = (0, -0.185, -1/9, -0.0823, -0.0415)`,
 Newton iteration on `(M - c J) dy = c f - M (psi + d)`.
 
-Default tolerances: relative `1e-9`, absolute `1e-12`.
+Default tolerances: relative `1e-9`, absolute `1e-12`. The dynamics start at time zero whatever the first output time.
+
+**Jumps in rates**: a comparison of the time with a fixed value inside a rate or rule marks a time at which the right-hand
+side can jump. Integration stops `1e-12 (1 + t)` before it and restarts the same distance after it, so that no stage of a
+step straddles the jump. Discontinuities that depend on the state are left to step-size control.
 
 ### Events
 
@@ -204,17 +234,22 @@ broken by a seeded random generator as the specification requires, and all trigg
 Species values convert with the compartment size before the event, and a species keeps its amount when its
 compartment's size jumps.
 
-Each accepted step is scanned at 16 points for a trigger change, which catches a trigger that opens and closes
-inside a step. The first change is refined by bisection on the interpolant to a relative width of `1e-11`, and the
-step is repeated exactly up to it. A window narrower than a sixteenth of a step can still be missed.
+A step ends on every fixed time that a trigger compares the time with, so a window set by the time cannot fall between
+the points examined. Each accepted step is also scanned at 16 points for a trigger change, which catches a state-driven
+trigger that opens and closes inside a step. The first change is refined by bisection on the interpolant to a relative
+width of `1e-11`, and the step is repeated exactly up to it. A state-driven window narrower than a sixteenth of a step can
+still be missed. A negative delay is an error. `delay` history keeps the value on both sides of an event.
 
 ### Steady states
 
 The stoichiometric matrix factors as `N = L Nr`, with `Nr` the independent rows found by full pivoting and
 `L = N Nr' (Nr Nr')^-1` (Reder 1988). Dependent species follow from the independent ones through the conserved totals.
-The system integrates for a chosen time first, which selects the attractor reached from the initial state, and damped
-Newton then solves `Nr v(y(s)) = 0`, running until it stops improving. This finds a fixed point and says nothing about
-its stability.
+The system integrates for a chosen time first, extended past the last time a rate can jump, and damped Newton then solves
+`Nr v(y(s)) = 0` at that time, running until it stops improving. The result reports the largest real part of the eigenvalues
+of the Jacobian over the independent amounts. Newton can reach any root, so a root that is unstable or has a negative amount
+extends the integration tenfold, up to twice, before it is reported: an unstable root is returned with `stable = false`, as on
+a limit cycle, and one with negative amounts is an error. `delay` reads the present at a steady state. Rates that still
+depend on the time are an error, and so is a stoichiometric coefficient or conversion factor that varies.
 
 ### Metabolic control analysis
 
@@ -232,31 +267,53 @@ The engine reports residuals of the theorems in the scaled form in which they ar
 
 ### Sensitivity and estimation
 
-**Local**: `dJ/dp = Cj dv/dp`, `dy/dp = Cs dv/dp` with `dv/dp` symbolic.
+**Local**: a parameter moves the rates of change at the frozen steady state by `b = N dv/dp + (dN/dp) v`, and then
+`ds/dp = -(Nr E L)^-1 b`, `dy/dp = L ds/dp`, `dJ/dp = dv/dp + E dy/dp`. The partial derivatives come from a fourth-order
+central difference with `h = 1e-3 |p|` through the override mechanism, so that a parameter counts everywhere it reaches:
+laws, stoichiometries, compartment sizes and values assigned from it. A name that does not exist, varies during a simulation
+or is set by a rule is an error.
 
 **Global**: first-order Sobol indices from the estimator of Saltelli et al. (2010) and total indices from Jansen's
-(1999) formula, with `n (d + 2)` evaluations. A sample that fails to evaluate is dropped from every arm.
+(1999) formula, with `n (d + 2)` evaluations. The output is a symbol at the steady state or at a time. A sample that fails to
+evaluate is dropped from every arm. Failures concentrated in one region bias the indices, so more than 5 % is an error.
 
 **Estimation**: Levenberg-Marquardt on `chi2(p) = sum ((y_model - y_obs) / sigma)^2` in the logarithm of each parameter,
 with forward-difference Jacobians over full simulations. **Profile likelihood** (Raue et al. 2009): each grid value of one
-parameter re-optimizes the others, and the interval ends where `chi2` exceeds its minimum by 3.84.
+parameter re-optimizes the others, and the interval ends where `chi2` exceeds its minimum by 3.84. The walk to each limit
+starts at the estimate, which is on the grid, and a limit beyond a failed simulation stays undetermined.
 
 ### Stochastic simulation
 
-**Direct method** (Gillespie 1977), exact for mass-action networks with constant propensities between firings.
-**Tau-leaping** (Cao, Gillespie and Petzold 2006): *an approximation*, with Poisson increments and a leap bound of the
-form of their equation 8 with `g = 2` for all species, which is conservative for first-order reactions; it falls back to
-direct steps when a leap would cover fewer than 10 expected firings, and halves a leap that would make an amount negative.
-With rate rules or events, propensities are treated as constant over steps of at most `T/2000`.
+**Direct method** (Gillespie 1977), exact for networks with constant propensities between firings. A reaction whose firing
+would leave a species below zero has propensity zero. Stoichiometry is read at each firing. Event semantics follow the
+deterministic driver, with priorities and random ties.
+
+**Tau-leaping** (Cao, Gillespie and Petzold 2006): *an approximation*. Reactions within 10 firings of exhausting a reactant are
+critical. Over the others, the leap is the `tau'` of their equation 33, with `g_i` from the highest-order reaction taking species
+`i` and the order from the reactant stoichiometry, which is the true order for mass-action laws. Below 10 expected firings it
+takes 100 direct steps. Otherwise the leap is the smaller of `tau'` and the exponential waiting time of the critical reactions,
+clipped to the next stop, with Poisson firings of the others. A leap that makes a species negative is repeated at half of `tau'`,
+and the time advances only on acceptance.
+
+The method bounds the relative change of each propensity by `epsilon`, except that one molecule's change is always allowed
+(their `max(epsilon x_i / g_i, 1)`). The explicit method's first-order error is therefore of the order of `epsilon` per decay time
+(3 % at 0.03 on pure decay), and a low-copy species with fast turnover is biased whatever `epsilon` is: a birth-death species of true
+mean 1, beside a large population that sets the leap, reads 1.45 here and 1.81 in GillesPy2's tau-leaping solver on the same system.
+Use the direct method for such species.
+
+Propensities depending on the time or on a rate rule are held constant over steps of at most `T/2000`, and steps end on fixed times
+that rates and triggers compare the time with. Negative or undefined propensities, algebraic rules, `delay`, fast reactions and
+cascading events that do not settle are errors.
 
 ## 5. Outputs
 
 **Escher** (King et al. 2015): reaction data, and map files of schema 1-0-0 with a force-directed layout.
 
 **Atlas overlay** (`rashevsky-flux-overlay/1`): projects absolute fluxes onto the Reactome events of the metabolism map
-at `biochemistry.draconitic.com`. A reaction reaches an event through a shared Reactome or Rhea identifier, or, failing
-those, through a shared EC number. An event reached by an identifier reports only those reactions; the `match` field of
-each event gives the type. *This is a projection for reading fluxes in context*: the model and the map are separate
+at `biochemistry.draconitic.com`. A reaction reaches an event through a shared Reactome (`reactome` or `reactome.reaction`) or
+Rhea identifier, or, failing those, through a shared EC number. An event reached by an identifier reports only those reactions,
+unless they carry no flux and its EC matches do; the `match` field of each event gives the type. A drawn reaction takes the
+value and the line style of its largest event. *This is a projection for reading fluxes in context*: the model and the map are separate
 reconstructions, and an EC number can cover several events and compartments.
 
 **Layouts**: `models/e_coli_core/layout.json` is drawn by hand. Other models use Fruchterman and Reingold (1991) with

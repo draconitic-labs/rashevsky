@@ -379,7 +379,7 @@ impl Driver<'_> {
                 None => e.assignments.iter().map(|(_, c)| eval(c, &vals, t, &self.sys)).collect(),
             };
             self.apply(t, y, due.event, &values);
-            self.project_algebraic(t, y);
+            self.project_algebraic(t, y)?;
             changed = true;
         }
         Err(Error::Kinetic(format!("event loop did not settle at t = {t}")))
@@ -433,10 +433,10 @@ impl Driver<'_> {
     }
 
     /// Restores the algebraic rules after a jump, by Newton iteration on the variables they determine.
-    fn project_algebraic(&self, t: f64, y: &mut [f64]) {
+    fn project_algebraic(&self, t: f64, y: &mut [f64]) -> Result<()> {
         let m = self.model;
         if m.algebraic.is_empty() {
-            return;
+            return Ok(());
         }
         let n = m.algebraic.len();
         let residual = |y: &[f64]| -> Vec<f64> {
@@ -446,8 +446,11 @@ impl Driver<'_> {
         for _ in 0..20 {
             let r = residual(y);
             let norm = r.iter().map(|v| v * v).sum::<f64>().sqrt();
-            if !norm.is_finite() || norm < 1e-13 {
-                return;
+            if norm < 1e-13 {
+                return Ok(());
+            }
+            if !norm.is_finite() {
+                break;
             }
             let mut jac = DMatrix::zeros(n, n);
             for (col, (state, _)) in m.algebraic.iter().enumerate() {
@@ -461,10 +464,18 @@ impl Driver<'_> {
                 }
             }
             let rhs = nalgebra::DVector::from_iterator(n, r.iter().map(|v| -v));
-            let Some(dx) = jac.lu().solve(&rhs) else { return };
+            let Some(dx) = jac.lu().solve(&rhs) else { break };
             for (k, (state, _)) in m.algebraic.iter().enumerate() {
                 y[*state] += dx[k];
             }
+        }
+        let remaining = residual(y).iter().map(|v| v * v).sum::<f64>().sqrt();
+        if remaining < 1e-8 * (1.0 + y.iter().fold(0.0f64, |a, v| a.max(v.abs()))) {
+            Ok(())
+        } else {
+            Err(Error::Kinetic(format!(
+                "the algebraic rules cannot be satisfied after the event at t = {t}; residual {remaining:e}"
+            )))
         }
     }
 

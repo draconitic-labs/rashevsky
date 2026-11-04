@@ -548,7 +548,9 @@ pub fn optgp(model: &Model, options: &SamplerOptions) -> Result<FluxSamples> {
         }
         let found = span(&warmup);
         if found < d {
-            return Err(Error::Solver(format!("the warmup points span {found} of {d} dimensions, so OptGP cannot reach the whole polytope")));
+            return Err(Error::Solver(format!(
+                "the warmup points span {found} of {d} dimensions, so OptGP cannot reach the whole polytope"
+            )));
         }
     }
     let center = warmup.iter().fold(DVector::zeros(n_free), |acc, p| acc + p) / warmup.len() as f64;

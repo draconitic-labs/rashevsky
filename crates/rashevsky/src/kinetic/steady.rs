@@ -114,7 +114,13 @@ pub struct SteadyState {
 const EXTENSIONS: usize = 2;
 
 /// Damped Newton from `start`, evaluating at time `time`.
-fn newton(model: &KineticModel, m: &Moieties, start: &[f64], time: f64, options: &SteadyOptions) -> Result<SteadyState> {
+fn newton(
+    model: &KineticModel,
+    m: &Moieties,
+    start: &[f64],
+    time: f64,
+    options: &SteadyOptions,
+) -> Result<SteadyState> {
     let sys = KineticSystem::new(model, false);
     let n = start.len();
     let y0 = start.to_vec();
@@ -214,7 +220,9 @@ fn check_time_settled(model: &KineticModel, y: &[f64], t: f64) -> Result<()> {
     sys.rhs(2.0 * t + 1.0, y, &mut later);
     let scale = now.iter().chain(&later).fold(1.0f64, |acc, v| acc.max(v.abs()));
     if now.iter().zip(&later).any(|(a, b)| (a - b).abs() > 1e-8 * scale) {
-        return Err(Error::Kinetic(format!("the rates still depend on the time at t = {t}, so there is no steady state")));
+        return Err(Error::Kinetic(format!(
+            "the rates still depend on the time at t = {t}, so there is no steady state"
+        )));
     }
     Ok(())
 }

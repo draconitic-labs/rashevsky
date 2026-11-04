@@ -94,7 +94,8 @@ pub fn enzyme_constrained_fba(model: &Model, data: &EnzymeData) -> Result<Enzyme
         let single = [(c.enzyme.clone(), 1.0)];
         let members: &[(String, f64)] = if c.subunits.is_empty() { &single } else { &c.subunits };
         for (enzyme, copies) in members {
-            let col = *usage_col.get(enzyme.as_str()).ok_or_else(|| Error::Unknown { kind: "enzyme", id: enzyme.clone() })?;
+            let col =
+                *usage_col.get(enzyme.as_str()).ok_or_else(|| Error::Unknown { kind: "enzyme", id: enzyme.clone() })?;
             shares.entry(col).or_default().push((allocation, *copies));
         }
     }
@@ -209,14 +210,26 @@ mod tests {
     /// `-> A`, with A leaving by two parallel routes.
     fn parallel() -> Model {
         let mut m = model();
-        m.reactions.push(Reaction { id: "other".into(), lb: 0.0, ub: 1000.0, stoichiometry: vec![(0, -1.0)], ..Reaction::default() });
+        m.reactions.push(Reaction {
+            id: "other".into(),
+            lb: 0.0,
+            ub: 1000.0,
+            stoichiometry: vec![(0, -1.0)],
+            ..Reaction::default()
+        });
         m.objective = vec![(1, 1.0), (2, 1.0)];
         m.reindex();
         m
     }
 
     fn catalysis(reaction: &str, enzyme: &str, kcat: f64) -> Catalysis {
-        Catalysis { reaction: reaction.into(), enzyme: enzyme.into(), subunits: Vec::new(), kcat_forward: kcat, kcat_reverse: 0.0 }
+        Catalysis {
+            reaction: reaction.into(),
+            enzyme: enzyme.into(),
+            subunits: Vec::new(),
+            kcat_forward: kcat,
+            kcat_reverse: 0.0,
+        }
     }
 
     #[test]

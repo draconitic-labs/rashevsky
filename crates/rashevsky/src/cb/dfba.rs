@@ -101,7 +101,11 @@ pub fn dfba(model: &Model, options: &DfbaOptions) -> Result<DfbaResult> {
     };
     for s in &options.substrates {
         let j = model.reaction_index(&s.exchange)?;
-        followed.push(Followed { column: j, coefficient: coefficient(j, &s.exchange)?, kinetics: Some((s.vmax, s.km)) });
+        followed.push(Followed {
+            column: j,
+            coefficient: coefficient(j, &s.exchange)?,
+            kinetics: Some((s.vmax, s.km)),
+        });
         ids.push(s.exchange.clone());
         conc.push(s.initial);
     }
@@ -145,7 +149,9 @@ pub fn dfba(model: &Model, options: &DfbaOptions) -> Result<DfbaResult> {
             let s = session.solve()?;
             status = s.status;
             if status == Status::Unbounded {
-                return Err(Error::Solver(format!("the flux problem is unbounded at t = {t}; give the exchange a bound")));
+                return Err(Error::Solver(format!(
+                    "the flux problem is unbounded at t = {t}; give the exchange a bound"
+                )));
             }
             if status != Status::Optimal {
                 fluxes = None;

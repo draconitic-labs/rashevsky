@@ -109,6 +109,29 @@ def stochastic():
     return out
 
 
+def other_forms():
+    """The same cases at every SBML version, and after writing each model and reading it back."""
+    out = {}
+    for label, args in (
+        ("l3v2", ["--level", "l3v2"]),
+        ("l3v1", ["--level", "l3v1"]),
+        ("l2v5", ["--level", "l2v5"]),
+        ("l2v4", ["--level", "l2v4"]),
+        ("l2v3", ["--level", "l2v3"]),
+        ("l2v2", ["--level", "l2v2"]),
+        ("l2v1", ["--level", "l2v1"]),
+        ("newest_after_round_trip", ["--round-trip"]),
+        ("l3v1_after_round_trip", ["--level", "l3v1", "--round-trip"]),
+        ("l2v5_after_round_trip", ["--level", "l2v5", "--round-trip"]),
+    ):
+        results = engine("sbml-suite", SEMANTIC, *args)
+        applicable = [c for c in results if c["applicable"]]
+        failed = [{"case": c["case"], "detail": c["detail"]} for c in applicable if not c["passed"]]
+        out[label] = {"applicable": len(applicable), "passed": len(applicable) - len(failed), "failed": failed}
+        print(label, out[label]["passed"], "of", out[label]["applicable"], flush=True)
+    return out
+
+
 def kurtosis_check(case_dir, runs=2_000_000, seed=991):
     """Case 00003 is a birth-death process, X0 = 100, lambda = 1, mu = 1.1, whose exact law is known
     (Kendall 1948). Late in the run it is so heavy-tailed that the suite's Y, which assumes a sample
@@ -155,6 +178,7 @@ def main() -> int:
     print(f"rodas4 {rodas['passed']}/{rodas['applicable']} = {rodas['percent']:.2f} % in {rodas['seconds']:.0f} s", flush=True)
     bdf = semantic("bdf")
     print(f"bdf {bdf['passed']}/{bdf['applicable']} = {bdf['percent']:.2f} % in {bdf['seconds']:.0f} s", flush=True)
+    forms = other_forms()
     stoch = stochastic()
     flagged = [c for c, r in stoch.items() if len(r["attempts"]) > 1]
     failed = [c for c, r in stoch.items() if not r["pass"]]
@@ -165,6 +189,7 @@ def main() -> int:
         "suite": "SBML Test Suite 3.5.0",
         "rodas4": rodas,
         "bdf": bdf,
+        "other_forms": forms,
         "stochastic_runs_per_case": RUNS,
         "stochastic": stoch,
         "stochastic_cases": len(stoch),

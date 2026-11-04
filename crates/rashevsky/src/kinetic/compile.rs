@@ -76,7 +76,8 @@ pub fn eval(c: &C, vals: &[f64], t: f64, ctx: &dyn DelayContext) -> f64 {
         },
         C::Piece(pieces, otherwise) => {
             for (value, cond) in pieces {
-                if eval(cond, vals, t, ctx) != 0.0 {
+                let holds = eval(cond, vals, t, ctx);
+                if holds != 0.0 && !holds.is_nan() {
                     return eval(value, vals, t, ctx);
                 }
             }
@@ -258,7 +259,8 @@ fn reads_time(c: &C) -> bool {
         C::Time => true,
         C::Ap(_, args) => args.iter().any(reads_time),
         C::Piece(pieces, otherwise) => {
-            pieces.iter().any(|(v, w)| reads_time(v) || reads_time(w)) || otherwise.as_ref().is_some_and(|o| reads_time(o))
+            pieces.iter().any(|(v, w)| reads_time(v) || reads_time(w))
+                || otherwise.as_ref().is_some_and(|o| reads_time(o))
         }
         C::Delay(x, lag) => reads_time(x) || reads_time(lag),
     }
@@ -394,7 +396,8 @@ impl KineticModel {
     pub fn has_varying_stoichiometry(&self) -> bool {
         let varying = self.varying_slots();
         self.stoich.iter().any(|e| {
-            matches!(e.coef, Coef::Slot(s) if varying.contains(&s)) || e.conversion.is_some_and(|s| varying.contains(&s))
+            matches!(e.coef, Coef::Slot(s) if varying.contains(&s))
+                || e.conversion.is_some_and(|s| varying.contains(&s))
         })
     }
 }
@@ -652,13 +655,18 @@ impl KineticModel {
     /// written `S#a`, otherwise what math sees. A symbol that a rule determines cannot be overridden.
     pub fn set_value(&mut self, name: &str, value: f64) -> Result<()> {
         let slot = self.slot(name)?;
-        let species_view = self.species.iter().any(|s| s.view == slot && matches!(s.kind, SpeciesKind::Amount | SpeciesKind::Constant));
+        let species_view = self
+            .species
+            .iter()
+            .any(|s| s.view == slot && matches!(s.kind, SpeciesKind::Amount | SpeciesKind::Constant));
         let species_amount = self.species.iter().any(|s| s.amount == slot);
         if !species_view && !species_amount && self.derived.iter().any(|(d, _)| *d == slot) {
             return Err(Error::Invalid(format!("`{name}` is determined by a rule, so it cannot be overridden")));
         }
         if self.algebraic.iter().any(|(state, _)| self.state_slots[*state] == slot) {
-            return Err(Error::Invalid(format!("`{name}` is determined by an algebraic rule, so it cannot be overridden")));
+            return Err(Error::Invalid(format!(
+                "`{name}` is determined by an algebraic rule, so it cannot be overridden"
+            )));
         }
         self.overrides.retain(|(s, _)| *s != slot);
         self.overrides.push((slot, value));
@@ -672,8 +680,10 @@ impl KineticModel {
         self.initial.clone_from(&self.compiled_initial);
         self.initial_items.clone_from(&self.compiled_items);
         let overrides = self.overrides.clone();
-        let species_of: Vec<Option<usize>> =
-            overrides.iter().map(|(slot, _)| self.species.iter().position(|s| s.view == *slot || s.amount == *slot)).collect();
+        let species_of: Vec<Option<usize>> = overrides
+            .iter()
+            .map(|(slot, _)| self.species.iter().position(|s| s.view == *slot || s.amount == *slot))
+            .collect();
         for (&(slot, value), _) in overrides.iter().zip(&species_of).filter(|(_, owner)| owner.is_none()) {
             self.initial_items.retain(|(s, _)| *s != slot);
             self.initial[slot] = value;
@@ -715,7 +725,11 @@ impl KineticModel {
                 if keep.contains(s) {
                     continue;
                 }
-                let v = if self.has_delay { eval(c, &self.initial, 0.0, &context) } else { eval(c, &self.initial, 0.0, &NoDelay) };
+                let v = if self.has_delay {
+                    eval(c, &self.initial, 0.0, &context)
+                } else {
+                    eval(c, &self.initial, 0.0, &NoDelay)
+                };
                 let old = self.initial[*s];
                 if v.to_bits() != old.to_bits() && !(v.is_nan() && old.is_nan()) {
                     self.initial[*s] = v;

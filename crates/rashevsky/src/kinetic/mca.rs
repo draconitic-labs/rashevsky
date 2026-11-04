@@ -133,16 +133,18 @@ pub fn control_analysis(model: &KineticModel, state: &SteadyState) -> Result<Con
 
     let v = &state.fluxes;
     let y = &state.y;
+    // A flux of the size of rounding has no meaningful scaled coefficient.
+    let flux_scale = v.iter().fold(0.0f64, |a, x| a.max(x.abs()));
     let mut scaled_e = DMatrix::zeros(n_r, n_s);
     for j in 0..n_r {
         for k in 0..n_s {
-            scaled_e[(j, k)] = if v[j] != 0.0 { e[(j, k)] * y[k] / v[j] } else { f64::NAN };
+            scaled_e[(j, k)] = if v[j].abs() > 1e-9 * flux_scale { e[(j, k)] * y[k] / v[j] } else { f64::NAN };
         }
     }
     let mut scaled_cj = DMatrix::zeros(n_r, n_r);
     for i in 0..n_r {
         for j in 0..n_r {
-            scaled_cj[(i, j)] = if v[i] != 0.0 { cj[(i, j)] * v[j] / v[i] } else { f64::NAN };
+            scaled_cj[(i, j)] = if v[i].abs() > 1e-9 * flux_scale { cj[(i, j)] * v[j] / v[i] } else { f64::NAN };
         }
     }
     let mut scaled_cs = DMatrix::zeros(n_s, n_r);
@@ -153,7 +155,6 @@ pub fn control_analysis(model: &KineticModel, state: &SteadyState) -> Result<Con
     }
 
     // A flux that is zero to rounding error (a reaction at equilibrium) has no scaled coefficients.
-    let flux_scale = v.iter().fold(0.0f64, |a, x| a.max(x.abs()));
     let carries_flux = |i: usize| v[i].abs() > 1e-9 * flux_scale;
 
     // Theorem residuals, in the scaled form in which the theorems are stated.

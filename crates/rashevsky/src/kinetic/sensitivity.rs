@@ -64,7 +64,9 @@ pub fn local_steady(
         let stencil = |w: f64, x: f64, y: f64, z: f64| (w - 8.0 * x + 8.0 * y - z) / (12.0 * h);
         let dv = DVector::from_iterator(n_reactions, (0..n_reactions).map(|j| stencil(a.1[j], b.1[j], c.1[j], d.1[j])));
         let rhs = DVector::from_iterator(ind.len(), ind.iter().map(|&i| -stencil(a.0[i], b.0[i], c.0[i], d.0[i])));
-        let ds = lu.solve(&rhs).ok_or_else(|| Error::Kinetic("the reduced Jacobian is singular at this steady state".into()))?;
+        let ds = lu
+            .solve(&rhs)
+            .ok_or_else(|| Error::Kinetic("the reduced Jacobian is singular at this steady state".into()))?;
         let dy = &moieties.link * ds;
         let dj = dv + &control.elasticities * &dy;
         flux.column_mut(column).copy_from(&dj);

@@ -174,6 +174,8 @@ fn evaluate(
 ) -> Result<std::result::Result<bool, String>> {
     let mut p = base.clone();
     let mut bounds: HashMap<usize, (f64, f64)> = HashMap::new();
+    let mut forced_in = std::collections::HashSet::new();
+    let mut forced_out = std::collections::HashSet::new();
     for (entries, is_input) in [(&task.inputs, true), (&task.outputs, false)] {
         let classify = |token: &str| -> (u8, String) {
             let upper = token.to_uppercase();
@@ -199,6 +201,15 @@ fn evaluate(
                 },
             };
             for i in ids {
+                // As RAVEN: one metabolite cannot be both forced in and forced out.
+                if kind == 2 && *lb > 0.0 {
+                    let (this, other) =
+                        if is_input { (&mut forced_in, &forced_out) } else { (&mut forced_out, &forced_in) };
+                    if other.contains(&i) {
+                        return Ok(Err(format!("{token} has a nonzero lower bound both as input and as output")));
+                    }
+                    this.insert(i);
+                }
                 let b = bounds.entry(i).or_insert((0.0, 0.0));
                 if is_input {
                     b.0 = -ub;
@@ -215,6 +226,9 @@ fn evaluate(
         }
     }
     for (&i, &(lb, ub)) in &bounds {
+        if lb > ub {
+            return Ok(Err(format!("the limits on {} contradict each other", model.metabolites[i].id)));
+        }
         p.row_lb[i] = lb;
         p.row_ub[i] = ub;
     }

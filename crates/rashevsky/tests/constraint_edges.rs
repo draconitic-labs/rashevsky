@@ -185,7 +185,11 @@ fn dfba_tracked_species_at_zero_cannot_be_taken_up() {
 #[test]
 fn dfba_refuses_an_unbounded_problem() {
     // Nothing limits this growth: the exchange is not followed and has no bound.
-    let m = model(vec![met("A", false)], vec![rxn("in", &[(0, 1.0)], 0.0, f64::INFINITY), rxn("grow", &[(0, -1.0)], 0.0, f64::INFINITY)], &[(1, 1.0)]);
+    let m = model(
+        vec![met("A", false)],
+        vec![rxn("in", &[(0, 1.0)], 0.0, f64::INFINITY), rxn("grow", &[(0, -1.0)], 0.0, f64::INFINITY)],
+        &[(1, 1.0)],
+    );
     let options = DfbaOptions { biomass: 1.0, t_end: 1.0, dt: 0.5, substrates: Vec::new(), tracked: Vec::new() };
     assert!(cb::dfba(&m, &options).unwrap_err().to_string().contains("unbounded"));
 }
@@ -205,7 +209,14 @@ fn square() -> Model {
 }
 
 fn sampler(fraction: Option<f64>) -> SamplerOptions {
-    SamplerOptions { chains: 4, samples_per_chain: 500, thinning: 50, burn_in: 500, seed: 3, fraction_of_optimum: fraction }
+    SamplerOptions {
+        chains: 4,
+        samples_per_chain: 500,
+        thinning: 50,
+        burn_in: 500,
+        seed: 3,
+        fraction_of_optimum: fraction,
+    }
 }
 
 fn objective_values(run: &cb::FluxSamples, m: &Model) -> Vec<f64> {
@@ -317,7 +328,11 @@ fn retention_holds_for_negative_and_zero_optima() {
 fn deletions_report_unbounded_rather_than_lethal() {
     let m = model(
         vec![met("A", false)],
-        vec![rxn("in", &[(0, 1.0)], 0.0, f64::INFINITY), rxn("grow", &[(0, -1.0)], 0.0, f64::INFINITY), rxn("spare", &[(0, -1.0)], 0.0, 1.0)],
+        vec![
+            rxn("in", &[(0, 1.0)], 0.0, f64::INFINITY),
+            rxn("grow", &[(0, -1.0)], 0.0, f64::INFINITY),
+            rxn("spare", &[(0, -1.0)], 0.0, 1.0),
+        ],
         &[(1, 1.0)],
     );
     let rows = cb::single_reaction_deletion(&m, None).unwrap();
@@ -436,7 +451,11 @@ fn a_task_can_name_a_metabolite_on_both_sides_and_a_bad_reaction_fails_alone() {
         equations: equation.map(|e| (e.to_string(), 0.0, 1.0)).into_iter().collect(),
         changed: changed.map(|c| (c.to_string(), 0.0, 1.0)).into_iter().collect(),
     };
-    let tasks = [task("both_sides", Some("A[c] => A[c] + B[c]"), None), task("bad", None, Some("no_such_reaction")), task("plain", None, None)];
+    let tasks = [
+        task("both_sides", Some("A[c] => A[c] + B[c]"), None),
+        task("bad", None, Some("no_such_reaction")),
+        task("plain", None, None),
+    ];
     let results = check_tasks(&m, &tasks, false).unwrap();
     assert!(results[0].error.is_none(), "{:?}", results[0]);
     assert!(results[1].error.is_some());
@@ -445,10 +464,15 @@ fn a_task_can_name_a_metabolite_on_both_sides_and_a_bad_reaction_fails_alone() {
 
 #[test]
 fn annotations_survive_a_round_trip() {
-    let doc = rashevsky::sbml::read::read_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../models/e_coli_core/e_coli_core.xml.gz")).unwrap();
+    let doc = rashevsky::sbml::read::read_file(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../models/e_coli_core/e_coli_core.xml.gz"
+    ))
+    .unwrap();
     let again = rashevsky::sbml::read::read_str(&rashevsky::sbml::write::write_string(&doc)).unwrap();
     let count = |d: &rashevsky::sbml::Document| -> usize {
-        d.model.reactions.iter().map(|r| r.annotations.len()).sum::<usize>() + d.model.species.iter().map(|s| s.annotations.len()).sum::<usize>()
+        d.model.reactions.iter().map(|r| r.annotations.len()).sum::<usize>()
+            + d.model.species.iter().map(|s| s.annotations.len()).sum::<usize>()
     };
     assert!(count(&doc) > 1000);
     assert_eq!(count(&doc), count(&again));

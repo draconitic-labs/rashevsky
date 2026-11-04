@@ -19,7 +19,14 @@ fn end_value(m: &KineticModel, symbol: &str, end: f64, steps: usize, method: Met
     *simulate(m, &times, &options).unwrap().series(m, symbol).unwrap().last().unwrap()
 }
 
-fn mean_at_end(m: &KineticModel, symbol: &str, end: f64, steps: usize, runs: usize, algorithm: Algorithm) -> (f64, f64) {
+fn mean_at_end(
+    m: &KineticModel,
+    symbol: &str,
+    end: f64,
+    steps: usize,
+    runs: usize,
+    algorithm: Algorithm,
+) -> (f64, f64) {
     let times: Vec<f64> = (0..=steps).map(|k| end * k as f64 / steps as f64).collect();
     let e = ensemble(m, &times, runs, algorithm, 11).unwrap();
     let slot = m.slot(symbol).unwrap();
@@ -56,12 +63,9 @@ fn a_negative_parameter_with_a_rate_rule_does_not_stall_a_leap() {
 
 #[test]
 fn stochastic_simulation_refuses_what_a_propensity_cannot_describe() {
-    for (name, expected) in [
-        ("ssa_rev", "propensity"),
-        ("ssa_delay", "delay"),
-        ("ssa_alg", "algebraic"),
-        ("m_casc", "settle"),
-    ] {
+    for (name, expected) in
+        [("ssa_rev", "propensity"), ("ssa_delay", "delay"), ("ssa_alg", "algebraic"), ("m_casc", "settle")]
+    {
         let m = model(name);
         let error = ensemble(&m, &[0.0, 1.0], 2, Algorithm::Direct, 1).unwrap_err().to_string();
         assert!(error.contains(expected), "{name}: {error}");
@@ -283,10 +287,7 @@ fn a_fast_reaction_equilibrates_whatever_the_size_of_its_law() {
 }
 
 fn observations() -> Vec<Observation> {
-    [0.5, 1.0, 2.0, 3.0]
-        .iter()
-        .map(|&t| Observation { time: t, symbol: "S".into(), value: 0.0, sigma: 0.02 })
-        .collect()
+    [0.5, 1.0, 2.0, 3.0].iter().map(|&t| Observation { time: t, symbol: "S".into(), value: 0.0, sigma: 0.02 }).collect()
 }
 
 #[test]
@@ -346,6 +347,7 @@ fn a_required_package_in_use_is_refused() {
 <model id="m"><comp:listOfSubmodels><comp:submodel comp:id="a" comp:modelRef="b"/></comp:listOfSubmodels></model></sbml>"#;
     assert!(KineticModel::from_sbml_str(text).unwrap_err().to_string().contains("comp"));
     // Declaring it without using it changes nothing.
-    let unused = text.replace(r#"<comp:listOfSubmodels><comp:submodel comp:id="a" comp:modelRef="b"/></comp:listOfSubmodels>"#, "");
+    let unused = text
+        .replace(r#"<comp:listOfSubmodels><comp:submodel comp:id="a" comp:modelRef="b"/></comp:listOfSubmodels>"#, "");
     assert!(KineticModel::from_sbml_str(&unused).is_ok());
 }

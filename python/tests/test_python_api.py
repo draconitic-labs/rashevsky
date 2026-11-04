@@ -63,9 +63,9 @@ def test_unknown_identifier_raises(model):
 
 
 def test_sampling_returns_diagnostics(model):
-    result = model.sample(chains=2, samples=100, thinning=20, burn_in=200, fraction=0.9)
+    result = model.sample(chains=2, samples=300, thinning=100, burn_in=2000, fraction=0.9)
     assert result["dimension"] > 0
-    assert result["diagnostics"]["max_split_rhat"] < 2.0
+    assert result["diagnostics"]["max_split_rhat"] < 1.2
 
 
 SIMPLE = """<?xml version="1.0"?>

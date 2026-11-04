@@ -163,7 +163,11 @@ fn time_course(
 }
 
 /// FBC cases: objective and fluxes at the reference tolerance, by the column names of the results.
-fn flux_balance(doc: &crate::sbml::Document, settings: &Settings, results: &(Vec<String>, Vec<Vec<f64>>)) -> Result<Option<String>> {
+fn flux_balance(
+    doc: &crate::sbml::Document,
+    settings: &Settings,
+    results: &(Vec<String>, Vec<Vec<f64>>),
+) -> Result<Option<String>> {
     let model = crate::Model::from_document(doc)?;
     let solution = crate::cb::fba(&model)?;
     let row = results.1.first().ok_or_else(|| Error::Invalid("no result row".into()))?;

@@ -420,7 +420,10 @@ fn read_observations(path: &PathBuf) -> Result<Vec<rashevsky::kinetic::fit::Obse
     let mut lines = text.lines().enumerate().filter(|(_, l)| !l.trim().is_empty());
     let header: Vec<&str> = lines.next().map(|(_, l)| l.split(',').map(str::trim).collect()).unwrap_or_default();
     if header != ["time", "symbol", "value", "sigma"] {
-        return Err(rashevsky::Error::Invalid(format!("{}: the header must be time,symbol,value,sigma", path.display())));
+        return Err(rashevsky::Error::Invalid(format!(
+            "{}: the header must be time,symbol,value,sigma",
+            path.display()
+        )));
     }
     lines
         .map(|(number, line)| {

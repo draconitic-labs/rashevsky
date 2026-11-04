@@ -126,7 +126,10 @@ pub fn double_reaction_deletion(model: &Model, reactions: Option<&[usize]>) -> R
 pub fn synthetic_lethal_genes(model: &Model, threshold: f64) -> Result<Vec<Deletion>> {
     let baseline = super::fba::fba(model)?;
     if baseline.status != Status::Optimal {
-        return Err(crate::error::Error::Solver(format!("the model before deletions ended with {:?}", baseline.status)));
+        return Err(crate::error::Error::Solver(format!(
+            "the model before deletions ended with {:?}",
+            baseline.status
+        )));
     }
     let singles = single_gene_deletion(model, None)?;
     let viable: Vec<usize> = singles.iter().enumerate().filter(|(_, d)| d.growth > threshold).map(|(g, _)| g).collect();

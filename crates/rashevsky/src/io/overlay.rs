@@ -196,7 +196,8 @@ pub fn build_overlay(
         let mut exact = false;
         let mut any = false;
         for resource in &r.annotations {
-            if let Some(id) = annotation_value(resource, "reactome").or_else(|| annotation_value(resource, "reactome.reaction"))
+            if let Some(id) =
+                annotation_value(resource, "reactome").or_else(|| annotation_value(resource, "reactome.reaction"))
                 && known.contains_key(id)
             {
                 tally.entry(id.to_string()).or_default().reactome.push(j);
@@ -232,15 +233,16 @@ pub fn build_overlay(
     for (event, t) in tally {
         let carries = |list: &[usize]| list.iter().any(|&j| fluxes[j].abs() > 1e-9);
         // An exact match reports alone unless it carries nothing and an EC match does.
-        let (kind, mut members) = if !t.reactome.is_empty() && (carries(&t.reactome) || carries(&t.rhea) || !carries(&t.ec)) {
-            let mut m = t.reactome;
-            m.extend(t.rhea);
-            ("reactome", m)
-        } else if !t.rhea.is_empty() && (carries(&t.rhea) || !carries(&t.ec)) {
-            ("rhea", t.rhea)
-        } else {
-            ("ec", t.ec)
-        };
+        let (kind, mut members) =
+            if !t.reactome.is_empty() && (carries(&t.reactome) || carries(&t.rhea) || !carries(&t.ec)) {
+                let mut m = t.reactome;
+                m.extend(t.rhea);
+                ("reactome", m)
+            } else if !t.rhea.is_empty() && (carries(&t.rhea) || !carries(&t.ec)) {
+                ("rhea", t.rhea)
+            } else {
+                ("ec", t.ec)
+            };
         members.sort_unstable();
         members.dedup();
         events.insert(

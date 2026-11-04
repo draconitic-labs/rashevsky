@@ -110,12 +110,17 @@ impl Model {
     pub fn from_document(doc: &Document) -> Result<Self> {
         let m = &doc.model;
         if let Some(what) = &m.unsupported_fbc {
-            return Err(Error::Invalid(format!("this model uses {what} from FBC version 3, which the flux analyses do not implement")));
+            return Err(Error::Invalid(format!(
+                "this model uses {what} from FBC version 3, which the flux analyses do not implement"
+            )));
         }
         // Initial assignments and rules can define flux bounds and stoichiometries. The kinetic
         // compiler already evaluates them, so its initial values serve when any are present.
-        let has_math_stoichiometry =
-            m.reactions.iter().flat_map(|r| r.reactants.iter().chain(&r.products)).any(|sr| sr.stoichiometry_math.is_some());
+        let has_math_stoichiometry = m
+            .reactions
+            .iter()
+            .flat_map(|r| r.reactants.iter().chain(&r.products))
+            .any(|sr| sr.stoichiometry_math.is_some());
         let evaluated = if m.initial_assignments.is_empty() && m.rules.is_empty() && !has_math_stoichiometry {
             None
         } else {
@@ -176,7 +181,10 @@ impl Model {
                             let c = crate::kinetic::compile::compile_expr(e, &km.index).ok()?;
                             Some(crate::kinetic::compile::eval(&c, &km.initial, 0.0, &crate::kinetic::compile::NoDelay))
                         });
-                        let value = from_math.or_else(|| sr.id.as_deref().and_then(&initial_value)).or(sr.stoichiometry).unwrap_or(1.0);
+                        let value = from_math
+                            .or_else(|| sr.id.as_deref().and_then(&initial_value))
+                            .or(sr.stoichiometry)
+                            .unwrap_or(1.0);
                         *merged.entry(i).or_insert(0.0) += sign * value;
                     }
                 }
@@ -427,9 +435,11 @@ fn read_reaction(
             },
         }
     };
-    let lb = bound(&r.lower_bound)?
-        .or_else(|| local_value(r, "LOWER_BOUND"))
-        .unwrap_or(if r.reversible { f64::NEG_INFINITY } else { 0.0 });
+    let lb = bound(&r.lower_bound)?.or_else(|| local_value(r, "LOWER_BOUND")).unwrap_or(if r.reversible {
+        f64::NEG_INFINITY
+    } else {
+        0.0
+    });
     let ub = bound(&r.upper_bound)?.or_else(|| local_value(r, "UPPER_BOUND")).unwrap_or(f64::INFINITY);
     let mut merged: BTreeMap<usize, f64> = BTreeMap::new();
     for (refs, sign) in [(&r.reactants, -1.0), (&r.products, 1.0)] {

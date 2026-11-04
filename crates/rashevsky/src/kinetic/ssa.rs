@@ -229,7 +229,8 @@ impl Trajectory<'_> {
             for (i, p) in self.pending.iter().enumerate() {
                 if p.1 <= self.t {
                     let e = &self.model.events[p.0];
-                    let priority = e.priority.as_ref().map_or(f64::NEG_INFINITY, |c| eval(c, &self.vals, self.t, &NoDelay));
+                    let priority =
+                        e.priority.as_ref().map_or(f64::NEG_INFINITY, |c| eval(c, &self.vals, self.t, &NoDelay));
                     match best {
                         None => best = Some((i, priority)),
                         Some((_, b)) if priority > b => {
@@ -267,7 +268,9 @@ impl Trajectory<'_> {
     fn reactants(&self) -> Vec<Vec<Reactant>> {
         self.changes
             .iter()
-            .map(|list| list.iter().filter(|(_, c)| *c < 0.0).map(|&(state, c)| Reactant { state, taken: -c }).collect())
+            .map(|list| {
+                list.iter().filter(|(_, c)| *c < 0.0).map(|&(state, c)| Reactant { state, taken: -c }).collect()
+            })
             .collect()
     }
 }
@@ -290,7 +293,14 @@ fn relative_change_bound(order: f64, taken: f64, x: f64) -> f64 {
 }
 
 /// The leap `tau'` of equation 33, over non-critical reactions and their reactant species.
-fn leap_size(y: &[f64], reactants: &[Vec<Reactant>], changes: &[Vec<(usize, f64)>], a: &[f64], critical: &[bool], epsilon: f64) -> f64 {
+fn leap_size(
+    y: &[f64],
+    reactants: &[Vec<Reactant>],
+    changes: &[Vec<(usize, f64)>],
+    a: &[f64],
+    critical: &[bool],
+    epsilon: f64,
+) -> f64 {
     let n = y.len();
     let mut mu = vec![0.0; n];
     let mut sigma = vec![0.0; n];
@@ -378,7 +388,9 @@ fn leap(traj: &mut Trajectory<'_>, a: &[f64], total: f64, stop_at: f64, epsilon:
         .iter()
         .zip(a)
         .map(|(list, &rate)| {
-            rate > 0.0 && list.iter().map(|r| (traj.y[r.state] / r.taken).floor()).fold(f64::INFINITY, f64::min) < CRITICAL_FIRINGS
+            rate > 0.0
+                && list.iter().map(|r| (traj.y[r.state] / r.taken).floor()).fold(f64::INFINITY, f64::min)
+                    < CRITICAL_FIRINGS
         })
         .collect();
     let mut tau_noncritical = leap_size(&traj.y, &reactants, &traj.changes, a, &critical, epsilon);
@@ -388,7 +400,8 @@ fn leap(traj: &mut Trajectory<'_>, a: &[f64], total: f64, stop_at: f64, epsilon:
         if tau_noncritical * total < LEAP_MINIMUM {
             return false;
         }
-        let tau_critical = if critical_total > 0.0 { -(1.0 - rng.random::<f64>()).ln() / critical_total } else { f64::INFINITY };
+        let tau_critical =
+            if critical_total > 0.0 { -(1.0 - rng.random::<f64>()).ln() / critical_total } else { f64::INFINITY };
         let remaining = stop_at - traj.t;
         let tau = tau_noncritical.min(tau_critical).min(remaining);
         for (j, &rate) in a.iter().enumerate() {

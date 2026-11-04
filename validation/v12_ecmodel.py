@@ -58,7 +58,7 @@ def folded_network(ec: cobra.Model) -> tuple[cobra.Model, list, list, dict]:
             weights[target.id] = -r.metabolites[pool]
 
     forms: dict[str, dict] = {}
-    enzymes, catalysis = [], []
+    catalysis = []
     for r in ec.reactions:
         if r.id.startswith("draw_prot_") or r.id == POOL:
             continue
@@ -70,11 +70,15 @@ def folded_network(ec: cobra.Model) -> tuple[cobra.Model, list, list, dict]:
         slot.append(r)
         subunits = {x.id: -c for x, c in r.metabolites.items() if is_protein(x.id)}
         if subunits:
+            # The file's coefficient on a subunit is copies / kcat. The largest sets the turnover number.
             turnover = 1.0 / max(subunits.values())
-            # A complex is one enzyme whose mass is what its subunits take per catalytic cycle.
-            enzymes.append({"id": r.id, "molecular_weight": sum(c * weights[k] for k, c in subunits.items()) * turnover})
             forward = m["rev"] is None
-            catalysis.append({"reaction": m["base"], "enzyme": r.id, "kcat_forward": turnover if forward else 0.0, "kcat_reverse": 0.0 if forward else turnover})
+            catalysis.append({
+                "reaction": m["base"],
+                "subunits": [[k, c * turnover] for k, c in sorted(subunits.items())],
+                "kcat_forward": turnover if forward else 0.0,
+                "kcat_reverse": 0.0 if forward else turnover,
+            })
 
     def direction(base: str, key: str, name: str) -> tuple[dict, float, float] | None:
         form = forms.get(base, {})
@@ -114,6 +118,7 @@ def folded_network(ec: cobra.Model) -> tuple[cobra.Model, list, list, dict]:
             report["one_direction_costed"].append(base)
     objective = next(r for r in ec.reactions if r.objective_coefficient)
     plain.objective = objective.id
+    enzymes = [{"id": k, "molecular_weight": w} for k, w in sorted(weights.items())]
     return plain, enzymes, catalysis, report
 
 
@@ -183,7 +188,9 @@ def main() -> int:
         cobra.io.write_sbml_model(plain, str(plain_path))
         table = scratch / "enzymes.json"
         table.write_text(json.dumps({"enzymes": enzymes, "catalysis": catalysis, "protein_pool": pool}))
-        print(len(plain.reactions), "folded reactions,", len(enzymes), "isozyme-direction pairs, pool", pool, report, flush=True)
+        shared = sum(1 for e in enzymes if sum(1 for c in catalysis if any(s[0] == e["id"] for s in c["subunits"])) > 1)
+        complexes = sum(1 for c in catalysis if len(c["subunits"]) > 1)
+        print(len(plain.reactions), "folded reactions,", len(enzymes), "enzymes,", shared, "shared,", len(catalysis), "catalyses,", complexes, "complexes, pool", pool, report, flush=True)
 
         conditions = [
             ("batch, unlimited glucose", 1.0, None, True),
@@ -242,7 +249,10 @@ def main() -> int:
         "cobrapy_version": cobra.__version__,
         "source_commit": "8c50008decb93a3dbf31949836ff61eec57d572b",
         "folded_reactions": len(plain.reactions),
-        "isozyme_direction_pairs": len(enzymes),
+        "enzymes": len(enzymes),
+        "shared_enzymes": shared,
+        "catalyses": len(catalysis),
+        "complexes": complexes,
         "structure_report": report,
         "protein_pool": pool,
         "conditions": rows,

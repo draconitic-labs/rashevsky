@@ -262,7 +262,11 @@ fn local_sensitivities_match_finite_differences_on_glycolysis() {
         for (r, (a, b)) in up.iter().zip(&down).enumerate() {
             let numeric = (a - b) / (2.0 * h);
             let scale = numeric.abs().max(1e-3);
-            assert!((local.flux[(r, column)] - numeric).abs() < 1e-5 * scale, "{name} {r}: {} {numeric}", local.flux[(r, column)]);
+            assert!(
+                (local.flux[(r, column)] - numeric).abs() < 1e-5 * scale,
+                "{name} {r}: {} {numeric}",
+                local.flux[(r, column)]
+            );
             seen = seen.max(numeric.abs());
         }
     }

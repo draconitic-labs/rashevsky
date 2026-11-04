@@ -36,7 +36,9 @@ pub fn read_str(xml: &str) -> Result<Document> {
             && !matches!(package, "fbc" | "groups")
             && root.children.iter().any(|c| uses_package(c, package))
         {
-            return Err(Error::Sbml(format!("this model requires the {package} package, which this engine does not implement")));
+            return Err(Error::Sbml(format!(
+                "this model requires the {package} package, which this engine does not implement"
+            )));
         }
     }
     let level: u32 = parse_num(root.attr("level"), "level")?;

@@ -87,7 +87,9 @@ pub fn write_string(doc: &Document) -> String {
         s.push_str(" xmlns:fbc=\"http://www.sbml.org/sbml/level3/version1/fbc/version2\" fbc:required=\"false\"");
     }
     if uses_groups {
-        s.push_str(" xmlns:groups=\"http://www.sbml.org/sbml/level3/version1/groups/version1\" groups:required=\"false\"");
+        s.push_str(
+            " xmlns:groups=\"http://www.sbml.org/sbml/level3/version1/groups/version1\" groups:required=\"false\"",
+        );
     }
     s.push_str(">\n");
     let _ = write!(s, "<model id=\"{}\"", escape(&m.id));
@@ -237,7 +239,9 @@ pub fn write_string(doc: &Document) -> String {
             if !r.annotations.is_empty() {
                 annotation(&format!("meta_reaction_{j}"), &r.annotations, &mut s);
             }
-            for (tag, is_product, refs) in [("listOfReactants", false, &r.reactants), ("listOfProducts", true, &r.products)] {
+            for (tag, is_product, refs) in
+                [("listOfReactants", false, &r.reactants), ("listOfProducts", true, &r.products)]
+            {
                 if refs.is_empty() {
                     continue;
                 }

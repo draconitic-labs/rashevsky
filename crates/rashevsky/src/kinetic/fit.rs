@@ -167,7 +167,9 @@ pub fn fit(
     if parameters.iter().any(|p| p.start <= 0.0 || !p.start.is_finite()) {
         return Err(Error::Invalid("starting values must be positive".into()));
     }
-    if let Some(bad) = data.iter().find(|o| !o.time.is_finite() || !o.value.is_finite() || !(o.sigma > 0.0) || !o.sigma.is_finite()) {
+    if let Some(bad) =
+        data.iter().find(|o| !o.time.is_finite() || !o.value.is_finite() || o.sigma.is_nan() || o.sigma <= 0.0 || o.sigma.is_infinite())
+    {
         return Err(Error::Invalid(format!("the measurement of {} at t = {} is not usable", bad.symbol, bad.time)));
     }
     // An override that is refused should say why, rather than look like a failed simulation.

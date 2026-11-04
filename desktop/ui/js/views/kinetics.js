@@ -124,6 +124,7 @@ function renderControl() {
     h('div', { class: 'tile' }, h('strong', {}, fmt.sci(t.flux_connectivity)), h('span', {}, 'Flux connectivity')),
     h('div', { class: 'tile' }, h('strong', {}, fmt.sci(t.concentration_connectivity)), h('span', {}, 'Concentration connectivity')),
     h('div', { class: 'tile' }, h('strong', {}, String(control.conserved_moieties)), h('span', {}, 'Conserved moieties')),
+    h('div', { class: control.stable ? 'tile' : 'tile tile-warn' }, h('strong', {}, control.stable ? 'Stable' : 'Unstable'), h('span', {}, `Largest eigenvalue ${fmt.sci(control.largest_eigenvalue)}`)),
   );
 }
 

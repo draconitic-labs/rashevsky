@@ -10,10 +10,13 @@ use serde::{Deserialize, Serialize};
 pub struct EnvelopePoint {
     /// Value of the controlled flux.
     pub x: f64,
-    /// Smallest feasible value of the target flux, NaN if infeasible.
+    /// Smallest feasible value of the target flux, infinite if unbounded, NaN if infeasible.
     pub minimum: f64,
-    /// Largest feasible value of the target flux, NaN if infeasible.
+    /// Largest feasible value of the target flux, infinite if unbounded, NaN if infeasible.
     pub maximum: f64,
+    /// Whether this value of the controlled flux is feasible. JSON writes infinity and NaN alike as
+    /// `null`, and this tells them apart.
+    pub feasible: bool,
 }
 
 /// Computes the envelope of `target` against `control` on an evenly spaced grid of `points`.
@@ -43,6 +46,7 @@ pub fn production_envelope(
         let s = session.solve()?;
         Ok(match s.status {
             Status::Optimal => Some(s.objective),
+            Status::Unbounded => Some(if sense == Sense::Maximize { f64::INFINITY } else { f64::NEG_INFINITY }),
             _ => None,
         })
     };
@@ -52,7 +56,10 @@ pub fn production_envelope(
             let lo = extreme(&mut session, cj, Sense::Minimize)?;
             let hi = extreme(&mut session, cj, Sense::Maximize)?;
             match (lo, hi) {
-                (Some(a), Some(b)) => (a, b),
+                (Some(a), Some(b)) if a.is_finite() && b.is_finite() => (a, b),
+                (Some(_), Some(_)) => {
+                    return Err(Error::Invalid("the control flux is unbounded; give it a bound or a range".into()));
+                }
                 _ => return Err(Error::Solver("the control flux has no feasible range".into())),
             }
         }
@@ -61,9 +68,14 @@ pub fn production_envelope(
     for k in 0..points {
         let x = lo + (hi - lo) * k as f64 / (points - 1) as f64;
         session.set_col_bounds(cj, x, x)?;
-        let minimum = extreme(&mut session, tj, Sense::Minimize)?.unwrap_or(f64::NAN);
-        let maximum = extreme(&mut session, tj, Sense::Maximize)?.unwrap_or(f64::NAN);
-        out.push(EnvelopePoint { x, minimum, maximum });
+        let minimum = extreme(&mut session, tj, Sense::Minimize)?;
+        let maximum = extreme(&mut session, tj, Sense::Maximize)?;
+        out.push(EnvelopePoint {
+            x,
+            minimum: minimum.unwrap_or(f64::NAN),
+            maximum: maximum.unwrap_or(f64::NAN),
+            feasible: minimum.is_some() && maximum.is_some(),
+        });
     }
     Ok(out)
 }
