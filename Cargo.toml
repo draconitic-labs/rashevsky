@@ -1,0 +1,21 @@
+[workspace]
+resolver = "3"
+members = ["crates/rashevsky", "crates/rashevsky-cli"]
+default-members = ["crates/rashevsky", "crates/rashevsky-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+authors = ["Flintglade"]
+repository = "https://github.com/flintglade/rashevsky"
+description = "Genome-scale constraint-based and kinetic metabolic modelling engine"
+keywords = ["metabolism", "fba", "sbml", "systems-biology", "kinetics"]
+categories = ["science"]
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 4
+debug = false

@@ -1,0 +1,33 @@
+[package]
+name = "rashevsky"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "../../README.md"
+
+[features]
+default = ["highs", "parallel"]
+highs = ["dep:highs-sys"]
+parallel = ["dep:rayon"]
+
+[dependencies]
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+highs-sys = { version = "1.15", optional = true }
+nalgebra = { version = "0.34", default-features = false, features = ["std"] }
+quick-xml = "0.38"
+rand = { version = "0.9", default-features = false, features = ["std", "small_rng"] }
+rand_chacha = { version = "0.9", default-features = false }
+rayon = { version = "1", optional = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+thiserror = "2"
+
+[dev-dependencies]
+approx = "0.5"
+proptest = { version = "1", default-features = false, features = ["std"] }

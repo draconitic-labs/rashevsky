@@ -1,0 +1,9 @@
+target/
+/data/
+*.pyc
+__pycache__/
+.ipynb_checkpoints/
+.venv/
+/python/*.so
+/web/pkg/
+/results/
