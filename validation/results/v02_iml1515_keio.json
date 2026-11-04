@@ -1,0 +1,172 @@
+{
+  "accuracy_percent": 93.47503916670195,
+  "classification_disagreements_sample": [
+    {
+      "condition": "Xylose",
+      "gene": "b3564",
+      "published": "TN",
+      "published_growth": 0.0,
+      "rashevsky": "FP",
+      "rashevsky_growth": 0.7171259713406438
+    }
+  ],
+  "cobrapy_same_file": {
+    "Glucose": {
+      "cobrapy_b3564": 0.8217979336265866,
+      "cobrapy_seconds_4_processes": 2.579859733581543,
+      "genes": 1516,
+      "max_abs_difference_vs_cobrapy": 4.988011618261337e-11,
+      "rashevsky_b3564": 0.8217979336265464,
+      "worst_gene": "b3177"
+    },
+    "Xylose": {
+      "cobrapy_b3564": 0.7171259713406494,
+      "cobrapy_seconds_4_processes": 2.985933303833008,
+      "genes": 1516,
+      "max_abs_difference_vs_cobrapy": 6.719539313171375e-11,
+      "rashevsky_b3564": 0.7171259713406438,
+      "worst_gene": "b0091"
+    }
+  },
+  "counts": {
+    "FN": 295,
+    "FP": 1246,
+    "TN": 2843,
+    "TP": 19233
+  },
+  "elapsed_seconds": 49.01879096031189,
+  "genes_in_table_not_in_model": [],
+  "growth_abs_diff_vs_published": {
+    "max": 0.7171259713406438,
+    "median": 1.9095836023552692e-13,
+    "p99": 0.026790686888459037
+  },
+  "mcc": 0.758186953646236,
+  "pass": true,
+  "per_condition": {
+    "Acetate": {
+      "FN": 25,
+      "FP": 86,
+      "TN": 179,
+      "TP": 1213
+    },
+    "Galactose": {
+      "FN": 17,
+      "FP": 81,
+      "TN": 180,
+      "TP": 1225
+    },
+    "Gluconate": {
+      "FN": 15,
+      "FP": 81,
+      "TN": 179,
+      "TP": 1228
+    },
+    "Glucose": {
+      "FN": 16,
+      "FP": 71,
+      "TN": 178,
+      "TP": 1238
+    },
+    "Glycerol": {
+      "FN": 20,
+      "FP": 74,
+      "TN": 174,
+      "TP": 1235
+    },
+    "L-Alanine": {
+      "FN": 24,
+      "FP": 71,
+      "TN": 180,
+      "TP": 1228
+    },
+    "Lactate": {
+      "FN": 22,
+      "FP": 71,
+      "TN": 182,
+      "TP": 1228
+    },
+    "Maltose": {
+      "FN": 9,
+      "FP": 61,
+      "TN": 147,
+      "TP": 855
+    },
+    "Mannitol": {
+      "FN": 12,
+      "FP": 79,
+      "TN": 185,
+      "TP": 1227
+    },
+    "N-acetyl-glucosamine": {
+      "FN": 14,
+      "FP": 78,
+      "TN": 183,
+      "TP": 1228
+    },
+    "Oxoglutarate": {
+      "FN": 24,
+      "FP": 90,
+      "TN": 171,
+      "TP": 1218
+    },
+    "Pyruvate": {
+      "FN": 24,
+      "FP": 77,
+      "TN": 180,
+      "TP": 1222
+    },
+    "Ribose": {
+      "FN": 18,
+      "FP": 89,
+      "TN": 177,
+      "TP": 1219
+    },
+    "Sorbitol": {
+      "FN": 19,
+      "FP": 81,
+      "TN": 181,
+      "TP": 1222
+    },
+    "Succinate": {
+      "FN": 22,
+      "FP": 73,
+      "TN": 186,
+      "TP": 1222
+    },
+    "Xylose": {
+      "FN": 14,
+      "FP": 83,
+      "TN": 181,
+      "TP": 1225
+    }
+  },
+  "phenotypes": 23617,
+  "published_accuracy_percent": 93.4,
+  "published_counts": {
+    "FN": 295,
+    "FP": 1245,
+    "TN": 2844,
+    "TP": 19233
+  },
+  "reference": "Monk et al. 2017, Supplementary Data 11, Table 1",
+  "rows_classified_differently_from_published": 1,
+  "wild_type_growth": {
+    "Acetate": 0.21009920466529472,
+    "Galactose": 0.8018784568565016,
+    "Gluconate": 0.7825294571986898,
+    "Glucose": 0.8217979336265836,
+    "Glycerol": 0.494713492417905,
+    "L-Alanine": 0.3800212788913709,
+    "Lactate": 0.35056506816319793,
+    "Maltose": 1.12079610819335,
+    "Mannitol": 0.8317576720116253,
+    "N-acetyl-glucosamine": 0.8423515837224954,
+    "Oxoglutarate": 0.547389581637312,
+    "Pyruvate": 0.31394047224790544,
+    "Ribose": 0.682361596235993,
+    "Sorbitol": 0.8317576720116273,
+    "Succinate": 0.45008625725639045,
+    "Xylose": 0.7171259713406438
+  }
+}
