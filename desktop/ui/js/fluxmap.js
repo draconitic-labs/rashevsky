@@ -219,7 +219,7 @@ export class FluxMap {
   }
 
   get large() {
-    return this.reactions.length > 150;
+    return this.reactions.length > 100;
   }
 
   magnitude(v) {

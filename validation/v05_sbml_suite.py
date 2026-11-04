@@ -10,8 +10,9 @@ Pass: at least 95 % of applicable semantic cases with Rodas4 and with BDF; every
 at most 3 failing points, a case over that limit being repeated once with an independent seed. An
 earlier run with 10,000 realizations and only the first seed flagged cases 00032 (10 points) and
 00033 (4 points); the protocol changed to the present one after 40,000-realization runs of both
-with another seed were clean. Case 00003 stays over the limit at 40,000 realizations on both seeds:
-it fails the suite's literal criterion, and `kurtosis_check` shows why, comparing with the exact law.
+with another seed were clean. Case 00003 has gone over the limit at 40,000 realizations on both seeds with
+some random streams and stayed under it with others, because its Y is unreliable: `kurtosis_check` shows why,
+and always compares it with the exact law.
 Every attempt is recorded in the results file.
 """
 from __future__ import annotations
@@ -182,9 +183,10 @@ def main() -> int:
     stoch = stochastic()
     flagged = [c for c, r in stoch.items() if len(r["attempts"]) > 1]
     failed = [c for c, r in stoch.items() if not r["pass"]]
-    corrected = kurtosis_check(STOCHASTIC / "00003") if "00003" in failed else None
-    unexplained = [c for c in failed if not (c == "00003" and corrected and corrected["pass"])]
-    passed = rodas["percent"] >= 95 and bdf["percent"] >= 95 and not unexplained
+    # Always run: case 00003's Y is unreliable either way, so a pass by it alone would prove little.
+    corrected = kurtosis_check(STOCHASTIC / "00003")
+    unexplained = [c for c in failed if not (c == "00003" and corrected["pass"])]
+    passed = rodas["percent"] >= 95 and bdf["percent"] >= 95 and not unexplained and corrected["pass"]
     write_result("v05_sbml_suite", {
         "suite": "SBML Test Suite 3.5.0",
         "rodas4": rodas,

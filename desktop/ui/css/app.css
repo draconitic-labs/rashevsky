@@ -237,6 +237,7 @@ input[type="checkbox"] { accent-color: var(--flavin); width: 16px; height: 16px;
 .species.is-on { color: var(--text); border-color: var(--line-strong); }
 .species.is-fixed { font-style: italic; }
 .species-dot { width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--line-strong); }
+.kinetic-side > * { flex-shrink: 0; }
 .param-list { display: flex; flex-direction: column; gap: 3px; overflow: visible; }
 .param { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .param .ident { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-size: 11.5px; color: var(--text-2); }

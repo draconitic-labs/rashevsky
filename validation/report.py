@@ -188,11 +188,10 @@ def main() -> None:
     k3 = suite["case_00003_exact_law_check"]
     flagged = suite["stochastic_cases_flagged_on_first_seed"]
     add(f"The {suite['stochastic_cases']} `StochasticTimeCourse` cases of the DSMTS (Evans, Gillespie and Wilkinson 2008), with {suite['stochastic_runs_per_case']:,} realizations each. The suite accepts a mean `Z` in (-3, 3) and a variance `Y` in (-5, 5) at each time point, and states that a correct simulator can fail a few points. The limit used here is 3 per case, with a flagged case repeated once on an independent seed, because the points of a case are strongly correlated and one excursion can flag many of them.\n")
-    add(f"- Flagged on the first seed: {', '.join(flagged)}.")
+    add(f"- Flagged on the first seed: {', '.join(flagged) or 'none'}.")
     fail = suite["stochastic_cases_failing_the_literal_criterion"]
-    add(f"- Still over the limit on the second seed: {', '.join(fail) if fail else 'none'}.")
-    if k3:
-        add(f"\n**Case 00003 fails the suite's literal criterion**, at this number of realizations, on both seeds. It is a birth-death process, for which the exact law is known (Kendall 1948). Its kurtosis reaches {k3['max_kurtosis']:.0f}, while `Y` assumes the sampling error of a normal population and so overstates significance by a factor of `sqrt((kurtosis - 1) / 2)`. Compared with the exact variance using its exact sampling error at {k3['runs']:,} realizations, the largest `|z|` is {k3['max_abs_variance_z']:.2f} for the variance and {k3['max_abs_mean_z']:.2f} for the mean, with a limit of 4. No error in the simulator is detectable.")
+    add(f"- Still over the limit on the second seed: {', '.join(fail) or 'none'}.")
+    add(f"\n**Case 00003 is decided by its exact law, not by this criterion.** It is a birth-death process (Kendall 1948) whose kurtosis reaches {k3['max_kurtosis']:.0f}, while `Y` assumes the sampling error of a normal population and so overstates significance by a factor of `sqrt((kurtosis - 1) / 2)`. Whether its `Y` stays under the limit therefore depends on the random stream: this run flags {suite['stochastic']['00003']['attempts'][-1]['y_failures']} of its points, and earlier runs with other streams went over the limit on both seeds. Compared with the exact variance using its exact sampling error at {k3['runs']:,} realizations, the largest `|z|` is {k3['max_abs_variance_z']:.2f} for the variance and {k3['max_abs_mean_z']:.2f} for the mean, with a limit of 4.")
     add("\nThe other cases of the stochastic folder test the `distrib` package, which this engine does not implement.\n")
 
     add("## Flux sampling\n\n`validation/v06_sampling.py`\n")
