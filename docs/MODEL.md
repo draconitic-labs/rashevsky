@@ -19,11 +19,13 @@ COBRA conventions before FBC (`LOWER_BOUND`, `UPPER_BOUND` and `OBJECTIVE_COEFFI
 `GENE_ASSOCIATION` in notes). Stoichiometry expressions, initial assignments and rules that define flux bounds or
 stoichiometries are evaluated by the kinetic compiler of section 4. FBC version 3 user constraints and quadratic objective
 terms are refused for flux analyses, as is any model using a package it marks as required, other than FBC and groups.
-Identifiers are kept as written: a COBRA escape such as `__45__` is not decoded.
+Identifiers are kept as written: a COBRA escape such as `__45__` is not decoded. Namespace bindings last as long as their
+element, and a package can arrive under a default namespace.
 
-Writing: SBML Level 3 Version 1, declaring FBC version 2 and groups only when a model uses them, with annotations kept.
-Level 2 defaults become explicit, and a Level 2 stoichiometry expression becomes an assignment rule on a named species
-reference.
+Writing: SBML Level 3, declaring FBC version 2 and groups only when a model uses them, with annotations and constraints kept.
+Version 1 unless the math needs Version 2 (`max`, `min`, `quotient`, `rem`, `implies`, `rateOf`). Level 2 defaults become explicit,
+and a Level 2 stoichiometry expression becomes an assignment rule on a named species reference. Content that cannot be written
+faithfully, FBC version 3 constraints or a gene rule that does not parse, is an error rather than a different model.
 
 ### Gene deletions
 
@@ -97,11 +99,12 @@ minimizes the number of open exchanges with binaries, then total uptake among th
 
 **Dynamic FBA** (Mahadevan, Edwards and Doyle 2002; Varma and Palsson 1994): static optimization. Over a step
 `dt` the fluxes are constant. With `c_i` the exchange's coefficient on its metabolite, uptake is `u_i = c_i v_i`,
-limited by `vmax_i S_i / (K_i + S_i)` and never beyond the model's own bounds. Then `X(t + dt) = X e^(mu dt)` and
-`S_i(t + dt) = S_i - u_i I`, with `I = X (e^(mu dt) - 1) / mu`. Every followed species, kinetic or not, is capped at
-`u_i I <= S_i`. Since `I` depends on `mu` and `mu` on the cap, the two are iterated to a consistent step, which holds
-biomass to the yield at any step size. The scheme is exact while fluxes stay constant and first-order once they change.
-Each step reports its solver status, and an unbounded problem is an error.
+limited by `vmax_i S_i / (K_i + S_i)` and never beyond the model's own bounds, except that what is there to take up overrides a
+bound that forces uptake. The growth rate `mu` is the flux of the one maximized reaction in the objective. Then
+`X(t + dt) = X e^(mu dt)` and `S_i(t + dt) = S_i - u_i I`, with `I = X (e^(mu dt) - 1) / mu`. Every followed species, kinetic or
+not, is capped at `u_i I <= S_i`. Since `I` grows with `mu` and `mu` with the cap, the cap that uses up exactly what remains is
+found by bisection, which holds biomass to the yield at any step size. The scheme is exact while fluxes stay constant and
+first-order once they change. Each step reports its solver status, and an unbounded problem is an error.
 
 ### Flux sampling
 
@@ -149,7 +152,8 @@ enzyme `k` in the complex of `c`:
     v_j <= sum_c kcat+_c a_c,   v_j >= -sum_c kcat-_c a_c,   sum_c n_ck a_c <= e_k,   sum_k MW_k e_k <= P,   e_k <= abundance_k
 
 Reactions therefore share a promiscuous enzyme, and a complex takes all of its subunits, as in the paper's single
-utilization constraint per enzyme. A published GECKO file can also be read as it stands, since it encodes enzymes as
+utilization constraint per enzyme. The pool is a limit and not a use, so a second program finds the least protein that reaches the
+optimum: `usage` and `pool_used` report that, and it sets the fluxes returned. A published GECKO file can also be read as it stands, since it encodes enzymes as
 metabolites and reactions, with coefficients `n_ck / kcat`. Both routes reach the same optimum on `eciML1515`
 (`validation/v12_ecmodel.py`).
 
@@ -219,11 +223,15 @@ algebraic variables.
 order 1 to 5 on a quasi-constant step, with backward differences, `kappa = (0, -0.185, -1/9, -0.0823, -0.0415)`,
 Newton iteration on `(M - c J) dy = c f - M (psi + d)`.
 
-Default tolerances: relative `1e-9`, absolute `1e-12`. The dynamics start at time zero whatever the first output time.
+Default tolerances: relative `1e-9`, absolute `1e-12`. The dynamics start at time zero whatever the first output time. Far
+from time zero, `t + h - t` can differ measurably from `h`, so the BDF difference table is rescaled to the step actually taken.
 
-**Jumps in rates**: a comparison of the time with a fixed value inside a rate or rule marks a time at which the right-hand
-side can jump. Integration stops `1e-12 (1 + t)` before it and restarts the same distance after it, so that no stage of a
-step straddles the jump. Discontinuities that depend on the state are left to step-size control.
+**Jumps in rates**: a comparison or rounding of an expression of the time alone marks where the right-hand side can jump,
+whatever its form: `time > c`, `2 * time > c`, `lt(a, time, b)`, a rule `T = time`, `abs(time - c) < w`, `floor(time / p)`. A
+comparison affine in the time by its form has its root solved, wherever that lies. Anything else is examined at 20,000 points
+over the run and refined by bisection, so a window narrower than `1/20000` of the run can still be missed there. Integration
+stops `4e-14 (1 + t)` before each such time, moves across without a step, and restarts just after it, so that no stage of a step
+straddles the jump. Discontinuities that depend on the state are left to step-size control.
 
 ### Events
 
@@ -234,8 +242,7 @@ broken by a seeded random generator as the specification requires, and all trigg
 Species values convert with the compartment size before the event, and a species keeps its amount when its
 compartment's size jumps.
 
-A step ends on every fixed time that a trigger compares the time with, so a window set by the time cannot fall between
-the points examined. Each accepted step is also scanned at 16 points for a trigger change, which catches a state-driven
+A step ends on every time found this way in a trigger, so a window set by the time cannot fall between the points examined. Each accepted step is also scanned at 16 points for a trigger change, which catches a state-driven
 trigger that opens and closes inside a step. The first change is refined by bisection on the interpolant to a relative
 width of `1e-11`, and the step is repeated exactly up to it. A state-driven window narrower than a sixteenth of a step can
 still be missed. A negative delay is an error. `delay` history keeps the value on both sides of an event.
@@ -244,12 +251,17 @@ still be missed. A negative delay is an error. `delay` history keeps the value o
 
 The stoichiometric matrix factors as `N = L Nr`, with `Nr` the independent rows found by full pivoting and
 `L = N Nr' (Nr Nr')^-1` (Reder 1988). Dependent species follow from the independent ones through the conserved totals.
-The system integrates for a chosen time first, extended past the last time a rate can jump, and damped Newton then solves
-`Nr v(y(s)) = 0` at that time, running until it stops improving. The result reports the largest real part of the eigenvalues
-of the Jacobian over the independent amounts. Newton can reach any root, so a root that is unstable or has a negative amount
-extends the integration tenfold, up to twice, before it is reported: an unstable root is returned with `stable = false`, as on
-a limit cycle, and one with negative amounts is an error. `delay` reads the present at a steady state. Rates that still
-depend on the time are an error, and so is a stoichiometric coefficient or conversion factor that varies.
+The system integrates for a chosen time first, extended past the last time a rate or trigger can jump, and damped Newton then
+solves `Nr v(y(s)) = 0` at that time, running until it stops improving. A last Newton step that is not small means the iteration
+is running away, as with `S' = 1 / (1 + S)`, where the residual falls but no root exists, and that is an error. An event that
+would fire between the integrated state and the root is an error too.
+
+The result reports the largest real part of the eigenvalues of the Jacobian over the independent amounts. Newton can reach any
+root, so a root that is unstable or has a negative amount extends the integration tenfold, up to twice, before it is reported: an
+unstable root is returned with `stable = false`, as on a limit cycle, and one with negative amounts is an error. `delay` reads the
+present at a steady state, where those eigenvalues do not decide stability, so a delayed model reports no eigenvalue and counts as
+stable only if the integration reached the root. Rates that still depend on the time at several times with no common period are an
+error, and so is a stoichiometric coefficient or conversion factor that varies.
 
 ### Metabolic control analysis
 
@@ -267,30 +279,35 @@ The engine reports residuals of the theorems in the scaled form in which they ar
 
 ### Sensitivity and estimation
 
-**Local**: a parameter moves the rates of change at the frozen steady state by `b = N dv/dp + (dN/dp) v`, and then
-`ds/dp = -(Nr E L)^-1 b`, `dy/dp = L ds/dp`, `dJ/dp = dv/dp + E dy/dp`. The partial derivatives come from a fourth-order
-central difference with `h = 1e-3 |p|` through the override mechanism, so that a parameter counts everywhere it reaches:
-laws, stoichiometries, compartment sizes and values assigned from it. A name that does not exist, varies during a simulation
-or is set by a rule is an error.
+**Local**: a parameter moves the rates of change at the frozen steady state by `b = N dv/dp + (dN/dp) v`, and it can move the
+start. With `d0 = dy0/dp - L dy0_ind/dp`, the part of that move the dynamics cannot undo, such as a conserved total:
+`ds/dp = -(Nr E L)^-1 (b + Nr E d0)`, `dy/dp = d0 + L ds/dp`, `dJ/dp = dv/dp + E dy/dp`. The partial derivatives come from a
+fourth-order central difference with `h = 1e-3 |p|` through the override mechanism, so that a parameter counts everywhere it
+reaches: laws, stoichiometries, compartment sizes, starting values and values assigned from it. A name that does not exist,
+varies during a simulation or is set by a rule is an error.
 
 **Global**: first-order Sobol indices from the estimator of Saltelli et al. (2010) and total indices from Jansen's
 (1999) formula, with `n (d + 2)` evaluations. The output is a symbol at the steady state or at a time. A sample that fails to
-evaluate is dropped from every arm. Failures concentrated in one region bias the indices, so more than 5 % is an error.
+evaluate, or whose steady state is not an attractor, is dropped from every arm. Failures concentrated in one region bias the
+indices, so more than 5 % is an error. An output whose variance is of the size of rounding has indices of zero.
 
 **Estimation**: Levenberg-Marquardt on `chi2(p) = sum ((y_model - y_obs) / sigma)^2` in the logarithm of each parameter,
 with forward-difference Jacobians over full simulations. **Profile likelihood** (Raue et al. 2009): each grid value of one
-parameter re-optimizes the others, and the interval ends where `chi2` exceeds its minimum by 3.84. The walk to each limit
-starts at the estimate, which is on the grid, and a limit beyond a failed simulation stays undetermined.
+parameter re-optimizes the others, and the interval ends where `chi2` exceeds its minimum by 3.84. The grid only brackets each
+limit, which bisection on the re-optimized profile then finds, since a sharp likelihood is far from linear across a grid cell.
+The walk starts at the lowest point on the profile, which is reported, so that a fit stuck in a local minimum shows. A limit
+beyond a failed simulation stays undetermined.
 
 ### Stochastic simulation
 
 **Direct method** (Gillespie 1977), exact for networks with constant propensities between firings. A reaction whose firing
-would leave a species below zero has propensity zero. Stoichiometry is read at each firing. Event semantics follow the
-deterministic driver, with priorities and random ties.
+would leave a species below zero has propensity zero. Stoichiometry is read at each firing. Event semantics and the handling of
+compartment jumps follow the deterministic driver, with priorities and random ties.
 
 **Tau-leaping** (Cao, Gillespie and Petzold 2006): *an approximation*. Reactions within 10 firings of exhausting a reactant are
-critical. Over the others, the leap is the `tau'` of their equation 33, with `g_i` from the highest-order reaction taking species
-`i` and the order from the reactant stoichiometry, which is the true order for mass-action laws. Below 10 expected firings it
+critical. Over the others, the leap is the `tau'` of their equation 33, over every species a propensity reads, catalysts and
+autocatalysts included, with `g_i` from the highest-order reaction reading species `i` and the order from the reactant
+stoichiometry, which is the true order for mass-action laws. Below 10 expected firings it
 takes 100 direct steps. Otherwise the leap is the smaller of `tau'` and the exponential waiting time of the critical reactions,
 clipped to the next stop, with Poisson firings of the others. A leap that makes a species negative is repeated at half of `tau'`,
 and the time advances only on acceptance.
@@ -301,9 +318,11 @@ The method bounds the relative change of each propensity by `epsilon`, except th
 mean 1, beside a large population that sets the leap, reads 1.45 here and 1.81 in GillesPy2's tau-leaping solver on the same system.
 Use the direct method for such species.
 
-Propensities depending on the time or on a rate rule are held constant over steps of at most `T/2000`, and steps end on fixed times
-that rates and triggers compare the time with. Negative or undefined propensities, algebraic rules, `delay`, fast reactions and
-cascading events that do not settle are errors.
+A propensity may jump at the times of the integrators' analysis above, where a step ends, and is read just past each one, since
+`time > 5` is still false at 5. One that depends on a rate rule is held constant over steps of at most `T/2000`, which is an
+approximation. These are errors: negative or undefined propensities, rates that vary continuously with the time, algebraic rules,
+`delay`, fast reactions, cascading events that do not settle, amounts or reactant coefficients that are not whole numbers, and runs
+whose amounts pass `1e18` or that exceed `1e8` steps.
 
 ## 5. Outputs
 
