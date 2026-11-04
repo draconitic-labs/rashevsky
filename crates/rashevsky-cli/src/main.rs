@@ -170,8 +170,27 @@ enum Command {
         #[arg(long)]
         open_boundaries: bool,
     },
+    /// Run SBML Test Suite semantic cases and report each outcome.
+    SbmlSuite {
+        /// Directory that holds the numbered case folders.
+        root: PathBuf,
+        /// Comma-separated case numbers; all when absent.
+        #[arg(long)]
+        cases: Option<String>,
+        /// `rodas4` or `bdf`.
+        #[arg(long, default_value = "rodas4")]
+        method: String,
+    },
     /// Run a study described by a case file (see docs/CASES.md).
     Run { case: PathBuf },
+}
+
+fn parse_method(text: &str) -> Result<rashevsky::kinetic::Method> {
+    match text {
+        "rodas4" => Ok(rashevsky::kinetic::Method::Rodas4),
+        "bdf" => Ok(rashevsky::kinetic::Method::Bdf),
+        other => Err(rashevsky::Error::Invalid(format!("unknown method `{other}`"))),
+    }
 }
 
 fn parse_bound(text: &str) -> Result<(String, f64, f64)> {
@@ -392,11 +411,18 @@ fn run(cli: Cli) -> Result<()> {
             let list = rashevsky::tasks::parse_task_list(&std::fs::read_to_string(tasks)?)?;
             emit(&out, &rashevsky::tasks::check_tasks(&m, &list, !open_boundaries)?)
         }
+        Command::SbmlSuite { root, cases: list, method } => {
+            let filter: Option<Vec<String>> = list.map(|l| l.split(',').map(|c| format!("{:0>5}", c.trim())).collect());
+            let chosen = parse_method(&method)?;
+            emit(&out, &rashevsky::suite::run_suite(&root, chosen, filter.as_deref())?)
+        }
         Command::Run { case } => cases::run(&case, &out),
     }
 }
 
 fn main() {
+    // Deeply nested SBML math recurses in the evaluator, so workers get a large stack.
+    let _ = rayon::ThreadPoolBuilder::new().stack_size(64 << 20).build_global();
     if let Err(e) = run(Cli::parse()) {
         eprintln!("error: {e}");
         std::process::exit(1);

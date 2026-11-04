@@ -108,7 +108,8 @@ fn read_model(node: &Node, level: u32) -> Result<SbmlModel> {
         ..SbmlModel::default()
     };
     for f in list(node, "listOfFunctionDefinitions", "functionDefinition") {
-        let math = f.child("math").ok_or_else(|| Error::Sbml("function without math".into()))?;
+        // Level 3 Version 2 allows a function without math; nothing may call it.
+        let Some(math) = f.child("math") else { continue };
         let (args, body) = read_lambda(math)?;
         model.functions.push(FunctionDefinition { id: text_attr(f, "id"), args, body });
     }
@@ -269,8 +270,12 @@ fn legacy_gene_rule(notes: &str) -> Option<String> {
 }
 
 fn read_event(e: &Node, level: u32) -> Result<Event> {
-    let trigger_node = e.child("trigger").ok_or_else(|| Error::Sbml("event without trigger".into()))?;
-    let trigger = math_of(trigger_node)?.ok_or_else(|| Error::Sbml("trigger without math".into()))?;
+    // Level 3 Version 2 allows an event without a trigger or a trigger without math; neither fires.
+    let trigger_node = e.child("trigger");
+    let trigger = match trigger_node {
+        Some(t) => math_of(t)?.unwrap_or(Expr::Num(0.0)),
+        None => Expr::Num(0.0),
+    };
     let delay = match e.child("delay") {
         Some(d) => math_of(d)?,
         None => None,
@@ -288,8 +293,8 @@ fn read_event(e: &Node, level: u32) -> Result<Event> {
     Ok(Event {
         id: text_attr(e, "id"),
         trigger,
-        initial_value: flag(trigger_node, "initialValue", level < 3),
-        persistent: flag(trigger_node, "persistent", level < 3),
+        initial_value: trigger_node.is_none_or(|t| flag(t, "initialValue", level < 3)),
+        persistent: trigger_node.is_none_or(|t| flag(t, "persistent", level < 3)),
         delay,
         priority,
         use_values_from_trigger_time: flag(e, "useValuesFromTriggerTime", true),

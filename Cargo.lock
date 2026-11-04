@@ -710,6 +710,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "rashevsky",
+ "rayon",
  "serde",
  "serde_json",
 ]

@@ -111,10 +111,22 @@ impl Model {
     /// Builds the model from a parsed SBML document.
     pub fn from_document(doc: &Document) -> Result<Self> {
         let m = &doc.model;
+        // Initial assignments and rules can define flux bounds and stoichiometries. The kinetic
+        // compiler already evaluates them, so its initial values serve when any are present.
+        let evaluated = if m.initial_assignments.is_empty() && m.rules.is_empty() {
+            None
+        } else {
+            crate::kinetic::KineticModel::compile(doc).ok()
+        };
+        let initial_value = |id: &str| -> Option<f64> {
+            let km = evaluated.as_ref()?;
+            let v = km.initial[*km.index.get(id)?];
+            v.is_finite().then_some(v).or(if v.is_infinite() { Some(v) } else { None })
+        };
         let params: HashMap<&str, f64> = m
             .parameters
             .iter()
-            .filter_map(|p| p.value.map(|v| (p.id.as_str(), v)))
+            .filter_map(|p| initial_value(&p.id).or(p.value).map(|v| (p.id.as_str(), v)))
             .collect();
         let mut model = Model { id: m.id.clone(), name: m.name.clone(), ..Model::default() };
         for c in &m.compartments {
@@ -152,7 +164,25 @@ impl Model {
             }
         }
         for r in &m.reactions {
-            model.reactions.push(read_reaction(r, &params, &species_index, &gene_labels, &mut genes, &subsystem)?);
+            let mut parsed = read_reaction(r, &params, &species_index, &gene_labels, &mut genes, &subsystem)?;
+            // Stoichiometries assigned by name replace the attribute's value.
+            if evaluated.is_some() {
+                let mut merged: BTreeMap<usize, f64> = BTreeMap::new();
+                for (refs, sign) in [(&r.reactants, -1.0), (&r.products, 1.0)] {
+                    for sr in refs {
+                        let i = species_index[sr.species.as_str()];
+                        let value = sr
+                            .id
+                            .as_deref()
+                            .and_then(&initial_value)
+                            .or(sr.stoichiometry)
+                            .unwrap_or(1.0);
+                        *merged.entry(i).or_insert(0.0) += sign * value;
+                    }
+                }
+                parsed.stoichiometry = merged.into_iter().filter(|(_, c)| *c != 0.0).collect();
+            }
+            model.reactions.push(parsed);
         }
         let names: HashMap<&str, &str> = m
             .gene_products

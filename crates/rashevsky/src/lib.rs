@@ -14,6 +14,7 @@ pub mod lp;
 pub mod model;
 pub mod parallel;
 pub mod sbml;
+pub mod suite;
 pub mod tasks;
 
 pub use error::{Error, Result};
