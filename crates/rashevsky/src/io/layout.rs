@@ -100,6 +100,11 @@ pub fn force_layout(model: &Model, reactions: &[usize], seed: u64, iterations: u
             disp[b].0 += dx * force;
             disp[b].1 += dy * force;
         }
+        // Gravity toward the centre keeps separate components of the network from drifting apart.
+        for a in 0..n {
+            disp[a].0 -= (pos[a].0 - side / 2.0) * 0.35;
+            disp[a].1 -= (pos[a].1 - side / 2.0) * 0.35;
+        }
         for a in 0..n {
             let (dx, dy) = disp[a];
             let d = (dx * dx + dy * dy).sqrt().max(1e-3);

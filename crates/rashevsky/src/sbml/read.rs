@@ -7,18 +7,20 @@ use crate::error::{Error, Result};
 use std::io::Read as _;
 use std::path::Path;
 
-/// Reads an SBML file; `.gz` files are decompressed.
+/// Reads an SBML file; gzip-compressed files are decompressed.
 pub fn read_file(path: impl AsRef<Path>) -> Result<Document> {
-    let path = path.as_ref();
-    let bytes = std::fs::read(path)?;
-    let text = if bytes.starts_with(&[0x1f, 0x8b]) {
+    read_bytes(&std::fs::read(path.as_ref())?)
+}
+
+/// Reads SBML from bytes, plain or gzip-compressed.
+pub fn read_bytes(bytes: &[u8]) -> Result<Document> {
+    if bytes.starts_with(&[0x1f, 0x8b]) {
         let mut out = String::new();
-        flate2::read::GzDecoder::new(&bytes[..]).read_to_string(&mut out)?;
-        out
+        flate2::read::GzDecoder::new(bytes).read_to_string(&mut out)?;
+        read_str(&out)
     } else {
-        String::from_utf8(bytes).map_err(|e| Error::Sbml(format!("not UTF-8: {e}")))?
-    };
-    read_str(&text)
+        read_str(std::str::from_utf8(bytes).map_err(|e| Error::Sbml(format!("not UTF-8: {e}")))?)
+    }
 }
 
 /// Reads an SBML document from text.

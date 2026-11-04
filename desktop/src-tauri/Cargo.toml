@@ -1,0 +1,33 @@
+[package]
+name = "rashevsky-desktop"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Flintglade"]
+description = "Desktop workbench of the Rashevsky metabolic modelling engine"
+publish = false
+
+# Its own workspace, so that a root `cargo test` does not need WebKit.
+[workspace]
+
+[[bin]]
+name = "rashevsky-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+rashevsky = { path = "../../crates/rashevsky" }
+nalgebra = { version = "0.34", default-features = false, features = ["std"] }
+rayon = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+ureq = "3"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 8
