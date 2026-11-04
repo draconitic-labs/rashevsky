@@ -35,6 +35,7 @@ def main() -> None:
     folder.mkdir(parents=True, exist_ok=True)
     for item in json.loads(MANIFEST.read_text()):
         path = folder / item["file"]
+        path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists():
             print(f"downloading {item['file']}", flush=True)
             request = urllib.request.Request(item["url"], headers={"User-Agent": "rashevsky-validation"})

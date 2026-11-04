@@ -78,5 +78,11 @@
     "url": "https://www.ebi.ac.uk/biomodels/model/download/BIOMD0000000061?filename=BIOMD0000000061_url.xml",
     "sha256": "43ddd75b0dc49eb6c0946465b2e6c1d2c1e1f0da5c580fb784caaf0957fcc2c7",
     "source": "BioModels; CC0"
+  },
+  {
+    "file": "ecmodels/eciML1515_batch.xml",
+    "url": "https://raw.githubusercontent.com/SysBioChalmers/ecModels/8c50008decb93a3dbf31949836ff61eec57d572b/eciML1515/model/eciML1515_batch.xml",
+    "sha256": "71514e4c5717ed933514b7c3db59d3e747b9e31a8122ffbdfd40e07222aefcff",
+    "source": "SysBioChalmers ecModels, eciML1515 (Sanchez et al. 2017; Domenzain et al. 2022); CC BY 4.0"
   }
 ]

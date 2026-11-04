@@ -29,6 +29,10 @@ desktop application and the notebook leave it out because it cannot be deleted.
 Programs have the form `min or max c'x + x'Qx/2`, `a <= A x <= b`, `l <= x <= u`, with integrality on
 marked columns. Two backends implement it.
 
+HiGHS keeps matrix entries above 1e-12 (`small_matrix_value`). Its default of 1e-9 removes real enzyme costs from GECKO
+models: `eciML1515` has 17 entries at or below it, and solving that file with the default overstates anaerobic growth by
+2e-5, because the affected enzymes become free.
+
 **HiGHS** (Huangfu and Hall 2018) solves linear, mixed-integer and convex quadratic programs, through its
 C API. Feasibility tolerances are 1e-9, the relative MIP gap 1e-6. Each worker thread keeps one session
 and re-solves from the previous basis after a change of bounds or objective.
@@ -123,6 +127,10 @@ GECKO-style (Sanchez et al. 2017). Enzyme `k` has a usage `e_k` in mmol/gDW, so 
 molecular weights in g/mmol:
 
     v_j <= sum_k kcat+_jk e_k,   v_j >= -sum_k kcat-_jk e_k,   sum_k MW_k e_k <= P,   e_k <= abundance_k
+
+A published GECKO file can also be read as it stands, since it encodes enzymes as metabolites and reactions. Both
+routes reach the same optimum on `eciML1515` (`validation/v12_ecmodel.py`). A complex enters as one enzyme whose
+weight is what its subunits take per catalytic cycle, `MW = kcat sum_s c_s MW_s`, with `c_s = n_s / kcat`.
 
 Turnover numbers, weights and the pool `P` are inputs. The module holds no biological data, and validation
 covers its arithmetic only.

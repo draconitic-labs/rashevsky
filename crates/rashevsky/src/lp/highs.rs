@@ -101,6 +101,9 @@ impl HighsSession {
         };
         session.set_bool("output_flag", false)?;
         session.set_int("threads", 1)?;
+        // HiGHS drops entries at or below this value, 1e-9 by default and 1e-12 at the lowest. GECKO models carry
+        // enzyme costs near 1e-10, and dropping one makes that enzyme free.
+        session.set_double("small_matrix_value", 1e-12)?;
         session.set_double("primal_feasibility_tolerance", opts.feasibility_tolerance)?;
         session.set_double("dual_feasibility_tolerance", opts.feasibility_tolerance)?;
         session.set_double("mip_rel_gap", opts.mip_rel_gap)?;

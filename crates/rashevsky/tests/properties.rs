@@ -121,3 +121,16 @@ fn sbml_round_trip_keeps_the_model() {
         assert!((a.growth - b.growth).abs() < 1e-8);
     }
 }
+
+#[test]
+fn a_tiny_coefficient_still_constrains_the_flux() {
+    // A very fast enzyme: e = 5e-11 v with e <= 1e-9, so v <= 20. Dropping the entry would give v = 1000.
+    let mut p = Problem { sense: Some(Sense::Maximize), ..Problem::default() };
+    let v = p.add_col(1.0, 0.0, 1000.0, false);
+    let e = p.add_col(0.0, 0.0, 1e-9, false);
+    p.add_row(0.0, 0.0, vec![(e, 1.0), (v, -5e-11)]);
+    let mut session = lp::default_backend().open(&p).unwrap();
+    let s = session.solve().unwrap();
+    assert_eq!(s.status, Status::Optimal);
+    assert!((s.objective - 20.0).abs() < 1e-6, "{}", s.objective);
+}
