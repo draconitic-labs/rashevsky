@@ -1,12 +1,13 @@
 //! Data parallelism over the Rayon pool, with a sequential fallback for WebAssembly builds.
 
-/// Work unit size: a worker keeps one solver session per chunk.
+/// Work unit size: a worker keeps one solver session per chunk, and a session's first solve is much
+/// the slowest, so chunks stay large while still leaving room for balancing between workers.
 pub fn chunk_size(n: usize) -> usize {
     #[cfg(feature = "parallel")]
     let workers = rayon::current_num_threads().max(1);
     #[cfg(not(feature = "parallel"))]
     let workers = 1usize;
-    (n / (workers * 4)).max(1)
+    (n / (workers * 2)).max(1)
 }
 
 /// Applies `f` to chunks of `items`, keeping the order of chunks.

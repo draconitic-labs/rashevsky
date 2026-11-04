@@ -1,0 +1,27 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "rashevsky"
+version = "0.1.0"
+description = "Genome-scale constraint-based and kinetic metabolic modelling"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Flintglade" }]
+keywords = ["metabolism", "flux balance analysis", "sbml", "systems biology", "kinetics"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Rust",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+notebook = ["pandas>=2", "matplotlib>=3.8", "jupyter"]
+
+[tool.maturin]
+manifest-path = "crates/rashevsky-py/Cargo.toml"
+features = ["extension-module"]
+module-name = "rashevsky"

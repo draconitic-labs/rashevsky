@@ -19,4 +19,5 @@ pub mod suite;
 pub mod tasks;
 
 pub use error::{Error, Result};
+pub use nalgebra;
 pub use model::Model;

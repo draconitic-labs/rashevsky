@@ -1,0 +1,23 @@
+[package]
+name = "rashevsky-py"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Python bindings of the Rashevsky metabolic modelling engine"
+publish = false
+
+[lib]
+name = "rashevsky"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+engine = { package = "rashevsky", path = "../rashevsky" }
+pyo3 = { version = "0.30", features = ["abi3-py39"] }
+serde = "1"
+serde_json = { version = "1", features = ["float_roundtrip"] }
