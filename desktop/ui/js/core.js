@@ -131,7 +131,7 @@ export async function refreshReference() {
   if (ticket === referenceTicket) state.reference = base.growth;
 }
 
-export function setModel(view, curated) {
+export function setModel(view) {
   state.model = view;
   state.byId = new Map(view.reactions.map((r, i) => [r.id, i]));
   state.genes = [];
@@ -140,7 +140,7 @@ export function setModel(view, curated) {
   state.selected = null;
   state.solution = null;
   state.reference = null;
-  state.curated = curated;
+  state.curated = view.curated_layout;
   emit('model', view);
 }
 

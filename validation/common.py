@@ -10,7 +10,10 @@ import tempfile
 REPO = pathlib.Path(__file__).resolve().parents[1]
 RESULTS = REPO / "validation" / "results"
 DATA = pathlib.Path(os.environ.get("RASHEVSKY_DATA", REPO / ".data"))
-CORE = REPO / "models" / "e_coli_core" / "e_coli_core.xml.gz"
+# The textbook model, fetched by scripts/fetch_data.py because BiGG's terms keep it out of the repository.
+CORE = DATA / "e_coli_core.xml.gz"
+# The model the repository bundles.
+ICH360 = REPO / "models" / "ich360" / "iCH360.xml.gz"
 BIN = os.environ.get(
     "RASHEVSKY_BIN",
     str(pathlib.Path(os.environ.get("CARGO_TARGET_DIR", REPO / "target")) / "release" / "rashevsky"),

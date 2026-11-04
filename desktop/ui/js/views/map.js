@@ -392,7 +392,7 @@ export default {
     );
     map = new FluxMap(canvas, {
       indexOfId: (id) => state.byId.get(id),
-      insets: () => ({ left: refs.mediumPanel.hidden ? 24 : 240, top: 58, right: 62, bottom: 22 }),
+      insets: () => ({ left: refs.mediumPanel.hidden ? 24 : 240, top: 58, right: 190, bottom: 22 }),
       referenceGrowth: () => state.reference,
       onSelect: (hit) => select(hit),
       onCut: (id) => toggleReaction(id),

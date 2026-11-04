@@ -1,0 +1,924 @@
+{
+ "concentration_bounds": {},
+ "excluded_metabolites": [
+  "h2o_c",
+  "h2o_e",
+  "h2o_p",
+  "h_c",
+  "h_e",
+  "h_p"
+ ],
+ "reactions": {
+  "ACALD": {
+   "dg0": -20.67776918543086,
+   "sigma": 1.2002872522442234
+  },
+  "ACCOAC": {
+   "dg0": -9.09767005687089,
+   "sigma": 1.4948897801883925
+  },
+  "ACGK": {
+   "dg0": 24.665909535786227,
+   "sigma": 3.080175450846583
+  },
+  "ACGS": {
+   "dg0": -25.724363018043732,
+   "sigma": 3.384861906542871
+  },
+  "ACHBS": {
+   "dg0": -18.297785388835848,
+   "sigma": 4.908419565897986
+  },
+  "ACKr": {
+   "dg0": 13.990414860694386,
+   "sigma": 0.5495866610344518
+  },
+  "ACLS": {
+   "dg0": -27.018213699826276,
+   "sigma": 3.725894435551435
+  },
+  "ACODA": {
+   "dg0": -7.141061429359013,
+   "sigma": 3.497061911413662
+  },
+  "ACONTa": {
+   "dg0": 8.469446418863953,
+   "sigma": 1.1340541692951625
+  },
+  "ACONTb": {
+   "dg0": -1.623067614496989,
+   "sigma": 1.134867284127156
+  },
+  "ACOTA": {
+   "dg0": -3.2232906486289608,
+   "sigma": 3.3712824470218155
+  },
+  "ADK1": {
+   "dg0": 0.334459160192182,
+   "sigma": 0.15979053483789304
+  },
+  "ADSK": {
+   "dg0": -17.41478349071923,
+   "sigma": 5.9487007188184124
+  },
+  "ADSL1r": {
+   "dg0": 16.21911003929867,
+   "sigma": 1.376970906938032
+  },
+  "ADSL2r": {
+   "dg0": 23.87841796779398,
+   "sigma": 2.931870753707443
+  },
+  "ADSS": {
+   "dg0": -0.5731927280926072,
+   "sigma": 2.132881549143831
+  },
+  "AGPR": {
+   "dg0": 4.482110058042963,
+   "sigma": 1.61514930633548
+  },
+  "AICART": {
+   "dg0": 12.748996928667452,
+   "sigma": 3.7494189769516697
+  },
+  "AIRC2": {
+   "dg0": -56.38108229286965,
+   "sigma": 5.984946507791463
+  },
+  "AIRC3": {
+   "dg0": -30.72840507305534,
+   "sigma": 6.02728868539992
+  },
+  "AKGDH": {
+   "dg0": -28.214429651680575,
+   "sigma": 3.8849742998757133
+  },
+  "ALATA_L": {
+   "dg0": 0.15728392512843925,
+   "sigma": 0.5312336431378978
+  },
+  "ALCD2x": {
+   "dg0": 18.062499174643563,
+   "sigma": 0.3233520541748678
+  },
+  "ANPRT": {
+   "dg0": -62.81328892731574,
+   "sigma": 3.624508681110641
+  },
+  "ANS": {
+   "dg0": -109.0817914786023,
+   "sigma": 7.57875930019509
+  },
+  "ARGSL": {
+   "dg0": -9.629842991601691,
+   "sigma": 4.887377162272686
+  },
+  "ARGSS": {
+   "dg0": 16.877125823899064,
+   "sigma": 4.5144486904832375
+  },
+  "ASAD": {
+   "dg0": -24.206215565489174,
+   "sigma": 1.6927163689165632
+  },
+  "ASNS1": {
+   "dg0": -40.02046826668209,
+   "sigma": 3.647855517299794
+  },
+  "ASNS2": {
+   "dg0": -25.674931986674494,
+   "sigma": 3.5638989328805684
+  },
+  "ASPCT": {
+   "dg0": -22.468439909641027,
+   "sigma": 2.931870753740163
+  },
+  "ASPK": {
+   "dg0": 21.8484192944087,
+   "sigma": 2.931870753672609
+  },
+  "ASPTA": {
+   "dg0": 2.835696904678784,
+   "sigma": 0.5435878302628521
+  },
+  "BPNT": {
+   "dg0": -7.672331278530315,
+   "sigma": 3.1260416565208287
+  },
+  "CBPS": {
+   "dg0": -15.037137877046774,
+   "sigma": 2.645151726277537
+  },
+  "CHORM": {
+   "dg0": -48.66944600768517,
+   "sigma": 4.63889364098778
+  },
+  "CHORS": {
+   "dg0": -45.56054811293907,
+   "sigma": 3.830071787026787
+  },
+  "CS": {
+   "dg0": -38.761241776173165,
+   "sigma": 0.43731945424751073
+  },
+  "CTPS2": {
+   "dg0": -20.964551176575497,
+   "sigma": 2.630932472676183
+  },
+  "CYSS": {
+   "dg0": -51.28258179572629,
+   "sigma": 5.237531617381856
+  },
+  "CYSTL": {
+   "dg0": 0.5334905692729137,
+   "sigma": 2.7136456480309032
+  },
+  "DAPDC": {
+   "dg0": -15.492021841155633,
+   "sigma": 3.733838386429159
+  },
+  "DAPE": {
+   "dg0": -1.6533807475360618,
+   "sigma": 2.931870753584052
+  },
+  "DDPA": {
+   "dg0": -74.35200959846352,
+   "sigma": 2.3508607109196453
+  },
+  "DHAD1": {
+   "dg0": -36.93065911603594,
+   "sigma": 1.4003928195745539
+  },
+  "DHAD2": {
+   "dg0": -36.928253986879895,
+   "sigma": 1.4003928195745539
+  },
+  "DHDPRy": {
+   "dg0": -21.100277753411888,
+   "sigma": 3.9391747712933145
+  },
+  "DHDPS": {
+   "dg0": -128.20294551968357,
+   "sigma": 6.21734747728685
+  },
+  "DHFR": {
+   "dg0": -18.823332555509182,
+   "sigma": 2.39358077203115
+  },
+  "DHORD2": {
+   "dg0": -125.15046007418204,
+   "sigma": 6.326652864530612
+  },
+  "DHORD5": {
+   "dg0": -17.249626084966025,
+   "sigma": 5.020368326934358
+  },
+  "DHORTS": {
+   "dg0": -7.288873537091774,
+   "sigma": 1.6927163689933147
+  },
+  "DHQS": {
+   "dg0": -150.3272750006046,
+   "sigma": 6.264636668485041
+  },
+  "DHQTi": {
+   "dg0": -5.290246993946141,
+   "sigma": 2.073145691576291
+  },
+  "DTMPK": {
+   "dg0": -1.659525171797327,
+   "sigma": 2.931870753699305
+  },
+  "DUTPDP": {
+   "dg0": -42.15816488983728,
+   "sigma": 2.555219646682189
+  },
+  "ENO": {
+   "dg0": -3.8108419943565366,
+   "sigma": 0.3049103879957316
+  },
+  "FBA": {
+   "dg0": 23.163690734624026,
+   "sigma": 0.5290407446286738
+  },
+  "FBP": {
+   "dg0": -11.832362776390504,
+   "sigma": 0.6920454486597202
+  },
+  "FRD2": {
+   "dg0": -34.289060718690905,
+   "sigma": 5.26130955655654
+  },
+  "FUM": {
+   "dg0": -3.424645774163224,
+   "sigma": 0.27824312134037177
+  },
+  "G3PD2": {
+   "dg0": 22.62886215820754,
+   "sigma": 0.8053510710869959
+  },
+  "G3PT": {
+   "dg0": -12.987763452730142,
+   "sigma": 2.080885819123342
+  },
+  "G5SADs": {
+   "dg0": -36.70021677294943,
+   "sigma": 4.998797279051846
+  },
+  "G5SD": {
+   "dg0": -7.623745098362484,
+   "sigma": 1.61514930633548
+  },
+  "G6PDH2r": {
+   "dg0": -6.822034681511923,
+   "sigma": 1.3215711001706818
+  },
+  "GAPD": {
+   "dg0": 1.162463761099616,
+   "sigma": 0.40562633923936153
+  },
+  "GARFT": {
+   "dg0": 1.9422408476298187,
+   "sigma": 5.5954641345304275
+  },
+  "GHMT2r": {
+   "dg0": -10.110642594447313,
+   "sigma": 2.505303798192721
+  },
+  "GK1": {
+   "dg0": 0.04150605634936255,
+   "sigma": 1.1969312231306524
+  },
+  "GLNS": {
+   "dg0": -15.296216993936376,
+   "sigma": 0.8271014679972253
+  },
+  "GLU5K": {
+   "dg0": 28.86097045365051,
+   "sigma": 2.301329657952362
+  },
+  "GLUDy": {
+   "dg0": 33.417824588481096,
+   "sigma": 0.37462137523135264
+  },
+  "GLUN": {
+   "dg0": -14.34553628000765,
+   "sigma": 0.8598395737360721
+  },
+  "GLUPRT": {
+   "dg0": -64.11352500201463,
+   "sigma": 2.7233752167123892
+  },
+  "GLUSy": {
+   "dg0": -47.76336086848869,
+   "sigma": 0.9436721038249168
+  },
+  "GLYCK2": {
+   "dg0": -10.881512561402815,
+   "sigma": 0.7073330662457443
+  },
+  "GLYCL": {
+   "dg0": 18.585194305972607,
+   "sigma": 4.066891938849727
+  },
+  "GLYK": {
+   "dg0": -16.653989821213543,
+   "sigma": 2.078842931380468
+  },
+  "GND": {
+   "dg0": 10.314309751522671,
+   "sigma": 3.1763402600412363
+  },
+  "GNK": {
+   "dg0": -12.496936260465986,
+   "sigma": 3.206739218482915
+  },
+  "GTHOr": {
+   "dg0": -12.59781681940467,
+   "sigma": 0.783942360544208
+  },
+  "HCO3E": {
+   "dg0": -8.048871281984738,
+   "sigma": 3.0960866639009965
+  },
+  "HISTD": {
+   "dg0": -17.210418586702872,
+   "sigma": 2.241588355896781
+  },
+  "HISTP": {
+   "dg0": -20.293298655074828,
+   "sigma": 2.1802104300973957
+  },
+  "HSDy": {
+   "dg0": -19.43926068285714,
+   "sigma": 1.696412393916078
+  },
+  "HSK": {
+   "dg0": -39.408859791519944,
+   "sigma": 4.491288355899667
+  },
+  "HSST": {
+   "dg0": -29.936608020605377,
+   "sigma": 5.452876154228187
+  },
+  "HSTPT": {
+   "dg0": 8.83206477259938,
+   "sigma": 2.931870753584039
+  },
+  "ICDHyr": {
+   "dg0": 5.406109217001358,
+   "sigma": 3.186776651675181
+  },
+  "ICL": {
+   "dg0": 9.535847191245892,
+   "sigma": 1.351225030117334
+  },
+  "IGPDH": {
+   "dg0": -41.32791617365092,
+   "sigma": 1.9479059587613956
+  },
+  "IGPS": {
+   "dg0": -72.43404498434813,
+   "sigma": 6.010880862670386
+  },
+  "ILETA": {
+   "dg0": -5.927241421868416,
+   "sigma": 3.518488575756854
+  },
+  "IMPC": {
+   "dg0": 19.58927111918979,
+   "sigma": 5.44384060993509
+  },
+  "IMPD": {
+   "dg0": 16.478036941117352,
+   "sigma": 3.9817849941102956
+  },
+  "IPMD": {
+   "dg0": 15.626074417381687,
+   "sigma": 0.9862312729818159
+  },
+  "IPPMIa": {
+   "dg0": -3.695077414270429,
+   "sigma": 1.9030338037325891
+  },
+  "IPPMIb": {
+   "dg0": -0.3915610012760453,
+   "sigma": 1.9071124389380365
+  },
+  "IPPS": {
+   "dg0": -26.48316836775325,
+   "sigma": 1.3471437169997913
+  },
+  "KARA1": {
+   "dg0": 15.621488413442421,
+   "sigma": 1.0110966472899647
+  },
+  "KARA2": {
+   "dg0": -15.621471843890959,
+   "sigma": 1.0110966472899647
+  },
+  "LDH_D": {
+   "dg0": 20.63053981488278,
+   "sigma": 2.073145691520455
+  },
+  "LEUTAi": {
+   "dg0": -0.323178995107412,
+   "sigma": 1.577021393177969
+  },
+  "MALS": {
+   "dg0": -38.65211842157689,
+   "sigma": 2.081758617571494
+  },
+  "MDH": {
+   "dg0": 26.50293016623145,
+   "sigma": 0.3048878320045471
+  },
+  "ME1": {
+   "dg0": 12.104950519884909,
+   "sigma": 3.1183285670942245
+  },
+  "ME2": {
+   "dg0": 12.107094614873944,
+   "sigma": 3.137103713452536
+  },
+  "METS": {
+   "dg0": 0.14916827933393506,
+   "sigma": 5.0780437503671125
+  },
+  "MTHFC": {
+   "dg0": -5.365463312274642,
+   "sigma": 0.9155240221327449
+  },
+  "MTHFD": {
+   "dg0": 6.5393006406234235,
+   "sigma": 1.1400859910644374
+  },
+  "MTHFR2": {
+   "dg0": -40.47180854547105,
+   "sigma": 4.182738122021666
+  },
+  "NADTRHD": {
+   "dg0": -0.002144094989034784,
+   "sigma": 0.3357629240452971
+  },
+  "NDPK1": {
+   "dg0": -2.6677301092811376,
+   "sigma": 1.332575434726456
+  },
+  "NDPK2": {
+   "dg0": -0.42069248359024414,
+   "sigma": 1.262858654632222
+  },
+  "NDPK4": {
+   "dg0": 0.10916571417862997,
+   "sigma": 2.6171935835279285
+  },
+  "NDPK5": {
+   "dg0": 1.7688697442641796,
+   "sigma": 2.405183111083142
+  },
+  "NDPK6": {
+   "dg0": -1.551806835237926,
+   "sigma": 1.276839897177656
+  },
+  "NDPK7": {
+   "dg0": 4.061041458536806,
+   "sigma": 2.40518311105641
+  },
+  "NDPK8": {
+   "dg0": 2.3866067209509083,
+   "sigma": 1.4686952272134055
+  },
+  "NTP5": {
+   "dg0": -29.897251671752166,
+   "sigma": 2.3157017774955273
+  },
+  "OCBT": {
+   "dg0": -30.305986683613547,
+   "sigma": 2.931870753740149
+  },
+  "OMCDC": {
+   "dg0": -13.955294948587778,
+   "sigma": 4.3258262195386665
+  },
+  "OMPDC": {
+   "dg0": -22.69816817841604,
+   "sigma": 8.614866047211299
+  },
+  "ORPT": {
+   "dg0": -3.723203435422022,
+   "sigma": 1.311172461352494
+  },
+  "P5CR": {
+   "dg0": -15.208783968749458,
+   "sigma": 6.029368087500095
+  },
+  "PAPSR": {
+   "dg0": -42.79162025933023,
+   "sigma": 6.27241726311008
+  },
+  "PDH": {
+   "dg0": -34.226838870159554,
+   "sigma": 3.222666706106246
+  },
+  "PFK": {
+   "dg0": -17.809390497553125,
+   "sigma": 0.6745708486802017
+  },
+  "PFL": {
+   "dg0": -19.814039438597078,
+   "sigma": 1.4892371755153893
+  },
+  "PGCD": {
+   "dg0": 30.84281257423504,
+   "sigma": 0.5640702981300235
+  },
+  "PGI": {
+   "dg0": 2.6374958580388466,
+   "sigma": 0.382665782433602
+  },
+  "PGK": {
+   "dg0": 19.549800047385702,
+   "sigma": 0.4412773407676603
+  },
+  "PGL": {
+   "dg0": -25.37872803793556,
+   "sigma": 1.6588836068839339
+  },
+  "PGM": {
+   "dg0": -4.474954330214274,
+   "sigma": 0.36085049219679827
+  },
+  "PHETA1": {
+   "dg0": -0.07637398567914033,
+   "sigma": 2.0731456914217947
+  },
+  "PPA": {
+   "dg0": -16.456826036241424,
+   "sigma": 0.19094279246517792
+  },
+  "PPC": {
+   "dg0": -40.27109358321341,
+   "sigma": 3.1119051551972188
+  },
+  "PPCK": {
+   "dg0": 10.629340309269963,
+   "sigma": 3.1202021050609243
+  },
+  "PPND": {
+   "dg0": -10.78452928696288,
+   "sigma": 11.288220524393468
+  },
+  "PPNDH": {
+   "dg0": -64.72712548725676,
+   "sigma": 11.317291926436136
+  },
+  "PPS": {
+   "dg0": -4.948892478519838,
+   "sigma": 0.4979870294744027
+  },
+  "PRAGSr": {
+   "dg0": -27.22916615520213,
+   "sigma": 2.315893476716196
+  },
+  "PRAIi": {
+   "dg0": -9.793638701096938,
+   "sigma": 1.3482617169023363
+  },
+  "PRASCSi": {
+   "dg0": -77.4450899856333,
+   "sigma": 5.210788097819457
+  },
+  "PRMICI": {
+   "dg0": -9.775624832238577,
+   "sigma": 1.3482617169014437
+  },
+  "PRPPS": {
+   "dg0": -1.063317862243764,
+   "sigma": 2.024275520640553
+  },
+  "PSCVT": {
+   "dg0": -16.478218771960677,
+   "sigma": 2.298237749422559
+  },
+  "PSERT": {
+   "dg0": -10.896257844091338,
+   "sigma": 0.3761635407475897
+  },
+  "PSP_L": {
+   "dg0": -10.369080612883408,
+   "sigma": 0.2767919181937004
+  },
+  "PTAr": {
+   "dg0": 8.672467245030703,
+   "sigma": 0.6064527563143826
+  },
+  "PYK": {
+   "dg0": -25.027319955616264,
+   "sigma": 0.4235342515911658
+  },
+  "RBK": {
+   "dg0": -29.317323675648197,
+   "sigma": 2.041724310717759
+  },
+  "RNDR1": {
+   "dg0": -42.713325764291696,
+   "sigma": 3.7376646443614363
+  },
+  "RNDR2": {
+   "dg0": -38.96151510047439,
+   "sigma": 3.0388112248931054
+  },
+  "RNDR3": {
+   "dg0": -39.65393602792771,
+   "sigma": 2.9436610430643646
+  },
+  "RNDR4": {
+   "dg0": -41.696892989041245,
+   "sigma": 2.412063269647716
+  },
+  "RPE": {
+   "dg0": -3.3881578544159083,
+   "sigma": 1.153720019491749
+  },
+  "RPI": {
+   "dg0": 4.4712536353063115,
+   "sigma": 1.6668851934475926
+  },
+  "SADT2": {
+   "dg0": 19.544334038939645,
+   "sigma": 1.7851184626753969
+  },
+  "SDPDS": {
+   "dg0": 8.02163308293467,
+   "sigma": 3.740924516557893
+  },
+  "SDPTA": {
+   "dg0": -0.9220551187593173,
+   "sigma": 2.931870753584047
+  },
+  "SERAT": {
+   "dg0": -6.396159021443282,
+   "sigma": 2.931870753666653
+  },
+  "SHK3Dr": {
+   "dg0": -6.530071988809539,
+   "sigma": 1.3111724613608415
+  },
+  "SHKK": {
+   "dg0": -26.215673007866883,
+   "sigma": 2.8399551260203
+  },
+  "SHSL1": {
+   "dg0": -64.51336396019377,
+   "sigma": 5.574564822308252
+  },
+  "SUCDi": {
+   "dg0": -73.6117732705248,
+   "sigma": 6.519495116964098
+  },
+  "SUCOAS": {
+   "dg0": -1.2140582230074415,
+   "sigma": 1.3334281243274517
+  },
+  "SULR": {
+   "dg0": -109.70007763025023,
+   "sigma": 4.694120658428453
+  },
+  "TALA": {
+   "dg0": -0.9380787429734596,
+   "sigma": 1.4132811687987974
+  },
+  "THDPS": {
+   "dg0": 26.019401532115126,
+   "sigma": 5.198938766935994
+  },
+  "THRD_L": {
+   "dg0": -24.064751276544314,
+   "sigma": 4.155707806831843
+  },
+  "THRS": {
+   "dg0": -29.37246320892723,
+   "sigma": 2.809282417481369
+  },
+  "TKT1": {
+   "dg0": -1.5025263687166444,
+   "sigma": 2.369519210927433
+  },
+  "TKT2": {
+   "dg0": -10.302600299523988,
+   "sigma": 1.9213332844173228
+  },
+  "TMDS": {
+   "dg0": -45.276592267676165,
+   "sigma": 2.941525034144618
+  },
+  "TPI": {
+   "dg0": 5.617742386692498,
+   "sigma": 0.5486662102928138
+  },
+  "TRDR": {
+   "dg0": -7.738050694313415,
+   "sigma": 1.4734461041353866
+  },
+  "TRPS2": {
+   "dg0": -50.669396045745316,
+   "sigma": 1.1219658204107559
+  },
+  "TRPS3": {
+   "dg0": 19.179535660116642,
+   "sigma": 2.9318707536532607
+  },
+  "TYRTA": {
+   "dg0": 0.37600128851892123,
+   "sigma": 2.0731456914217814
+  },
+  "UMPK": {
+   "dg0": -0.5856878804379448,
+   "sigma": 3.19228415057884
+  },
+  "VALTA": {
+   "dg0": 1.7246845599528342,
+   "sigma": 3.4657441762217913
+  },
+  "VPAMTr": {
+   "dg0": -1.5674006348244802,
+   "sigma": 3.490058557323681
+  },
+  "XYLI1": {
+   "dg0": 3.667787982122775,
+   "sigma": 0.5844606793991408
+  },
+  "XYLK": {
+   "dg0": -24.789477984369057,
+   "sigma": 2.0258214815777604
+  }
+ },
+ "skipped": {
+  "3HAD100": "unbalanced in eQuilibrator's protonation states",
+  "3HAD120": "unbalanced in eQuilibrator's protonation states",
+  "3HAD121": "unbalanced in eQuilibrator's protonation states",
+  "3HAD140": "unbalanced in eQuilibrator's protonation states",
+  "3HAD141": "unbalanced in eQuilibrator's protonation states",
+  "3HAD160": "unbalanced in eQuilibrator's protonation states",
+  "3HAD161": "unbalanced in eQuilibrator's protonation states",
+  "3HAD180": "unbalanced in eQuilibrator's protonation states",
+  "3HAD181": "unbalanced in eQuilibrator's protonation states",
+  "3HAD40": "unbalanced in eQuilibrator's protonation states",
+  "3HAD60": "unbalanced in eQuilibrator's protonation states",
+  "3HAD80": "unbalanced in eQuilibrator's protonation states",
+  "3OAR100": "unbalanced in eQuilibrator's protonation states",
+  "3OAR120": "unbalanced in eQuilibrator's protonation states",
+  "3OAR121": "unbalanced in eQuilibrator's protonation states",
+  "3OAR140": "unbalanced in eQuilibrator's protonation states",
+  "3OAR141": "unbalanced in eQuilibrator's protonation states",
+  "3OAR160": "unbalanced in eQuilibrator's protonation states",
+  "3OAR161": "unbalanced in eQuilibrator's protonation states",
+  "3OAR180": "unbalanced in eQuilibrator's protonation states",
+  "3OAR181": "unbalanced in eQuilibrator's protonation states",
+  "3OAR40": "unbalanced in eQuilibrator's protonation states",
+  "3OAR60": "unbalanced in eQuilibrator's protonation states",
+  "3OAR80": "unbalanced in eQuilibrator's protonation states",
+  "3OAS100": "unbalanced in eQuilibrator's protonation states",
+  "3OAS120": "unbalanced in eQuilibrator's protonation states",
+  "3OAS121": "unbalanced in eQuilibrator's protonation states",
+  "3OAS140": "unbalanced in eQuilibrator's protonation states",
+  "3OAS141": "unbalanced in eQuilibrator's protonation states",
+  "3OAS160": "unbalanced in eQuilibrator's protonation states",
+  "3OAS161": "unbalanced in eQuilibrator's protonation states",
+  "3OAS180": "unbalanced in eQuilibrator's protonation states",
+  "3OAS181": "unbalanced in eQuilibrator's protonation states",
+  "3OAS60": "unbalanced in eQuilibrator's protonation states",
+  "3OAS80": "unbalanced in eQuilibrator's protonation states",
+  "ACALDtex": "crosses a membrane",
+  "ACALDtpp": "crosses a membrane",
+  "ACOATA": "unbalanced in eQuilibrator's protonation states",
+  "ACt2rpp": "crosses a membrane",
+  "ACtex": "crosses a membrane",
+  "AKGt2rpp": "crosses a membrane",
+  "AKGtex": "crosses a membrane",
+  "ATPM": "boundary or pseudo reaction",
+  "ATPPRT": "no usable estimate",
+  "ATPS4rpp": "crosses a membrane",
+  "Biomass": "boundary or pseudo reaction",
+  "CO2tex": "crosses a membrane",
+  "CO2tpp": "crosses a membrane",
+  "CYTBD2pp": "crosses a membrane",
+  "CYTBDpp": "crosses a membrane",
+  "CYTBO3_4pp": "crosses a membrane",
+  "D_LACt2pp": "crosses a membrane",
+  "D_LACtex": "crosses a membrane",
+  "EAR100x": "unbalanced in eQuilibrator's protonation states",
+  "EAR100y": "unbalanced in eQuilibrator's protonation states",
+  "EAR120x": "unbalanced in eQuilibrator's protonation states",
+  "EAR120y": "unbalanced in eQuilibrator's protonation states",
+  "EAR121x": "unbalanced in eQuilibrator's protonation states",
+  "EAR121y": "unbalanced in eQuilibrator's protonation states",
+  "EAR140x": "unbalanced in eQuilibrator's protonation states",
+  "EAR140y": "unbalanced in eQuilibrator's protonation states",
+  "EAR141x": "unbalanced in eQuilibrator's protonation states",
+  "EAR141y": "unbalanced in eQuilibrator's protonation states",
+  "EAR160x": "unbalanced in eQuilibrator's protonation states",
+  "EAR160y": "unbalanced in eQuilibrator's protonation states",
+  "EAR161x": "unbalanced in eQuilibrator's protonation states",
+  "EAR161y": "unbalanced in eQuilibrator's protonation states",
+  "EAR180x": "unbalanced in eQuilibrator's protonation states",
+  "EAR180y": "unbalanced in eQuilibrator's protonation states",
+  "EAR181x": "unbalanced in eQuilibrator's protonation states",
+  "EAR181y": "unbalanced in eQuilibrator's protonation states",
+  "EAR40x": "unbalanced in eQuilibrator's protonation states",
+  "EAR60x": "unbalanced in eQuilibrator's protonation states",
+  "EAR60y": "unbalanced in eQuilibrator's protonation states",
+  "EAR80x": "unbalanced in eQuilibrator's protonation states",
+  "EAR80y": "unbalanced in eQuilibrator's protonation states",
+  "ETOHtex": "crosses a membrane",
+  "ETOHtrpp": "crosses a membrane",
+  "EX_ac_e": "boundary or pseudo reaction",
+  "EX_acald_e": "boundary or pseudo reaction",
+  "EX_akg_e": "boundary or pseudo reaction",
+  "EX_co2_e": "boundary or pseudo reaction",
+  "EX_etoh_e": "boundary or pseudo reaction",
+  "EX_for_e": "boundary or pseudo reaction",
+  "EX_fru_e": "boundary or pseudo reaction",
+  "EX_fum_e": "boundary or pseudo reaction",
+  "EX_glc__D_e": "boundary or pseudo reaction",
+  "EX_glcn_e": "boundary or pseudo reaction",
+  "EX_gln__L_e": "boundary or pseudo reaction",
+  "EX_glu__L_e": "boundary or pseudo reaction",
+  "EX_glyc__R_e": "boundary or pseudo reaction",
+  "EX_glyc_e": "boundary or pseudo reaction",
+  "EX_h2o_e": "boundary or pseudo reaction",
+  "EX_h_e": "boundary or pseudo reaction",
+  "EX_lac__D_e": "boundary or pseudo reaction",
+  "EX_mal__L_e": "boundary or pseudo reaction",
+  "EX_nh4_e": "boundary or pseudo reaction",
+  "EX_o2_e": "boundary or pseudo reaction",
+  "EX_pi_e": "boundary or pseudo reaction",
+  "EX_pyr_e": "boundary or pseudo reaction",
+  "EX_rib__D_e": "boundary or pseudo reaction",
+  "EX_so4_e": "boundary or pseudo reaction",
+  "EX_succ_e": "boundary or pseudo reaction",
+  "EX_xyl__D_e": "boundary or pseudo reaction",
+  "FORt2pp": "crosses a membrane",
+  "FORtex": "crosses a membrane",
+  "FORtppi": "crosses a membrane",
+  "FRUpts2pp": "crosses a membrane",
+  "FRUtex": "crosses a membrane",
+  "FUMt2_2pp": "crosses a membrane",
+  "FUMtex": "crosses a membrane",
+  "GLCNt2rpp": "crosses a membrane",
+  "GLCNtex": "crosses a membrane",
+  "GLCptspp": "crosses a membrane",
+  "GLCtex_copy1": "crosses a membrane",
+  "GLNabcpp": "crosses a membrane",
+  "GLNtex": "crosses a membrane",
+  "GLUt2rpp": "crosses a membrane",
+  "GLUtex": "crosses a membrane",
+  "GLYCAt2rpp": "crosses a membrane",
+  "GLYCAtex": "crosses a membrane",
+  "GLYCtex": "crosses a membrane",
+  "GLYCtpp": "crosses a membrane",
+  "GMPS2": "no usable estimate",
+  "GRXR": "unbalanced in eQuilibrator's protonation states",
+  "H2Otex": "crosses a membrane",
+  "H2Otpp": "crosses a membrane",
+  "Htex": "crosses a membrane",
+  "IG3PS": "no usable estimate",
+  "KAS14": "unbalanced in eQuilibrator's protonation states",
+  "KAS15": "unbalanced in eQuilibrator's protonation states",
+  "MALt2_2pp": "crosses a membrane",
+  "MALtex": "crosses a membrane",
+  "MCOATA": "unbalanced in eQuilibrator's protonation states",
+  "NADH16pp": "crosses a membrane",
+  "NADH17pp": "crosses a membrane",
+  "NH4tex": "crosses a membrane",
+  "NH4tpp": "crosses a membrane",
+  "O2tex": "crosses a membrane",
+  "O2tpp": "crosses a membrane",
+  "PIt2rpp": "crosses a membrane",
+  "PItex": "crosses a membrane",
+  "PItpp": "crosses a membrane",
+  "PRAIS": "no usable estimate",
+  "PRAMPC": "no usable estimate",
+  "PRATPP": "no usable estimate",
+  "PRFGS": "no usable estimate",
+  "PYRt2rpp": "crosses a membrane",
+  "PYRtex": "crosses a membrane",
+  "RIBabcpp": "crosses a membrane",
+  "RIBtex": "crosses a membrane",
+  "RNDR1b": "unbalanced in eQuilibrator's protonation states",
+  "RNDR2b": "unbalanced in eQuilibrator's protonation states",
+  "SO4t2pp": "crosses a membrane",
+  "SO4tex": "crosses a membrane",
+  "SUCCt1pp": "crosses a membrane",
+  "SUCCt2_2pp": "crosses a membrane",
+  "SUCCtex": "crosses a membrane",
+  "SULabcpp": "crosses a membrane",
+  "T2DECAI": "no usable estimate",
+  "THD2pp": "crosses a membrane",
+  "XYLt2pp": "crosses a membrane",
+  "XYLtex": "crosses a membrane"
+ },
+ "source": "eQuilibrator component contribution, equilibrator-api, pH 7.5, pMg 3.0, I 0.25 M, 298.15 K; data CC BY 4.0, doi:10.5281/zenodo.4128543",
+ "temperature": 298.15
+}

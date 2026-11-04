@@ -14,6 +14,7 @@ Each script below also runs alone, from `validation/`, and prints what it finds.
 
 | Check | Criterion | Result | Verdict |
 | --- | --- | --- | --- |
+| iCH360 growth | within 1e-6 of COBRApy | 0.865627 with HiGHS, 0.865627 with the dense simplex | pass |
 | `e_coli_core` growth | 0.8739 1/h from BiGG; within 1e-6 of COBRApy | 0.873922 with HiGHS, 0.873922 with the dense simplex | pass |
 | FVA at 100 % of optimum | within 1e-6 of COBRApy | largest difference 3.9e-12 over 95 reactions | pass |
 | FVA at 90 % of optimum | within 1e-6 of COBRApy | largest difference 5.0e-13 | pass |
@@ -26,9 +27,30 @@ Each script below also runs alone, from `validation/`, and prints what it finds.
 | Enzyme constraints on eciML1515 | within 1e-6 of a certified optimum in 7 conditions | largest difference 1.6e-14 | pass |
 | SBML semantic suite | at least 95 % of applicable cases | 1700 of 1700 with Rodas4, 1700 of 1700 with BDF | pass |
 
+## iCH360 against COBRApy
+
+The bundled model. `validation/v13_ich360_cobrapy.py` runs every comparison of `v01` below on it, with the same tolerances. The authors publish no growth rate to match.
+
+| Analysis | COBRApy | Rashevsky or largest difference | Verdict |
+| --- | --- | --- | --- |
+| pFBA total flux | 758.025093 | 758.025093 | pass |
+| Loopless objective | 0.865627 | 0.865627 | pass |
+| CycleFreeFlux exchanges | | difference 3.4e-13 | pass |
+| Single gene deletions (356) | | difference 1.3e-10 | pass |
+| Single reaction deletions (349) | | difference 2.7e-12 | pass |
+| Double gene deletions (63,190) | | difference 7.2e-10 | pass |
+| MOMA distance after deleting PGI | 373.4473 (OSQP) | 373.4477 (HiGHS QP) | pass |
+| Linear MOMA distance | 98.218743 | 98.218743 | pass |
+| ROOM objective | 29 | 29 | pass |
+| Production envelope, 20 points | | difference 7.2e-11 | pass |
+| Minimal medium total uptake | 6.447592 | 6.447592 | pass |
+| Minimal medium components | 4 | 4 | pass |
+
+FVA at 100 % and 90 % of optimum over 349 reactions: largest difference 1.5e-11 and 1.7e-11.
+
 ## `e_coli_core` against COBRApy
 
-`validation/v01_core_cobrapy.py`
+The textbook model, fetched from BiGG Models. `validation/v01_core_cobrapy.py`
 
 | Analysis | COBRApy | Rashevsky or largest difference | Verdict |
 | --- | --- | --- | --- |
@@ -192,11 +214,13 @@ The other cases of the stochastic folder test the `distrib` package, which this 
 
 | Comparison | Largest difference of means, in flux SD | Reaction |
 | --- | --- | --- |
-| CHRR against COBRApy OptGP | 0.081 | NADH16 |
-| OptGP against COBRApy OptGP | 0.074 | NADTRHD |
-| CHRR against OptGP | 0.048 | ACALD |
+| CHRR against COBRApy OptGP | 0.092 | NADH16 |
+| OptGP against COBRApy OptGP | 0.063 | PPC |
+| CHRR against OptGP | 0.047 | ACALD |
 
-Diagnostics: CHRR split R-hat 1.002, smallest effective sample size 1410, largest Geweke z 3.8, in 0.40 s. OptGP R-hat 1.001, effective size 2852, Geweke z 3.4, in 1.46 s. A Rust test checks uniformity on a simplex against its exact mean and variance, and convergence on `e_coli_core` for several seeds.
+iCH360, the same way, a polytope of dimension 45, 309 reactions compared: CHRR against COBRApy 0.098, OptGP against COBRApy 0.095, CHRR against OptGP 0.043. COBRApy's OptGP is run with all its warmup points: by default it discards those it finds redundant, and on iCH360 that freezes `ASNS1` at exactly 0 and `ASNS2` near 0.19, a difference of 125 flux standard deviations from the other two samplers, when their split is free.
+
+Diagnostics: CHRR split R-hat 1.002, smallest effective sample size 1410, largest Geweke z 3.8, in 0.40 s. OptGP R-hat 1.001, effective size 2852, Geweke z 3.4, in 1.58 s. A Rust test checks uniformity on a simplex against its exact mean and variance, and convergence on `e_coli_core` for several seeds.
 
 ## Outputs
 
@@ -210,6 +234,7 @@ pFBA on Human-GEM projected onto the human-metabolism-r97-expanded-20261025 scen
 
 | Model | Errors from libSBML | Reactions | Objective read by COBRApy, original | Rewritten | Verdict |
 | --- | --- | --- | --- | --- | --- |
+| iCH360 | 0 | 349 | 0.865627 | 0.865627 | pass |
 | e_coli_core | 0 | 95 | 0.873922 | 0.873922 | pass |
 | iML1515 | 0 | 2,712 | 0.876997 | 0.876997 | pass |
 | Human-GEM | 0 | 12,748 | 138.532699 | 138.532699 | pass |
@@ -243,7 +268,7 @@ Relative error at t = 2 on the Teusink model, against a run at `rtol = 1e-12`. R
 
 ### Thermodynamics
 
-TFA on `e_coli_core` with 48 eQuilibrator energies: growth 0.873922 against 0.873922 without them, 0 fluxes against their Gibbs energy, and every reported `DrG'` within two standard uncertainties of its value recomputed from the reported concentrations (largest excess 1.3e-14 kJ/mol). The sign logic also has Rust tests on small networks with known answers.
+TFA on iCH360 with 186 eQuilibrator energies: growth 0.865627 against 0.865627 without them, 0 fluxes against their Gibbs energy, and every reported `DrG'` within two standard uncertainties of its value recomputed from the reported concentrations (largest excess 9.8e-14 kJ/mol). The sign logic also has Rust tests on small networks with known answers.
 
 ### Review
 
@@ -261,11 +286,12 @@ Rust tests, with Python and command-line tests of the same calls. Local sensitiv
 
 | Task | Rashevsky | COBRApy |
 | --- | --- | --- |
-| Read e_coli_core | 0.01 s | 0.15 s |
+| Read iCH360 | 0.03 s | 0.43 s |
+| Read e_coli_core | 0.01 s | 0.13 s |
 | Read iML1515 | 0.14 s | 2.38 s |
-| Read Human-GEM | 0.80 s | 11.57 s |
-| FVA of iML1515, 2,712 reactions | 2.4 s | 7.5 s |
-| All single gene deletions of iML1515 | 3.8 s | 3.2 s |
+| Read Human-GEM | 0.65 s | 10.17 s |
+| FVA of iML1515, 2,712 reactions | 2.8 s | 7.7 s |
+| All single gene deletions of iML1515 | 4.5 s | 2.6 s |
 
-FVA of iML1515 agrees with COBRApy to 1.8e-06. Essential tasks of Human-GEM take 5.5 s, a 100-minute time course of the Teusink model at 1,000 points 0.16 s, and 10,000 CHRR samples of `e_coli_core` 0.55 s, each including reading the file.
+FVA of iML1515 agrees with COBRApy to 1.8e-06. Essential tasks of Human-GEM take 5.5 s, a 100-minute time course of the Teusink model at 1,000 points 0.20 s, and 10,000 CHRR samples of `e_coli_core` 0.46 s, each including reading the file.
 

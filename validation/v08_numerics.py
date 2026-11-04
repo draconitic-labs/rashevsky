@@ -18,10 +18,10 @@ import math
 import sys
 import tempfile
 
-from common import CORE, DATA, REPO, engine, write_result
+from common import CORE, DATA, ICH360, REPO, engine, write_result
 
 TEUSINK = DATA / "BIOMD0000000064.xml"
-THERMO = REPO / "data" / "thermo" / "e_coli_core.json"
+THERMO = REPO / "data" / "thermo" / "ich360.json"
 
 
 def integrators() -> dict:
@@ -65,8 +65,8 @@ def dfba() -> dict:
 
 
 def tfa() -> dict:
-    fba = engine("fba", CORE)["objective"]
-    res = engine("tfa", CORE, THERMO)
+    fba = engine("fba", ICH360)["objective"]
+    res = engine("tfa", ICH360, THERMO)
     data = json.load(open(THERMO))
     gibbs = res["gibbs"]
     flux = res["fluxes"]["fluxes"]
@@ -75,7 +75,7 @@ def tfa() -> dict:
     from v02_helpers import reaction_table
 
     rt = 8.314462618e-3 * data["temperature"]
-    table = reaction_table(CORE)
+    table = reaction_table(ICH360)
     worst = 0.0
     for rid, energy in data["reactions"].items():
         term = sum(c * math.log(res["concentrations"][m]) for m, c in table[rid].items() if m not in data["excluded_metabolites"])

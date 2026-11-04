@@ -39,7 +39,7 @@ def main() -> int:
         s.shot(OUT / "map.png")
         fps = [line for line in s.read_log().splitlines() if "fps" in line]
         print("map frame rate:", fps[-1] if fps else "no frames reported")
-        s.click(656, 190, settle=1.0)  # PGI, on the spine between G6P and F6P
+        s.click(598, 198, settle=1.0)  # PGI, on the spine between G6P and F6P
         s.key("k", settle=1.4)
         s.shot(OUT / "knockout.png")
         s.key("Escape", settle=0.5)

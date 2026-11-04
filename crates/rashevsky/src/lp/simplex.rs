@@ -71,7 +71,12 @@ pub struct SimplexSession {
     basis: Vec<usize>,
     binv: DMatrix<f64>,
     x: Vec<f64>,
+    /// The inverse no longer matches the basis, since a row was added.
     dirty_basis: bool,
+    /// Bounds changed, so nonbasic variables may have to move. The inverse is still good.
+    moved_bounds: bool,
+    /// Pivots since the inverse was last rebuilt, across solves.
+    since_refactor: usize,
 }
 
 impl SimplexSession {
@@ -108,6 +113,8 @@ impl SimplexSession {
             binv: DMatrix::identity(m, m),
             x: vec![0.0; n + m],
             dirty_basis: false,
+            moved_bounds: false,
+            since_refactor: 0,
         };
         session.reset_basis();
         session
@@ -123,6 +130,7 @@ impl SimplexSession {
         }
         self.binv = -DMatrix::<f64>::identity(self.m, self.m);
         self.dirty_basis = false;
+        self.since_refactor = 0;
     }
 
     /// Puts a nonbasic variable on the finite bound nearest zero, or at zero when free.
@@ -155,6 +163,7 @@ impl SimplexSession {
         match b.lu().try_inverse() {
             Some(inv) => {
                 self.binv = inv;
+                self.since_refactor = 0;
                 true
             }
             None => false,
@@ -206,12 +215,15 @@ impl SimplexSession {
 
     /// Runs the simplex. The status is that of the final phase.
     fn run(&mut self) -> Status {
-        if self.dirty_basis {
+        if self.dirty_basis || self.moved_bounds {
             for j in 0..self.n + self.m {
                 if self.stat[j] != VarStat::Basic {
                     self.settle_nonbasic(j);
                 }
             }
+            self.moved_bounds = false;
+        }
+        if self.dirty_basis {
             if !self.refactor() {
                 self.reset_basis();
             }
@@ -220,15 +232,13 @@ impl SimplexSession {
         self.compute_basics();
         let tol = self.opts.primal_tolerance;
         let dtol = self.opts.dual_tolerance;
-        let mut since_refactor = 0;
         let mut degenerate = 0usize;
         for _ in 0..self.opts.max_iterations {
-            if since_refactor >= REFACTOR_EVERY {
+            if self.since_refactor >= REFACTOR_EVERY {
                 if !self.refactor() {
                     self.reset_basis();
                 }
                 self.compute_basics();
-                since_refactor = 0;
             }
             let phase1 = self.infeasibility() > 0.0;
             // Basic cost vector and simplex multipliers.
@@ -361,7 +371,7 @@ impl SimplexSession {
                     self.basis[r] = enter;
                     self.stat[enter] = VarStat::Basic;
                     self.pivot(r, &alpha);
-                    since_refactor += 1;
+                    self.since_refactor += 1;
                 }
             }
         }
@@ -485,14 +495,14 @@ impl Session for SimplexSession {
     fn set_col_bounds(&mut self, col: usize, lb: f64, ub: f64) -> Result<()> {
         self.lb[col] = lb;
         self.ub[col] = ub;
-        self.dirty_basis = true;
+        self.moved_bounds = true;
         Ok(())
     }
 
     fn set_row_bounds(&mut self, row: usize, lb: f64, ub: f64) -> Result<()> {
         self.lb[self.n + row] = lb;
         self.ub[self.n + row] = ub;
-        self.dirty_basis = true;
+        self.moved_bounds = true;
         Ok(())
     }
 
@@ -504,7 +514,6 @@ impl Session for SimplexSession {
         for (c, &v) in self.cost.iter_mut().zip(obj) {
             *c = if self.negate { -v } else { v };
         }
-        self.dirty_basis = true;
         Ok(())
     }
 

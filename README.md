@@ -22,6 +22,7 @@ Each row is a named published result or another tool on the same input, with the
 
 | Check | Reference | Result |
 | --- | --- | --- |
+| Bundled iCH360 | COBRApy on 15 analyses, among them all 63,190 gene pairs | all within tolerance, growth 0.865627 |
 | `e_coli_core` growth | 0.8739 1/h, BiGG and COBRApy | 0.873922, equal to COBRApy within 1e-11 |
 | Flux variability | COBRApy, tolerance 1e-6 on `e_coli_core`, 1e-5 on iML1515 | largest difference 4e-12 and 1.8e-6 |
 | iML1515 gene essentiality | Keio screens, Monk et al. 2017: 93.4 % | 93.48 % of 23,617 phenotypes; 1 row differs from the paper, traced to the model file |
@@ -62,7 +63,7 @@ The build compiles HiGHS from source, and it needs CMake, a C++ compiler and lib
 ## Use
 
 ```
-rashevsky fba models/e_coli_core/e_coli_core.xml.gz
+rashevsky fba models/ich360/iCH360.xml.gz
 rashevsky fba model.xml --ko-gene b4025 --bound EX_o2_e=0:1000
 rashevsky fva iML1515.xml.gz --fraction 0.9
 rashevsky deletion iML1515.xml.gz --kind gene --order 1
@@ -81,8 +82,8 @@ Every command prints JSON, or writes it to the file given by `--out`.
 ```python
 import rashevsky as rv
 
-model = rv.read_sbml("models/e_coli_core/e_coli_core.xml.gz")
-model.fba()["objective"]                                  # 0.8739
+model = rv.read_sbml("models/ich360/iCH360.xml.gz")
+model.fba()["objective"]                                  # 0.8656
 model.fba(knockout_genes=["b4025"])["objective"]          # 0.8632
 model.fva(fraction=0.9, reactions=["PFK"])                # {"PFK": (low, high)}
 model.single_gene_deletion()                              # {gene: growth}
@@ -99,7 +100,7 @@ glycolysis.sobol([{"name": "gR", "low": 2, "high": 10}], "vGLK", samples=512)["t
 ```rust
 use rashevsky::{Model, cb};
 
-let model = Model::read_sbml("models/e_coli_core/e_coli_core.xml.gz")?;
+let model = Model::read_sbml("models/ich360/iCH360.xml.gz")?;
 let growth = cb::fba(&model)?.objective;
 ```
 
@@ -130,4 +131,4 @@ Keys: `1` to `8` change workspace, `/` finds a reaction, `k` deletes the selecte
 
 Please cite the method papers for what you use: `docs/MODEL.md` lists them. If you use the bundled or fetched models, cite them as well.
 
-The engine is under the [MIT license](LICENSE). **Models keep their own terms:** `e_coli_core` from BiGG Models is for educational, research and non-profit use, and commercial use needs a license from UC San Diego. See [docs/DATA.md](docs/DATA.md).
+The engine is under the [MIT license](LICENSE), and so is iCH360, the bundled model. Everything in this repository can be used for any purpose, commercial included, under the terms listed in [docs/DATA.md](docs/DATA.md). Models you download from BiGG Models, such as `e_coli_core` and iML1515, come under BiGG's terms: educational, research and non-profit use, with commercial use needing an agreement with UC San Diego.

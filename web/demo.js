@@ -1,4 +1,4 @@
-// The flux map on e_coli_core, solved in the page.
+// The flux map of iCH360, solved in the page.
 import init, { Core } from './rashevsky_wasm.js';
 import { FluxMap } from './fluxmap.js';
 
@@ -11,6 +11,7 @@ let reactions = [];
 let byId = new Map();
 let cut = [];
 let reference = null;
+const references = new Map();
 let map;
 let reply = null;
 
@@ -22,8 +23,12 @@ function compute() {
   const oxygen = oxygenValue >= 60 ? 1000 : oxygenValue;
   $('glcOut').textContent = glucose.toFixed(1);
   $('o2Out').textContent = oxygenValue >= 60 ? 'Unlimited' : oxygenValue.toFixed(0);
-  reference = JSON.parse(core.solve(glucose, oxygen, '')).growth;
   reply = JSON.parse(core.solve(glucose, oxygen, cut.join(',')));
+  // Growth with nothing deleted, kept for each pair of limits.
+  const limits = `${glucose} ${oxygen}`;
+  if (cut.length === 0) references.set(limits, reply.growth);
+  else if (!references.has(limits)) references.set(limits, JSON.parse(core.solve(glucose, oxygen, '')).growth);
+  reference = references.get(limits);
   map.setFluxes(reply.fluxes, cut, reply.growth);
   const g = $('growth');
   g.textContent = reply.growth === null ? 'None' : reply.growth.toFixed(4);
@@ -77,7 +82,7 @@ async function main() {
     indexOfId: (id) => byId.get(id)?.index,
     referenceGrowth: () => reference,
     insets: () => (window.innerWidth > 700 ? { left: 240, top: 20, right: 20, bottom: 20 } : { left: 10, top: 110, right: 10, bottom: 130 }),
-    onSelect: (hit) => { if (hit?.kind === 'reaction' && !hit.id.startsWith('BIOMASS')) toggle(hit.id); },
+    onSelect: (hit) => { if (hit?.kind === 'reaction' && hit.id !== map.biomass?.id) toggle(hit.id); },
     onHover: (hit, x, y) => {
       if (!hit) {
         tip.hidden = true;

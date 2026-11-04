@@ -51,7 +51,7 @@
       "rashevsky": 6.787057500000002
     },
     "moma_distance": {
-      "cobrapy_osqp": 220.4800708604807,
+      "cobrapy_osqp": 220.480070860479,
       "knockout": "PGI",
       "pass": true,
       "rashevsky_highs_qp": 220.4804840370879,
@@ -68,7 +68,7 @@
       "points": 20
     },
     "room_objective": {
-      "cobrapy_highs": 29.999999999999453,
+      "cobrapy_highs": 29.999999999999975,
       "cobrapy_status": "optimal",
       "pass": true,
       "rashevsky": 30.0

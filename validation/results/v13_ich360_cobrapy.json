@@ -1,0 +1,89 @@
+{
+  "checks": {
+    "cycle_free_exchanges": {
+      "max_abs_difference": 3.3661962106634746e-13,
+      "pass": true
+    },
+    "double_gene_deletion": {
+      "max_abs_difference": 7.159210724250187e-10,
+      "pairs": 63190,
+      "pass": true
+    },
+    "fba_objective": {
+      "cobrapy": 0.8656270306509521,
+      "pass": true,
+      "published": null,
+      "rashevsky_highs": 0.8656270306509495,
+      "rashevsky_simplex": 0.8656270306507886
+    },
+    "fva_fraction_0.9": {
+      "max_abs_difference": 1.659827830735594e-11,
+      "pass": true,
+      "reactions": 349,
+      "tolerance": 1e-06,
+      "worst_reaction": "FORtppi"
+    },
+    "fva_fraction_1.0": {
+      "max_abs_difference": 1.482014511111629e-11,
+      "pass": true,
+      "reactions": 349,
+      "tolerance": 1e-06,
+      "worst_reaction": "AKGDH"
+    },
+    "linear_moma_distance": {
+      "cobrapy": 98.2187428382657,
+      "pass": true,
+      "rashevsky": 98.21874283827022
+    },
+    "loopless_objective": {
+      "cobrapy": 0.8656270306513064,
+      "pass": true,
+      "rashevsky": 0.8656270306509427
+    },
+    "minimal_medium_components": {
+      "cobrapy": 4,
+      "pass": true,
+      "rashevsky": 4
+    },
+    "minimal_medium_total": {
+      "cobrapy": 6.447592154924209,
+      "pass": true,
+      "rashevsky": 6.447592154924052
+    },
+    "moma_distance": {
+      "cobrapy_osqp": 373.44729983478925,
+      "knockout": "PGI",
+      "pass": true,
+      "rashevsky_highs_qp": 373.44769436206604,
+      "tolerance": 0.001
+    },
+    "pfba_total_flux": {
+      "cobrapy": 758.0250933093266,
+      "pass": true,
+      "rashevsky": 758.0250933093273
+    },
+    "production_envelope": {
+      "max_abs_difference": 7.213429853436537e-11,
+      "pass": true,
+      "points": 20
+    },
+    "room_objective": {
+      "cobrapy_highs": 29.0,
+      "cobrapy_status": "optimal",
+      "pass": true,
+      "rashevsky": 29.0
+    },
+    "single_gene_deletion": {
+      "genes": 356,
+      "max_abs_difference": 1.349034217668077e-10,
+      "pass": true
+    },
+    "single_reaction_deletion": {
+      "max_abs_difference": 2.7206570329951774e-12,
+      "pass": true,
+      "reactions": 349
+    }
+  },
+  "cobrapy_version": "0.32.1",
+  "pass": true
+}

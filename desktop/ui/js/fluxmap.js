@@ -119,7 +119,7 @@ export class FluxMap {
       };
       if (entry.boundary && subs.length + prods.length === 1) {
         const n = all[0];
-        const end = stub(n);
+        const end = entry.end ? { x: entry.end[0], y: entry.end[1] } : stub(n);
         const edge = { x0: n.x, y0: n.y, cx: (n.x + end.x) / 2, cy: (n.y + end.y) / 2, x1: end.x, y1: end.y };
         edge.length = curveLength(edge);
         // A positive flux leaves the cell when the metabolite is a substrate of the exchange.
@@ -132,6 +132,8 @@ export class FluxMap {
           const cx = mx + (n.x - mx) * bend;
           const cy = my + (n.y - my) * bend;
           const edge = { x0: n.x, y0: n.y, cx: subs.length === 1 && prods.length === 1 ? (n.x + mx) / 2 : cx, cy: subs.length === 1 && prods.length === 1 ? (n.y + my) / 2 : cy, x1: mx, y1: my };
+          // A layout may give the curve of a route.
+          if (entry.c?.[n.id]) [edge.cx, edge.cy] = entry.c[n.id];
           edge.length = curveLength(edge);
           incoming.push(edge);
         }
@@ -140,6 +142,7 @@ export class FluxMap {
           const cx = mx + (n.x - mx) * bend;
           const cy = my + (n.y - my) * bend;
           const edge = { x0: mx, y0: my, cx: subs.length === 1 && prods.length === 1 ? (n.x + mx) / 2 : cx, cy: subs.length === 1 && prods.length === 1 ? (n.y + my) / 2 : cy, x1: n.x, y1: n.y };
+          if (entry.c?.[n.id]) [edge.cx, edge.cy] = entry.c[n.id];
           edge.length = curveLength(edge);
           outgoing.push(edge);
         }
@@ -385,7 +388,7 @@ export class FluxMap {
 
     // Region names sit under everything, large and quiet.
     g.textBaseline = 'middle';
-    g.font = `500 ${Math.max(15, 15 / Math.sqrt(k))}px "Public Sans", sans-serif`;
+    g.font = `500 ${Math.max(15, 13 / k)}px "Public Sans", sans-serif`;
     g.fillStyle = '#4a515a';
     for (const region of this.layout.regions ?? []) {
       g.textAlign = region.anchor === 'end' ? 'right' : region.anchor === 'start' ? 'left' : 'center';
@@ -483,8 +486,10 @@ export class FluxMap {
       g.lineWidth = 2 / Math.max(0.65, Math.sqrt(k));
       g.strokeStyle = n.flux > 1e-7 ? ramp(m) : '#566070';
       g.stroke();
-      const selected = this.selected?.kind === 'metabolite' && this.selected.id === n.id;
-      const hovered = this.hover?.kind === 'metabolite' && this.hover.id === n.id;
+      // A metabolite drawn in several places is one metabolite.
+      const met = n.metabolite ?? n.id;
+      const selected = this.selected?.kind === 'metabolite' && this.selected.id === met;
+      const hovered = this.hover?.kind === 'metabolite' && this.hover.id === met;
       if (selected || hovered) {
         g.beginPath();
         g.arc(n.x, n.y, radius * 1.9, 0, Math.PI * 2);
@@ -546,26 +551,28 @@ export class FluxMap {
       const reference = this.handlers.referenceGrowth?.() || value || 1;
       const share = Math.max(0, Math.min(1.2, value / reference));
       const shown = this.reachedByReveal(1);
+      // It stays readable with a whole large map on view.
+      const s = Math.max(1, 0.75 / k);
       g.globalAlpha = shown;
       g.beginPath();
-      g.arc(b.x, b.y, 44, 0, Math.PI * 2);
+      g.arc(b.x, b.y, 44 * s, 0, Math.PI * 2);
       g.fillStyle = '#1b1f23';
       g.fill();
-      g.lineWidth = 2;
+      g.lineWidth = 2 * s;
       g.strokeStyle = '#343a41';
       g.stroke();
       g.beginPath();
-      g.arc(b.x, b.y, 44, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, share));
-      g.lineWidth = 6;
+      g.arc(b.x, b.y, 44 * s, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, share));
+      g.lineWidth = 6 * s;
       g.strokeStyle = value > 1e-9 ? ramp(0.95) : CUT;
       g.stroke();
       g.fillStyle = '#ece8df';
-      g.font = '600 20px "Public Sans", sans-serif';
+      g.font = `600 ${20 * s}px "Public Sans", sans-serif`;
       g.textBaseline = 'middle';
-      g.fillText(value > 1e-9 ? value.toFixed(3) : '0', b.x, b.y - 3);
-      g.font = '500 12px "Public Sans", sans-serif';
+      g.fillText(value > 1e-9 ? value.toFixed(3) : '0', b.x, b.y - 3 * s);
+      g.font = `500 ${12 * s}px "Public Sans", sans-serif`;
       g.fillStyle = '#a3a9b0';
-      g.fillText('biomass', b.x, b.y + 18);
+      g.fillText('biomass', b.x, b.y + 18 * s);
       g.textBaseline = 'alphabetic';
       g.globalAlpha = 1;
     }
@@ -632,9 +639,9 @@ export class FluxMap {
     const [x, y] = this.screenToWorld(sx, sy);
     const k = this.view.k;
     for (const n of this.nodes) {
-      if (Math.hypot(n.x - x, n.y - y) < 13 / Math.max(0.5, k)) return { kind: 'metabolite', id: n.id };
+      if (Math.hypot(n.x - x, n.y - y) < 13 / Math.max(0.5, k)) return { kind: 'metabolite', id: n.metabolite ?? n.id };
     }
-    if (this.biomass && Math.hypot(this.biomass.x - x, this.biomass.y - y) < 46) return { kind: 'reaction', id: this.biomass.id };
+    if (this.biomass && Math.hypot(this.biomass.x - x, this.biomass.y - y) < 46 * Math.max(1, 0.75 / k)) return { kind: 'reaction', id: this.biomass.id };
     let best = null;
     let bestD = 11 / Math.max(0.5, k);
     for (const r of this.reactions) {

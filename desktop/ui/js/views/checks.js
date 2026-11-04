@@ -23,11 +23,13 @@ function rows(v) {
   const sampling = v.v06_sampling;
   const overlay = v.v07_overlay_escher;
   const numerics = v.v08_numerics;
+  const bundled = v.v13_ich360_cobrapy.checks;
   const recon = v.v11_recon3d.checks;
   const enzyme = v.v12_ecmodel;
   const worst = Math.max(...Object.values(teusink.theorems).map((t) => t.worst));
   const failingCases = suite.stochastic_cases_failing_the_literal_criterion ?? [];
   return [
+    row('Bundled iCH360', 'COBRApy on growth, ranges, deletions and more, within 1e-5', `Growth ${bundled.fba_objective.rashevsky_highs.toFixed(6)}, ${count(bundled.double_gene_deletion.pairs)} gene pairs`, Object.values(bundled).every((c) => c.pass)),
     row('Growth of e_coli_core', 'BiGG 0.8739 1/h, COBRApy', core.fba_objective.rashevsky_highs.toFixed(6), core.fba_objective.pass),
     row('Flux variability', 'COBRApy within 1e-6', `Largest difference ${fmt.sci(core['fva_fraction_1.0'].max_abs_difference)}`, core['fva_fraction_1.0'].pass),
     row('Double gene deletions', 'COBRApy within 1e-5', `${count(core.double_gene_deletion.pairs)} pairs, largest difference ${fmt.sci(core.double_gene_deletion.max_abs_difference)}`, core.double_gene_deletion.pass),

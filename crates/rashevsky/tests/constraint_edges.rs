@@ -464,11 +464,9 @@ fn a_task_can_name_a_metabolite_on_both_sides_and_a_bad_reaction_fails_alone() {
 
 #[test]
 fn annotations_survive_a_round_trip() {
-    let doc = rashevsky::sbml::read::read_file(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../models/e_coli_core/e_coli_core.xml.gz"
-    ))
-    .unwrap();
+    let doc =
+        rashevsky::sbml::read::read_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../models/ich360/iCH360.xml.gz"))
+            .unwrap();
     let again = rashevsky::sbml::read::read_str(&rashevsky::sbml::write::write_string(&doc).unwrap()).unwrap();
     let count = |d: &rashevsky::sbml::Document| -> usize {
         d.model.reactions.iter().map(|r| r.annotations.len()).sum::<usize>()

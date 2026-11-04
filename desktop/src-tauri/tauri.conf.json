@@ -44,10 +44,10 @@
     "resources": {
       "../../LICENSE": "LICENSE",
       "../../THIRD-PARTY-NOTICES.md": "THIRD-PARTY-NOTICES.md",
-      "../../models/e_coli_core/NOTICE": "NOTICE-e_coli_core.txt",
       "../../models/teusink/NOTICE": "NOTICE-teusink.txt",
       "../../data/thermo/NOTICE": "NOTICE-thermo.txt",
-      "../../data/biochemistry/NOTICE": "NOTICE-biochemistry.txt"
+      "../../data/biochemistry/NOTICE": "NOTICE-biochemistry.txt",
+      "../../models/ich360/NOTICE": "NOTICE-iCH360.txt"
     }
   }
 }

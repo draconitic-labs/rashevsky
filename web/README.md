@@ -1,6 +1,6 @@
 # Labs demo
 
-`e_coli_core` flux balance in the browser, on the pure Rust simplex. The full engine is the product.
+iCH360 flux balance in the browser, on the pure Rust simplex. The full engine is the product.
 
 Build with `./build.sh`, which needs the `wasm32-unknown-unknown` target and `wasm-bindgen-cli` at the
 version pinned in `crates/rashevsky-wasm/Cargo.toml`. Serve `web/dist` as static files, with a content
@@ -14,7 +14,6 @@ Test in the webview it targets, not a browser:
 
 then run `rashevsky-web-preview` from the target folder, or drive it with `desktop/scripts/drive.py`.
 
-The demo bundles `e_coli_core` from BiGG Models, which is licensed for educational, research and
-non-profit use. See `models/e_coli_core/NOTICE` before placing it on a commercial site. That notice
-has to travel with the model: `build.sh` copies it to `dist/NOTICE-e_coli_core.txt`, and the page links
-to it as "Model terms". Keep both when installing.
+The demo bundles iCH360, which is under the MIT license, so it can sit on any site. Its notice has to
+travel with the model: `build.sh` copies it to `dist/NOTICE-iCH360.txt`, and the page links to it as
+"Model terms". Keep both when installing.

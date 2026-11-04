@@ -17,7 +17,7 @@ import urllib.request
 
 import jsonschema
 
-from common import CORE, DATA, REPO, engine, write_result
+from common import DATA, ICH360, REPO, engine, write_result
 
 SCENE = REPO / "data" / "biochemistry" / "scene.json"
 RHEA = REPO / "data" / "biochemistry" / "rhea-events.json"
@@ -53,9 +53,9 @@ def main() -> int:
     coverage = overlay["coverage"]
 
     # Escher.
-    map_path = RESULTS / "e_coli_core_escher_map.json"
-    data_path = RESULTS / "e_coli_core_reaction_data.json"
-    engine("escher", CORE, "--map", map_path, "--data", data_path)
+    map_path = RESULTS / "ich360_escher_map.json"
+    data_path = RESULTS / "ich360_reaction_data.json"
+    engine("escher", ICH360, "--map", map_path, "--data", data_path)
     doc = json.load(open(map_path))
     data = json.load(open(data_path))
     try:
@@ -66,7 +66,7 @@ def main() -> int:
     except jsonschema.ValidationError as exc:
         schema_ok = False
         schema_note = str(exc)[:300]
-    n_rxn = engine("info", CORE)["reactions"]
+    n_rxn = engine("info", ICH360)["reactions"]
     passed = not unknown and worst < 1e-6 and coverage["events_exact"] >= 300 and schema_ok and len(data) == n_rxn
     write_result("v07_overlay_escher", {
         "scene_release": overlay["scene_release"],

@@ -89,16 +89,14 @@ proptest! {
 }
 
 fn core() -> Model {
-    Model::read_sbml(concat!(env!("CARGO_MANIFEST_DIR"), "/../../models/e_coli_core/e_coli_core.xml.gz")).unwrap()
+    Model::read_sbml(concat!(env!("CARGO_MANIFEST_DIR"), "/../../models/ich360/iCH360.xml.gz")).unwrap()
 }
 
 #[test]
 fn sbml_round_trip_keeps_the_model() {
-    let doc = rashevsky::sbml::read::read_file(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../models/e_coli_core/e_coli_core.xml.gz"
-    ))
-    .unwrap();
+    let doc =
+        rashevsky::sbml::read::read_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../models/ich360/iCH360.xml.gz"))
+            .unwrap();
     let text = rashevsky::sbml::write::write_string(&doc).unwrap();
     let back = Model::from_sbml_str(&text).unwrap();
     let original = Model::from_document(&doc).unwrap();

@@ -153,7 +153,8 @@ impl Model {
         // Gene identifiers: SBML id mapped to the external label.
         let mut gene_labels: HashMap<&str, String> = HashMap::new();
         for g in &m.gene_products {
-            let label = if g.label.is_empty() { strip(&g.id, "G_") } else { g.label.clone() };
+            // iCH360 writes `G_b4025` in the label as well, and the prefix is not part of the name.
+            let label = strip(if g.label.is_empty() { &g.id } else { &g.label }, "G_");
             gene_labels.insert(g.id.as_str(), label);
         }
         let mut genes = GeneIndex::default();

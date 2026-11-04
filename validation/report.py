@@ -69,12 +69,30 @@ def fig_teusink() -> None:
     plt.close(fig)
 
 
+def comparison_table(add, core: dict) -> None:
+    """The table of one model against COBRApy."""
+    add("| Analysis | COBRApy | Rashevsky or largest difference | Verdict |\n| --- | --- | --- | --- |")
+    add(f"| pFBA total flux | {core['pfba_total_flux']['cobrapy']:.6f} | {core['pfba_total_flux']['rashevsky']:.6f} | {verdict(core['pfba_total_flux']['pass'])} |")
+    add(f"| Loopless objective | {core['loopless_objective']['cobrapy']:.6f} | {core['loopless_objective']['rashevsky']:.6f} | {verdict(core['loopless_objective']['pass'])} |")
+    add(f"| CycleFreeFlux exchanges | | difference {core['cycle_free_exchanges']['max_abs_difference']:.1e} | {verdict(core['cycle_free_exchanges']['pass'])} |")
+    add(f"| Single gene deletions ({core['single_gene_deletion']['genes']}) | | difference {core['single_gene_deletion']['max_abs_difference']:.1e} | {verdict(core['single_gene_deletion']['pass'])} |")
+    add(f"| Single reaction deletions ({core['single_reaction_deletion']['reactions']}) | | difference {core['single_reaction_deletion']['max_abs_difference']:.1e} | {verdict(core['single_reaction_deletion']['pass'])} |")
+    add(f"| Double gene deletions ({core['double_gene_deletion']['pairs']:,}) | | difference {core['double_gene_deletion']['max_abs_difference']:.1e} | {verdict(core['double_gene_deletion']['pass'])} |")
+    add(f"| MOMA distance after deleting PGI | {core['moma_distance']['cobrapy_osqp']:.4f} (OSQP) | {core['moma_distance']['rashevsky_highs_qp']:.4f} (HiGHS QP) | {verdict(core['moma_distance']['pass'])} |")
+    add(f"| Linear MOMA distance | {core['linear_moma_distance']['cobrapy']:.6f} | {core['linear_moma_distance']['rashevsky']:.6f} | {verdict(core['linear_moma_distance']['pass'])} |")
+    add(f"| ROOM objective | {core['room_objective']['cobrapy_highs']:.0f} | {core['room_objective']['rashevsky']:.0f} | {verdict(core['room_objective']['pass'])} |")
+    add(f"| Production envelope, {core['production_envelope']['points']} points | | difference {core['production_envelope']['max_abs_difference']:.1e} | {verdict(core['production_envelope']['pass'])} |")
+    add(f"| Minimal medium total uptake | {core['minimal_medium_total']['cobrapy']:.6f} | {core['minimal_medium_total']['rashevsky']:.6f} | {verdict(core['minimal_medium_total']['pass'])} |")
+    add(f"| Minimal medium components | {core['minimal_medium_components']['cobrapy']} | {core['minimal_medium_components']['rashevsky']} | {verdict(core['minimal_medium_components']['pass'])} |")
+
+
 def main() -> None:
     FIGURES.mkdir(parents=True, exist_ok=True)
     fig_keio()
     fig_integrators()
     fig_teusink()
     core = R["v01_core_cobrapy"]["checks"]
+    bundled = R["v13_ich360_cobrapy"]["checks"]
     keio = R["v02_iml1515_keio"]
     human = R["v03_human_gem"]
     t = R["v04_teusink_mca"]
@@ -96,6 +114,7 @@ def main() -> None:
         f"COBRApy {R['v01_core_cobrapy']['cobrapy_version']}, libRoadRunner {t['roadrunner_version']}, COPASI {t['copasi_version']}.\n")
     add("| Check | Criterion | Result | Verdict |\n| --- | --- | --- | --- |")
     rows = [
+        ("iCH360 growth", "within 1e-6 of COBRApy", f"{bundled['fba_objective']['rashevsky_highs']:.6f} with HiGHS, {bundled['fba_objective']['rashevsky_simplex']:.6f} with the dense simplex", bundled["fba_objective"]["pass"]),
         ("`e_coli_core` growth", "0.8739 1/h from BiGG; within 1e-6 of COBRApy", f"{core['fba_objective']['rashevsky_highs']:.6f} with HiGHS, {core['fba_objective']['rashevsky_simplex']:.6f} with the dense simplex", core["fba_objective"]["pass"]),
         ("FVA at 100 % of optimum", "within 1e-6 of COBRApy", f"largest difference {core['fva_fraction_1.0']['max_abs_difference']:.1e} over {core['fva_fraction_1.0']['reactions']} reactions", core["fva_fraction_1.0"]["pass"]),
         ("FVA at 90 % of optimum", "within 1e-6 of COBRApy", f"largest difference {core['fva_fraction_0.9']['max_abs_difference']:.1e}", core["fva_fraction_0.9"]["pass"]),
@@ -112,20 +131,11 @@ def main() -> None:
         add(f"| {name} | {criterion} | {result} | {verdict(ok)} |")
     add("")
 
-    add("## `e_coli_core` against COBRApy\n\n`validation/v01_core_cobrapy.py`\n")
-    add("| Analysis | COBRApy | Rashevsky or largest difference | Verdict |\n| --- | --- | --- | --- |")
-    add(f"| pFBA total flux | {core['pfba_total_flux']['cobrapy']:.6f} | {core['pfba_total_flux']['rashevsky']:.6f} | {verdict(core['pfba_total_flux']['pass'])} |")
-    add(f"| Loopless objective | {core['loopless_objective']['cobrapy']:.6f} | {core['loopless_objective']['rashevsky']:.6f} | {verdict(core['loopless_objective']['pass'])} |")
-    add(f"| CycleFreeFlux exchanges | | difference {core['cycle_free_exchanges']['max_abs_difference']:.1e} | {verdict(core['cycle_free_exchanges']['pass'])} |")
-    add(f"| Single gene deletions ({core['single_gene_deletion']['genes']}) | | difference {core['single_gene_deletion']['max_abs_difference']:.1e} | {verdict(core['single_gene_deletion']['pass'])} |")
-    add(f"| Single reaction deletions ({core['single_reaction_deletion']['reactions']}) | | difference {core['single_reaction_deletion']['max_abs_difference']:.1e} | {verdict(core['single_reaction_deletion']['pass'])} |")
-    add(f"| Double gene deletions ({core['double_gene_deletion']['pairs']:,}) | | difference {core['double_gene_deletion']['max_abs_difference']:.1e} | {verdict(core['double_gene_deletion']['pass'])} |")
-    add(f"| MOMA distance after deleting PGI | {core['moma_distance']['cobrapy_osqp']:.4f} (OSQP) | {core['moma_distance']['rashevsky_highs_qp']:.4f} (HiGHS QP) | {verdict(core['moma_distance']['pass'])} |")
-    add(f"| Linear MOMA distance | {core['linear_moma_distance']['cobrapy']:.6f} | {core['linear_moma_distance']['rashevsky']:.6f} | {verdict(core['linear_moma_distance']['pass'])} |")
-    add(f"| ROOM objective | {core['room_objective']['cobrapy_highs']:.0f} | {core['room_objective']['rashevsky']:.0f} | {verdict(core['room_objective']['pass'])} |")
-    add(f"| Production envelope, {core['production_envelope']['points']} points | | difference {core['production_envelope']['max_abs_difference']:.1e} | {verdict(core['production_envelope']['pass'])} |")
-    add(f"| Minimal medium total uptake | {core['minimal_medium_total']['cobrapy']:.6f} | {core['minimal_medium_total']['rashevsky']:.6f} | {verdict(core['minimal_medium_total']['pass'])} |")
-    add(f"| Minimal medium components | {core['minimal_medium_components']['cobrapy']} | {core['minimal_medium_components']['rashevsky']} | {verdict(core['minimal_medium_components']['pass'])} |")
+    add("## iCH360 against COBRApy\n\nThe bundled model. `validation/v13_ich360_cobrapy.py` runs every comparison of `v01` below on it, with the same tolerances. The authors publish no growth rate to match.\n")
+    comparison_table(add, bundled)
+    add(f"\nFVA at 100 % and 90 % of optimum over {bundled['fva_fraction_1.0']['reactions']} reactions: largest difference {bundled['fva_fraction_1.0']['max_abs_difference']:.1e} and {bundled['fva_fraction_0.9']['max_abs_difference']:.1e}.\n")
+    add("## `e_coli_core` against COBRApy\n\nThe textbook model, fetched from BiGG Models. `validation/v01_core_cobrapy.py`\n")
+    comparison_table(add, core)
     add("\nThe MOMA tolerance is 1e-3 because OSQP stops at a looser tolerance than the simplex-based solvers.\n")
 
     add("## iML1515 essentiality against the Keio collection\n\n`validation/v02_iml1515_keio.py`\n")
@@ -202,6 +212,9 @@ def main() -> None:
     add("| Comparison | Largest difference of means, in flux SD | Reaction |\n| --- | --- | --- |")
     for key, label in (("chrr_vs_cobrapy", "CHRR against COBRApy OptGP"), ("optgp_vs_cobrapy", "OptGP against COBRApy OptGP"), ("chrr_vs_optgp", "CHRR against OptGP")):
         add(f"| {label} | {m[key]['value']:.3f} | {m[key]['reaction']} |")
+    i6 = sampling["ich360"]
+    im = i6["max_mean_difference_in_flux_sd"]
+    add(f"\niCH360, the same way, a polytope of dimension {i6['polytope_dimension']}, {i6['reactions_compared']} reactions compared: CHRR against COBRApy {im['chrr_vs_cobrapy']['value']:.3f}, OptGP against COBRApy {im['optgp_vs_cobrapy']['value']:.3f}, CHRR against OptGP {im['chrr_vs_optgp']['value']:.3f}. COBRApy's OptGP is run with all its warmup points: by default it discards those it finds redundant, and on iCH360 that freezes `ASNS1` at exactly 0 and `ASNS2` near 0.19, a difference of 125 flux standard deviations from the other two samplers, when their split is free.")
     add(f"\nDiagnostics: CHRR split R-hat {d['max_split_rhat']:.3f}, smallest effective sample size {d['min_ess']:.0f}, largest Geweke z {d['max_geweke_z']:.1f}, in {sampling['chrr_seconds']:.2f} s. OptGP R-hat {o['max_split_rhat']:.3f}, effective size {o['min_ess']:.0f}, Geweke z {o['max_geweke_z']:.1f}, in {sampling['optgp_seconds']:.2f} s. A Rust test checks uniformity on a simplex against its exact mean and variance, and convergence on `e_coli_core` for several seeds.\n")
 
     add("## Outputs\n\n`validation/v07_overlay_escher.py`\n")
@@ -210,7 +223,7 @@ def main() -> None:
     if export:
         add("### SBML written by the engine\n\n`validation/v09_sbml_export.py`\n")
         add("| Model | Errors from libSBML | Reactions | Objective read by COBRApy, original | Rewritten | Verdict |\n| --- | --- | --- | --- | --- | --- |")
-        for name in ("e_coli_core", "iML1515", "Human-GEM"):
+        for name in ("iCH360", "e_coli_core", "iML1515", "Human-GEM"):
             x = export["checks"][name]
             add(f"| {name} | {x['libsbml_errors']} | {x['reactions'][1]:,} | {x['objective_original']:.6f} | {x['objective_rewritten']:.6f} | {verdict(x['pass'])} |")
         x = export["checks"]["teusink_kinetic"]
@@ -229,7 +242,7 @@ def main() -> None:
     add(f"`e_coli_core` on glucose through depletion. Observed order of convergence of the final biomass: {dfba['observed_order'][0]:.2f} and {dfba['observed_order'][1]:.2f}, for a scheme that is first-order once fluxes change. A Rust test checks the exponential phase against its closed form.\n")
     add("### Thermodynamics\n")
     tf = numerics["tfa"]
-    add(f"TFA on `e_coli_core` with {tf['reactions_with_energies']} eQuilibrator energies: growth {tf['tfa_objective']:.6f} against {tf['fba_objective']:.6f} without them, {len(tf['fluxes_against_gibbs'])} fluxes against their Gibbs energy, and every reported `DrG'` within two standard uncertainties of its value recomputed from the reported concentrations (largest excess {tf['largest_excess_beyond_two_sigma']:.1e} kJ/mol). The sign logic also has Rust tests on small networks with known answers.\n")
+    add(f"TFA on iCH360 with {tf['reactions_with_energies']} eQuilibrator energies: growth {tf['tfa_objective']:.6f} against {tf['fba_objective']:.6f} without them, {len(tf['fluxes_against_gibbs'])} fluxes against their Gibbs energy, and every reported `DrG'` within two standard uncertainties of its value recomputed from the reported concentrations (largest excess {tf['largest_excess_beyond_two_sigma']:.1e} kJ/mol). The sign logic also has Rust tests on small networks with known answers.\n")
     add("### Review\n")
     add("A fresh-context review read the numerics cold against the papers and against independent implementations. Three rounds reported 39, 28 and 10 groups of defects, each with a failing input, and each is now a regression test: `crates/rashevsky/tests/kinetic_edges.rs`, `constraint_edges.rs` and `overlay.rs`, with the models in `crates/rashevsky/tests/models`. On the same system, a birth-death species of true mean 1 beside a large population reads 1.45 with this engine's tau-leaping and 1.81 with GillesPy2's, so that bias belongs to the explicit method (`docs/MODEL.md`).\n")
     add("### Sensitivity and estimation\n")
@@ -240,7 +253,7 @@ def main() -> None:
         b = perf["benchmarks"]
         add(f"{perf['cpu']}, {perf['logical_cores']} logical cores, sharing the machine with other work, so these are indicative. COBRApy used GLPK with 4 processes.\n")
         add("| Task | Rashevsky | COBRApy |\n| --- | --- | --- |")
-        for name in ("e_coli_core", "iML1515", "Human-GEM"):
+        for name in ("iCH360", "e_coli_core", "iML1515", "Human-GEM"):
             add(f"| Read {name} | {b[name]['rashevsky_read_seconds']:.2f} s | {b[name]['cobrapy_read_seconds']:.2f} s |")
         f = b["iML1515_fva"]
         add(f"| FVA of iML1515, {f['reactions']:,} reactions | {f['rashevsky_seconds']:.1f} s | {f['cobrapy_glpk_4_processes_seconds']:.1f} s |")

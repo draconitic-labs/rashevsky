@@ -347,7 +347,7 @@ unless they carry no flux and its EC matches do; the `match` field of each event
 value and the line style of its largest event. *This is a projection for reading fluxes in context*: the model and the map are separate
 reconstructions, and an EC number can cover several events and compartments.
 
-**Layouts**: `models/e_coli_core/layout.json` is drawn by hand. Other models use Fruchterman and Reingold (1991) with
+**Layouts**: `models/ich360/layout.json` comes from the Escher map its authors drew, with each reaction's substrates and products taken from the model. Other models use Fruchterman and Reingold (1991) with
 gravity, over reactions and non-currency metabolites; this draws a readable network, and its geometry means nothing.
 
 ## References

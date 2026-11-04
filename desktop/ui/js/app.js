@@ -65,16 +65,16 @@ async function start() {
   try {
     if (state.startup.file) {
       const view = await invoke('open_file', { path: state.startup.file });
-      setModel(view, false);
+      setModel(view);
     } else {
-      const view = await invoke('open_bundled', { name: 'e_coli_core' });
-      setModel(view, true);
+      const view = await invoke('open_bundled', { name: 'iCH360' });
+      setModel(view);
     }
     await solve();
   } catch (error) {
     toast(`Could not open the model: ${error}`);
-    const view = await invoke('open_bundled', { name: 'e_coli_core' });
-    setModel(view, true);
+    const view = await invoke('open_bundled', { name: 'iCH360' });
+    setModel(view);
     await solve();
   }
   // Canvas text uses the font as soon as it has loaded.

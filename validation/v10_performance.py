@@ -18,7 +18,7 @@ import time
 import cobra
 from cobra.flux_analysis import flux_variability_analysis, single_gene_deletion
 
-from common import BIN, CORE, DATA, engine, write_result
+from common import BIN, CORE, DATA, ICH360, engine, write_result
 
 
 def timed(fn, repeats=3):
@@ -43,7 +43,7 @@ def main() -> int:
     iml = DATA / "iML1515.xml.gz"
     human = DATA / "Human-GEM.xml"
 
-    for name, path in (("e_coli_core", CORE), ("iML1515", iml), ("Human-GEM", human)):
+    for name, path in (("iCH360", ICH360), ("e_coli_core", CORE), ("iML1515", iml), ("Human-GEM", human)):
         seconds, _ = timed(lambda p=path: engine("info", p))
         fba, _ = timed(lambda p=path: engine("fba", p))
         ref_load, model = timed(lambda p=path: cobra.io.read_sbml_model(str(p)), repeats=1)

@@ -15,11 +15,13 @@ use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
-const CORE_XML: &[u8] = include_bytes!("../../../models/e_coli_core/e_coli_core.xml.gz");
-const CORE_LAYOUT: &str = include_str!("../../../models/e_coli_core/layout.json");
-// BiGG's permission requires its notice in every copy of `e_coli_core`, and this binary is one.
+const ICH360_XML: &[u8] = include_bytes!("../../../models/ich360/iCH360.xml.gz");
+const ICH360_LAYOUT: &str = include_str!("../../../models/ich360/layout.json");
+// The model the drawn map belongs to, also when it is opened from a file.
+const MAPPED_MODEL: &str = "iCH360";
+// The MIT license of iCH360 asks for its notice in every copy, and this binary is one.
 const TERMS: &[(&str, &str)] = &[
-    ("e_coli_core", include_str!("../../../models/e_coli_core/NOTICE")),
+    ("iCH360", include_str!("../../../models/ich360/NOTICE")),
     ("Teusink 2000", include_str!("../../../models/teusink/NOTICE")),
     ("Thermodynamic data", include_str!("../../../data/thermo/NOTICE")),
     ("Atlas of Human Biochemistry", include_str!("../../../data/biochemistry/NOTICE")),
@@ -29,6 +31,7 @@ const SCENE: &str = include_str!("../../../data/biochemistry/scene.json");
 const RHEA: &str = include_str!("../../../data/biochemistry/rhea-events.json");
 const VALIDATION: &[(&str, &str)] = &[
     ("v01_core_cobrapy", include_str!("../../../validation/results/v01_core_cobrapy.json")),
+    ("v13_ich360_cobrapy", include_str!("../../../validation/results/v13_ich360_cobrapy.json")),
     ("v02_iml1515_keio", include_str!("../../../validation/results/v02_iml1515_keio.json")),
     ("v03_human_gem", include_str!("../../../validation/results/v03_human_gem.json")),
     ("v04_teusink_mca", include_str!("../../../validation/results/v04_teusink_mca.json")),
@@ -95,12 +98,12 @@ pub fn bundled_terms() -> Vec<(&'static str, &'static str)> {
 /// Opens a model bundled with the application.
 #[tauri::command]
 pub async fn open_bundled(state: State<'_, AppState>, name: String) -> Reply<ModelView> {
-    if name != "e_coli_core" {
+    if name != "iCH360" {
         return Err(format!("no bundled model named {name}"));
     }
-    let doc = rashevsky::sbml::read::read_bytes(CORE_XML).map_err(text)?;
+    let doc = rashevsky::sbml::read::read_bytes(ICH360_XML).map_err(text)?;
     let model = Model::from_document(&doc).map_err(text)?;
-    let view = model_view(&model, true);
+    let view = model_view(&model, model.id == MAPPED_MODEL);
     *state.model.lock().map_err(text)? = Some(Arc::new(model));
     Ok(view)
 }
@@ -111,7 +114,7 @@ pub async fn open_file(state: State<'_, AppState>, path: String) -> Reply<ModelV
     let path2 = path.clone();
     let (model, view) = tauri::async_runtime::spawn_blocking(move || {
         let model = Model::read_sbml(&path2).map_err(text)?;
-        let view = model_view(&model, false);
+        let view = model_view(&model, model.id == MAPPED_MODEL);
         Ok::<_, String>((model, view))
     })
     .await
@@ -121,6 +124,7 @@ pub async fn open_file(state: State<'_, AppState>, path: String) -> Reply<ModelV
 }
 
 const SOURCES: &[(&str, &str, &str)] = &[
+    ("e_coli_core", "http://bigg.ucsd.edu/static/models/e_coli_core.xml.gz", "e_coli_core.xml.gz"),
     ("iML1515", "http://bigg.ucsd.edu/static/models/iML1515.xml.gz", "iML1515.xml.gz"),
     ("iJO1366", "http://bigg.ucsd.edu/static/models/iJO1366.xml.gz", "iJO1366.xml.gz"),
     ("Recon3D", "http://bigg.ucsd.edu/static/models/Recon3D.xml.gz", "Recon3D.xml.gz"),
@@ -290,7 +294,7 @@ pub async fn layout(
     count: Option<usize>,
 ) -> Reply<Value> {
     if curated {
-        return serde_json::from_str(CORE_LAYOUT).map_err(text);
+        return serde_json::from_str(ICH360_LAYOUT).map_err(text);
     }
     let m = current(&state)?;
     tauri::async_runtime::spawn_blocking(move || {
@@ -854,22 +858,40 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_binary_carries_the_whole_bigg_notice() {
-        let (_, notice) = TERMS[0];
-        for paragraph in [
-            "The Regents of the University of California",
-            "Permission to use, copy, modify and distribute",
-            "Those desiring to incorporate",
-            "In no event shall",
-            "\"as is\" basis",
+    fn the_binary_carries_the_license_of_the_model() {
+        let (name, notice) = TERMS[0];
+        assert_eq!(name, "iCH360");
+        for part in [
+            "Copyright (c) 2024 marco-corrao",
+            "Permission is hereby granted, free of charge",
+            "THE SOFTWARE IS PROVIDED \"AS IS\"",
         ] {
-            assert!(notice.contains(paragraph), "{paragraph}");
+            assert!(notice.contains(part), "{part}");
+        }
+    }
+
+    #[test]
+    fn the_bundled_map_draws_every_reaction_of_the_bundled_model() {
+        let doc = rashevsky::sbml::read::read_bytes(ICH360_XML).unwrap();
+        let model = Model::from_document(&doc).unwrap();
+        assert_eq!(model.id, MAPPED_MODEL);
+        let layout: Value = serde_json::from_str(ICH360_LAYOUT).unwrap();
+        let nodes = layout["nodes"].as_object().unwrap();
+        let drawn = layout["reactions"].as_object().unwrap();
+        assert_eq!(drawn.len(), model.reactions.len());
+        for r in &model.reactions {
+            let entry = drawn.get(&r.id).unwrap_or_else(|| panic!("{} is not on the map", r.id));
+            for side in ["s", "p"] {
+                for key in entry[side].as_array().unwrap() {
+                    assert!(nodes.contains_key(key.as_str().unwrap()), "{key} of {}", r.id);
+                }
+            }
         }
     }
 
     #[test]
     fn a_pair_screen_includes_isozymes_that_disable_nothing_alone() {
-        let doc = rashevsky::sbml::read::read_bytes(CORE_XML).unwrap();
+        let doc = rashevsky::sbml::read::read_bytes(ICH360_XML).unwrap();
         let model = Model::from_document(&doc).unwrap();
         let request: ScreenRequest =
             serde_json::from_value(json!({"kind": "gene", "order": 2, "min_growth": 0.05})).unwrap();
@@ -881,8 +903,8 @@ mod tests {
                 .unwrap_or_else(|| panic!("{pair:?} is not in the screen"));
             found.1.iter().map(|&j| model.reactions[j].id.clone()).collect()
         };
-        // Pyruvate formate-lyase has two activating enzymes, so only deleting both stops it.
-        assert_eq!(names(("b0902", "b3951")), ["PFL"]);
+        // Phosphoglucose isomerase has two genes, so only deleting both stops it.
+        assert_eq!(names(("b4025", "b2843")), ["PGI"]);
         assert!(sets.len() > 5000, "{}", sets.len());
     }
 }

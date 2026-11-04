@@ -5,8 +5,9 @@ import pytest
 
 import rashevsky as rv
 
-CORE = str(pathlib.Path(__file__).resolve().parents[2] / "models" / "e_coli_core" / "e_coli_core.xml.gz")
-BIOMASS = "BIOMASS_Ecoli_core_w_GAM"
+CORE = str(pathlib.Path(__file__).resolve().parents[2] / "models" / "ich360" / "iCH360.xml.gz")
+BIOMASS = "Biomass"
+GROWTH = 0.8656270
 
 
 @pytest.fixture()
@@ -15,7 +16,7 @@ def model():
 
 
 def test_fba_growth(model):
-    assert model.fba()["objective"] == pytest.approx(0.8739215, abs=1e-6)
+    assert model.fba()["objective"] == pytest.approx(GROWTH, abs=1e-6)
 
 
 def test_knockout_of_essential_reaction(model):
@@ -34,8 +35,8 @@ def test_copy_is_independent(model):
 
 def test_fva_holds_growth(model):
     ranges = model.fva(fraction=1.0, reactions=[BIOMASS])
-    assert ranges[BIOMASS][0] == pytest.approx(0.8739215, abs=1e-6)
-    assert ranges[BIOMASS][1] == pytest.approx(0.8739215, abs=1e-6)
+    assert ranges[BIOMASS][0] == pytest.approx(GROWTH, abs=1e-6)
+    assert ranges[BIOMASS][1] == pytest.approx(GROWTH, abs=1e-6)
 
 
 def test_pfba_keeps_growth_and_reduces_flux(model):
@@ -46,7 +47,7 @@ def test_pfba_keeps_growth_and_reduces_flux(model):
 
 
 def test_gene_deletion_counts(model):
-    assert len(model.single_gene_deletion()) == 137
+    assert len(model.single_gene_deletion()) == 356
 
 
 def test_envelope_and_medium(model):

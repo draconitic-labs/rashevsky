@@ -18,7 +18,7 @@ import cobra
 import libsbml
 import roadrunner
 
-from common import BIN, CORE, DATA, REPO, write_result
+from common import BIN, CORE, DATA, ICH360, REPO, write_result
 
 
 def convert(source, target) -> None:
@@ -28,7 +28,7 @@ def convert(source, target) -> None:
 def main() -> int:
     checks = {}
     with tempfile.TemporaryDirectory() as scratch:
-        for name, source in (("e_coli_core", CORE), ("iML1515", DATA / "iML1515.xml.gz"), ("Human-GEM", DATA / "Human-GEM.xml")):
+        for name, source in (("iCH360", ICH360), ("e_coli_core", CORE), ("iML1515", DATA / "iML1515.xml.gz"), ("Human-GEM", DATA / "Human-GEM.xml")):
             out = pathlib.Path(scratch) / f"{name}.xml"
             convert(source, out)
             document = libsbml.readSBML(str(out))

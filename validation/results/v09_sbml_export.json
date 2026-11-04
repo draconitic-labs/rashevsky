@@ -36,6 +36,24 @@
         95
       ]
     },
+    "iCH360": {
+      "genes": [
+        356,
+        356
+      ],
+      "libsbml_errors": 0,
+      "metabolites": [
+        304,
+        304
+      ],
+      "objective_original": 0.8656270306509521,
+      "objective_rewritten": 0.8656270306509521,
+      "pass": true,
+      "reactions": [
+        349,
+        349
+      ]
+    },
     "iML1515": {
       "genes": [
         1516,

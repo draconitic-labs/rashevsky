@@ -4,21 +4,54 @@
     "max_split_rhat": 1.0020541248026944,
     "min_ess": 1410.2515848369042
   },
-  "chrr_seconds": 0.402606813,
+  "chrr_seconds": 0.403181921,
   "cobrapy_valid_samples": 10000,
+  "ich360": {
+    "chrr_diagnostics": {
+      "max_geweke_z": 3.0014417804951425,
+      "max_split_rhat": 1.0012040713132286,
+      "min_ess": 3984.87147355581
+    },
+    "chrr_seconds": 5.46424572,
+    "cobrapy_valid_samples": 10000,
+    "limit": 0.15,
+    "max_mean_difference_in_flux_sd": {
+      "chrr_vs_cobrapy": {
+        "reaction": "EAR80x",
+        "value": 0.09778580910857988
+      },
+      "chrr_vs_optgp": {
+        "reaction": "NDPK6",
+        "value": 0.04327540393227341
+      },
+      "optgp_vs_cobrapy": {
+        "reaction": "EX_ac_e",
+        "value": 0.09450793591564124
+      }
+    },
+    "optgp_diagnostics": {
+      "max_geweke_z": 3.0735248072095906,
+      "max_split_rhat": 1.0007765863570672,
+      "min_ess": 4636.818576608965
+    },
+    "optgp_seconds": 103.465490512,
+    "pass": true,
+    "polytope_dimension": 45,
+    "reactions_compared": 309
+  },
   "limit": 0.15,
   "max_mean_difference_in_flux_sd": {
     "chrr_vs_cobrapy": {
       "reaction": "NADH16",
-      "value": 0.08140244954380661
+      "value": 0.09179131469767648
     },
     "chrr_vs_optgp": {
       "reaction": "ACALD",
-      "value": 0.04794781418851788
+      "value": 0.0473023124713103
     },
     "optgp_vs_cobrapy": {
-      "reaction": "NADTRHD",
-      "value": 0.07421553097669448
+      "reaction": "PPC",
+      "value": 0.06278726340336711
     }
   },
   "optgp_diagnostics": {
@@ -26,7 +59,7 @@
     "max_split_rhat": 1.0010131695486302,
     "min_ess": 2852.4193181205014
   },
-  "optgp_seconds": 1.4594863390000001,
+  "optgp_seconds": 1.577561367,
   "pass": true,
   "polytope_dimension": 24,
   "reactions_compared": 87

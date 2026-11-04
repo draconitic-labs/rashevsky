@@ -2,7 +2,7 @@
 
 use std::process::Command;
 
-const CORE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../models/e_coli_core/e_coli_core.xml.gz");
+const CORE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../models/ich360/iCH360.xml.gz");
 
 fn run(args: &[&str]) -> serde_json::Value {
     let output = Command::new(env!("CARGO_BIN_EXE_rashevsky")).args(args).output().unwrap();
@@ -13,24 +13,27 @@ fn run(args: &[&str]) -> serde_json::Value {
 #[test]
 fn fba_reports_growth() {
     let out = run(&["fba", CORE]);
-    assert!((out["objective"].as_f64().unwrap() - 0.8739215).abs() < 1e-6);
+    assert!((out["objective"].as_f64().unwrap() - 0.8656270).abs() < 1e-6);
     assert_eq!(out["status"], "Optimal");
 }
 
 #[test]
 fn deletions_and_bounds_take_effect() {
     let out = run(&["fba", CORE, "--ko-reaction", "PGI"]);
-    assert!((out["objective"].as_f64().unwrap() - 0.8631).abs() < 1e-3);
+    assert!((out["objective"].as_f64().unwrap() - 0.8552008).abs() < 1e-6);
     let anaerobic = run(&["fba", CORE, "--bound", "EX_o2_e=0:1000"]);
-    assert!((anaerobic["objective"].as_f64().unwrap() - 0.21166).abs() < 1e-4);
+    assert!((anaerobic["objective"].as_f64().unwrap() - 0.1565800).abs() < 1e-6);
+    // Phosphoglucose isomerase has a second gene, so one deletion changes nothing and both stop it.
     let gene = run(&["fba", CORE, "--ko-gene", "b4025"]);
-    assert!((gene["objective"].as_f64().unwrap() - 0.8631).abs() < 1e-3);
+    assert!((gene["objective"].as_f64().unwrap() - 0.8656270).abs() < 1e-6);
+    let both = run(&["fba", CORE, "--ko-gene", "b4025", "--ko-gene", "b2843"]);
+    assert!((both["objective"].as_f64().unwrap() - 0.8552008).abs() < 1e-6);
 }
 
 #[test]
 fn simplex_backend_is_selectable() {
     let out = run(&["fba", CORE, "--backend", "simplex"]);
-    assert!((out["objective"].as_f64().unwrap() - 0.8739215).abs() < 1e-6);
+    assert!((out["objective"].as_f64().unwrap() - 0.8656270).abs() < 1e-6);
 }
 
 #[test]
@@ -44,8 +47,8 @@ fn an_unknown_reaction_is_an_error_with_a_message() {
 #[test]
 fn info_counts_the_model() {
     let out = run(&["info", CORE]);
-    assert_eq!(out["reactions"], 95);
-    assert_eq!(out["genes"], 137);
+    assert_eq!(out["reactions"], 349);
+    assert_eq!(out["genes"], 356);
 }
 
 const BIRTH_DEATH: &str = r#"<?xml version="1.0"?>

@@ -1,0 +1,7144 @@
+{
+"nodes": {
+"10fthf_c": {
+"external": false,
+"label": "10fthf",
+"side": "l",
+"x": 60.0,
+"y": 1245.1
+},
+"13dpg_c": {
+"external": false,
+"label": "1,3-BPG",
+"side": "r",
+"x": 940.6,
+"y": 944.0
+},
+"1pyr5c_c": {
+"external": false,
+"label": "1pyr5c",
+"x": 2661.2,
+"y": 1260.5
+},
+"23dhdp_c": {
+"external": false,
+"label": "2,3-Dihydrodipicolinate",
+"side": "l",
+"x": 2088.3,
+"y": 2309.2
+},
+"23dhmb_c": {
+"external": false,
+"label": "23dhmb",
+"x": 572.4,
+"y": 1759.9
+},
+"23dhmp_c": {
+"external": false,
+"label": "23dhmp",
+"x": 2896.4,
+"y": 2071.7
+},
+"25aics_c": {
+"external": false,
+"label": "25aics",
+"x": 2703.4,
+"y": 228.6
+},
+"26dap_LL_c": {
+"external": false,
+"label": "26dap_LL",
+"x": 2648.3,
+"y": 2309.2
+},
+"26dap__M_c": {
+"external": false,
+"label": "26dap__M",
+"x": 2757.9,
+"y": 2309.2
+},
+"2ahbut_c": {
+"external": false,
+"label": "2ahbut",
+"x": 2756.4,
+"y": 2071.7
+},
+"2cpr5p_c": {
+"external": false,
+"label": "2cpr5p",
+"x": 2191.4,
+"y": 564.1
+},
+"2dda7p_c": {
+"external": false,
+"label": "2dda7p",
+"x": 1658.1,
+"y": 752.3
+},
+"2ippm_c": {
+"external": false,
+"label": "2-Isopropylmaleate",
+"x": 195.5,
+"y": 1765.3
+},
+"2obut_c": {
+"external": false,
+"label": "2-Oxobutanoate",
+"x": 2616.4,
+"y": 2071.7
+},
+"2pg_c": {
+"external": false,
+"label": "2PG",
+"side": "r",
+"x": 940.6,
+"y": 1168.0
+},
+"34hpp_c": {
+"external": false,
+"label": "34hpp",
+"x": 2399.0,
+"y": 892.3
+},
+"3c2hmp_c": {
+"external": false,
+"label": "3c2hmp",
+"side": "l",
+"x": 92.9,
+"y": 1741.5
+},
+"3c3hmp_c": {
+"external": false,
+"label": "3c3hmp",
+"x": 292.5,
+"y": 1763.9
+},
+"3c4mop_c": {
+"external": false,
+"label": "3c4mop",
+"side": "l",
+"x": 93.0,
+"y": 1601.5
+},
+"3dhq_c": {
+"external": false,
+"label": "3-Dehydroquinate",
+"x": 1737.6,
+"y": 752.3
+},
+"3dhsk_c": {
+"external": false,
+"label": "3-Dehydroshikimate",
+"x": 1827.3,
+"y": 752.3
+},
+"3haACP_c": {
+"external": false,
+"label": "3haACP",
+"side": "r",
+"x": 1041.4,
+"y": 2506.1
+},
+"3hcddec5eACP_c": {
+"external": false,
+"label": "3hcddec5eACP",
+"x": 2204.8,
+"y": 2998.2
+},
+"3hcmrs7eACP_c": {
+"external": false,
+"label": "3hcmrs7eACP",
+"x": 2764.8,
+"y": 2998.2
+},
+"3hcpalm9eACP_c": {
+"external": false,
+"label": "3hcpalm9eACP",
+"side": "l",
+"x": 3114.6,
+"y": 2769.1
+},
+"3hcvac11eACP_c": {
+"external": false,
+"label": "3hcvac11eACP",
+"side": "l",
+"x": 3345.0,
+"y": 2621.3
+},
+"3hddecACP_c": {
+"external": false,
+"label": "3hddecACP",
+"side": "r",
+"x": 2111.1,
+"y": 2672.8
+},
+"3hdecACP_c": {
+"external": false,
+"label": "3hdecACP",
+"side": "r",
+"x": 1864.2,
+"y": 2666.5
+},
+"3hhexACP_c": {
+"external": false,
+"label": "3hhexACP",
+"side": "r",
+"x": 1385.6,
+"y": 2667.5
+},
+"3hmrsACP_c": {
+"external": false,
+"label": "3hmrsACP",
+"side": "r",
+"x": 2361.4,
+"y": 2669.9
+},
+"3hoctACP_c": {
+"external": false,
+"label": "3hoctACP",
+"side": "r",
+"x": 1604.0,
+"y": 2665.7
+},
+"3hoctaACP_c": {
+"external": false,
+"label": "3hoctaACP",
+"side": "r",
+"x": 2854.7,
+"y": 2684.2
+},
+"3hpalmACP_c": {
+"external": false,
+"label": "3hpalmACP",
+"side": "r",
+"x": 2630.1,
+"y": 2671.0
+},
+"3ig3p_c": {
+"external": false,
+"label": "3ig3p",
+"x": 2307.1,
+"y": 564.1
+},
+"3mob_c": {
+"external": false,
+"label": "3-Methyl-2-oxobutanoate",
+"side": "b",
+"x": 432.5,
+"y": 1761.9
+},
+"3mop_c": {
+"external": false,
+"label": "3mop",
+"x": 3027.7,
+"y": 2071.2
+},
+"3ocddec5eACP_c": {
+"external": false,
+"label": "3ocddec5eACP",
+"x": 2064.8,
+"y": 2998.2
+},
+"3ocmrs7eACP_c": {
+"external": false,
+"label": "3ocmrs7eACP",
+"x": 2624.8,
+"y": 2998.2
+},
+"3ocpalm9eACP_c": {
+"external": false,
+"label": "3ocpalm9eACP",
+"side": "l",
+"x": 3115.2,
+"y": 2909.1
+},
+"3ocvac11eACP_c": {
+"external": false,
+"label": "3ocvac11eACP",
+"x": 3345.0,
+"y": 2481.3
+},
+"3oddecACP_c": {
+"external": false,
+"label": "3oddecACP",
+"side": "r",
+"x": 2111.1,
+"y": 2552.8
+},
+"3odecACP_c": {
+"external": false,
+"label": "3odecACP",
+"side": "r",
+"x": 1864.2,
+"y": 2546.5
+},
+"3ohexACP_c": {
+"external": false,
+"label": "3ohexACP",
+"side": "r",
+"x": 1385.6,
+"y": 2547.5
+},
+"3omrsACP_c": {
+"external": false,
+"label": "3omrsACP",
+"side": "r",
+"x": 2361.4,
+"y": 2549.9
+},
+"3ooctACP_c": {
+"external": false,
+"label": "3ooctACP",
+"side": "r",
+"x": 1604.0,
+"y": 2545.7
+},
+"3ooctdACP_c": {
+"external": false,
+"label": "3ooctdACP",
+"side": "r",
+"x": 2854.7,
+"y": 2564.2
+},
+"3opalmACP_c": {
+"external": false,
+"label": "3opalmACP",
+"side": "r",
+"x": 2630.1,
+"y": 2551.0
+},
+"3pg_c": {
+"external": false,
+"label": "3PG",
+"side": "r",
+"x": 940.6,
+"y": 1068.0
+},
+"3php_c": {
+"external": false,
+"label": "3-Phosphohydroxypyruvate",
+"x": 776.1,
+"y": 1069.1
+},
+"3psme_c": {
+"external": false,
+"label": "3psme",
+"x": 2177.0,
+"y": 751.8
+},
+"4mop_c": {
+"external": false,
+"label": "4-Methyl-2-oxopentanoate",
+"side": "l",
+"x": 93.1,
+"y": 1461.5
+},
+"4pasp_c": {
+"external": false,
+"label": "4-Phospho-L-aspartate",
+"side": "l",
+"x": 1936.3,
+"y": 1990.3
+},
+"5aizc_c": {
+"external": false,
+"label": "5aizc",
+"x": 2577.9,
+"y": 227.8
+},
+"5caiz_c": {
+"external": false,
+"label": "5caiz",
+"x": 2504.0,
+"y": 227.4
+},
+"6pgc_c": {
+"external": false,
+"label": "6PG",
+"side": "b",
+"x": 1249.4,
+"y": 424.0
+},
+"6pgl_c": {
+"external": false,
+"label": "6PGL",
+"x": 1121.4,
+"y": 424.0
+},
+"acACP_c": {
+"external": false,
+"label": "Acetyl-ACP",
+"side": "l",
+"x": 847.5,
+"y": 2192.7
+},
+"ac_c": {
+"external": false,
+"label": "Acetate",
+"side": "r",
+"x": 1488.6,
+"y": 2039.7
+},
+"ac_e": {
+"external": true,
+"label": "Acetate",
+"side": "l",
+"x": 1488.6,
+"y": 2319.7
+},
+"ac_p": {
+"external": false,
+"label": "Acetate",
+"side": "r",
+"x": 1488.6,
+"y": 2179.7
+},
+"acald_c": {
+"external": false,
+"label": "Acetaldehyde",
+"x": 1569.1,
+"y": 1789.4
+},
+"acald_e": {
+"external": true,
+"label": "Acetaldehyde",
+"side": "r",
+"x": 1569.1,
+"y": 2074.2
+},
+"acald_p": {
+"external": false,
+"label": "Acetaldehyde",
+"side": "r",
+"x": 1569.1,
+"y": 1934.2
+},
+"accoa_c": {
+"external": false,
+"label": "Acetyl-CoA",
+"x": 1354.4,
+"y": 1756.9
+},
+"acg5p_c": {
+"external": false,
+"label": "acg5p",
+"x": 2600.3,
+"y": 1386.1
+},
+"acg5sa_c": {
+"external": false,
+"label": "acg5sa",
+"x": 2740.3,
+"y": 1386.1
+},
+"acglu_c": {
+"external": false,
+"label": "N-Acetyl-L-glutamate",
+"x": 2460.3,
+"y": 1386.1
+},
+"acon_C_c": {
+"external": false,
+"label": "cis-Aconitate",
+"side": "b",
+"x": 1797.6,
+"y": 1539.3
+},
+"acorn_c": {
+"external": false,
+"label": "N2-Acetyl-L-ornithine",
+"x": 2880.3,
+"y": 1386.1
+},
+"acser_c": {
+"external": false,
+"label": "O-Acetyl-L-serine",
+"x": 339.6,
+"y": 1071.9
+},
+"actACP_c": {
+"external": false,
+"label": "Acetoacetyl-ACP",
+"side": "r",
+"x": 1041.6,
+"y": 2382.9
+},
+"actp_c": {
+"external": false,
+"label": "Acetyl phosphate",
+"side": "r",
+"x": 1488.6,
+"y": 1899.7
+},
+"adp_c": {
+"external": false,
+"label": "ADP C10H12N5O10P2",
+"side": "b",
+"x": 3170.5,
+"y": 510.2
+},
+"adp_c@2": {
+"external": false,
+"label": "ADP C10H12N5O10P2",
+"metabolite": "adp_c",
+"side": "r",
+"x": 2900.3,
+"y": 1098.3
+},
+"aicar_c": {
+"external": false,
+"label": "aicar",
+"x": 2793.9,
+"y": 229.0
+},
+"air_c": {
+"external": false,
+"label": "air",
+"x": 2375.3,
+"y": 226.5
+},
+"akg_c": {
+"external": false,
+"label": "2-Oxoglutarate",
+"side": "l",
+"x": 2017.0,
+"y": 1368.8
+},
+"akg_e": {
+"external": true,
+"label": "2-Oxoglutarate",
+"side": "b",
+"x": 2116.6,
+"y": 1611.9
+},
+"akg_p": {
+"external": false,
+"label": "2-Oxoglutarate",
+"side": "l",
+"x": 2017.6,
+"y": 1558.2
+},
+"ala__L_c": {
+"external": false,
+"label": "L-Alanine",
+"side": "l",
+"x": 560.8,
+"y": 1867.8
+},
+"alac__S_c": {
+"external": false,
+"label": "(S)-2-Acetolactate",
+"x": 712.4,
+"y": 1757.9
+},
+"amp_c": {
+"external": false,
+"label": "AMP C10H12N5O7P",
+"side": "l",
+"x": 3030.5,
+"y": 509.4
+},
+"amp_c@2": {
+"external": false,
+"label": "AMP C10H12N5O7P",
+"metabolite": "amp_c",
+"side": "r",
+"x": 526.8,
+"y": 869.6
+},
+"anth_c": {
+"external": false,
+"label": "Anthranilate",
+"side": "l",
+"x": 2006.8,
+"y": 608.2
+},
+"aps_c": {
+"external": false,
+"label": "aps",
+"side": "l",
+"x": 312.2,
+"y": 637.4
+},
+"arg__L_c": {
+"external": false,
+"label": "L-Arginine",
+"side": "r",
+"x": 3441.0,
+"y": 1388.4
+},
+"argsuc_c": {
+"external": false,
+"label": "argsuc",
+"x": 3301.0,
+"y": 1388.4
+},
+"asn__L_c": {
+"external": false,
+"label": "L-Asparagine",
+"x": 1951.6,
+"y": 1631.5
+},
+"asp__L_c": {
+"external": false,
+"label": "L-Aspartate",
+"x": 1940.2,
+"y": 1743.5
+},
+"aspsa_c": {
+"external": false,
+"label": "aspsa",
+"x": 2090.7,
+"y": 1989.7
+},
+"atp_c": {
+"external": false,
+"label": "ATP C10H12N5O13P3",
+"side": "l",
+"x": 2760.3,
+"y": 1098.3
+},
+"atp_c@2": {
+"external": false,
+"label": "ATP C10H12N5O13P3",
+"metabolite": "atp_c",
+"side": "r",
+"x": 3495.6,
+"y": 511.6
+},
+"but2eACP_c": {
+"external": false,
+"label": "but2eACP",
+"side": "r",
+"x": 1041.4,
+"y": 2626.1
+},
+"butACP_c": {
+"external": false,
+"label": "Butyryl-ACP (n-C4:0ACP)",
+"side": "b",
+"x": 1041.4,
+"y": 2746.1
+},
+"cbasp_c": {
+"external": false,
+"label": "N-Carbamoyl-L-aspartate",
+"x": 2168.2,
+"y": 1746.9
+},
+"cbp_c": {
+"external": false,
+"label": "Carbamoyl phosphate",
+"side": "l",
+"x": 2036.4,
+"y": 1780.3
+},
+"cddec5eACP_c": {
+"external": false,
+"label": "cddec5eACP",
+"side": "b",
+"x": 2484.8,
+"y": 2998.2
+},
+"cddec5eACP_c@2": {
+"external": false,
+"label": "cddec5eACP",
+"metabolite": "cddec5eACP_c",
+"side": "r",
+"x": 2484.8,
+"y": 2998.2
+},
+"cdec3eACP_c": {
+"external": false,
+"label": "cdec3eACP",
+"side": "l",
+"x": 1781.5,
+"y": 2996.2
+},
+"cdp_c": {
+"external": false,
+"label": "CDP C9H12N3O11P2",
+"side": "l",
+"x": 3032.0,
+"y": 1894.5
+},
+"chor_c": {
+"external": false,
+"label": "Chorismate",
+"side": "r",
+"x": 2259.0,
+"y": 752.3
+},
+"cit_c": {
+"external": false,
+"label": "Citrate",
+"x": 1707.0,
+"y": 1512.4
+},
+"citr__L_c": {
+"external": false,
+"label": "L-Citrulline",
+"x": 3160.3,
+"y": 1386.1
+},
+"co2_c": {
+"external": false,
+"label": "CO2 CO2",
+"x": 773.6,
+"y": 2389.6
+},
+"co2_c@2": {
+"external": false,
+"label": "CO2 CO2",
+"metabolite": "co2_c",
+"side": "r",
+"x": 2172.1,
+"y": 1916.1
+},
+"co2_c@3": {
+"external": false,
+"label": "CO2 CO2",
+"metabolite": "co2_c",
+"side": "r",
+"x": 2608.4,
+"y": 1787.8
+},
+"co2_e": {
+"external": true,
+"label": "CO2 CO2",
+"side": "r",
+"x": 773.6,
+"y": 2657.6
+},
+"co2_p": {
+"external": false,
+"label": "CO2 CO2",
+"side": "r",
+"x": 773.6,
+"y": 2517.6
+},
+"ctp_c": {
+"external": false,
+"label": "CTP C9H12N3O14P3",
+"x": 3032.0,
+"y": 1754.5
+},
+"cys__L_c": {
+"external": false,
+"label": "L-Cysteine",
+"side": "l",
+"x": 151.1,
+"y": 1072.1
+},
+"cyst__L_c": {
+"external": false,
+"label": "L-Cystathionine",
+"side": "b",
+"x": 2249.9,
+"y": 2187.5
+},
+"dadp_c": {
+"external": false,
+"label": "DADP C10H12N5O9P2",
+"side": "r",
+"x": 3170.1,
+"y": 363.0
+},
+"datp_c": {
+"external": false,
+"label": "DATP C10H12N5O12P3",
+"x": 3170.1,
+"y": 279.5
+},
+"dcaACP_c": {
+"external": false,
+"label": "dcaACP",
+"side": "b",
+"x": 1864.2,
+"y": 2897.7
+},
+"dcamp_c": {
+"external": false,
+"label": "dcamp",
+"side": "r",
+"x": 3031.4,
+"y": 369.4
+},
+"dcdp_c": {
+"external": false,
+"label": "DCDP C9H12N3O10P2",
+"x": 3173.4,
+"y": 1895.5
+},
+"dctp_c": {
+"external": false,
+"label": "DCTP C9H12N3O13P3",
+"side": "r",
+"x": 3313.4,
+"y": 1895.5
+},
+"ddcaACP_c": {
+"external": false,
+"label": "ddcaACP",
+"side": "b",
+"x": 2111.1,
+"y": 2912.8
+},
+"dgdp_c": {
+"external": false,
+"label": "DGDP C10H12N5O10P2",
+"side": "l",
+"x": 3325.0,
+"y": 215.8
+},
+"dgtp_c": {
+"external": false,
+"label": "DGTP C10H12N5O13P3",
+"side": "b",
+"x": 3325.0,
+"y": 310.8
+},
+"dhap_c": {
+"external": false,
+"label": "DHAP",
+"side": "b",
+"x": 860.6,
+"y": 796.0
+},
+"dhf_c": {
+"external": false,
+"label": "7,8-Dihydrofolate",
+"side": "b",
+"x": 473.9,
+"y": 1419.9
+},
+"dhf_c@2": {
+"external": false,
+"label": "7,8-Dihydrofolate",
+"metabolite": "dhf_c",
+"x": 3130.6,
+"y": 1578.2
+},
+"dhor__S_c": {
+"external": false,
+"label": "(S)-Dihydroorotate",
+"side": "r",
+"x": 2308.2,
+"y": 1746.9
+},
+"dtdp_c": {
+"external": false,
+"label": "DTDP C10H13N2O11P2",
+"x": 3302.7,
+"y": 1614.5
+},
+"dtmp_c": {
+"external": false,
+"label": "DTMP C10H13N2O8P",
+"x": 3162.7,
+"y": 1614.5
+},
+"dttp_c": {
+"external": false,
+"label": "DTTP C10H13N2O14P3",
+"side": "r",
+"x": 3442.7,
+"y": 1614.5
+},
+"dudp_c": {
+"external": false,
+"label": "DUDP C9H11N2O11P2",
+"x": 2738.2,
+"y": 1614.5
+},
+"dump_c": {
+"external": false,
+"label": "DUMP C9H11N2O8P",
+"x": 3018.2,
+"y": 1614.5
+},
+"dutp_c": {
+"external": false,
+"label": "DUTP C9H11N2O14P3",
+"x": 2878.2,
+"y": 1614.5
+},
+"e4p_c": {
+"external": false,
+"label": "E4P",
+"side": "b",
+"x": 1299.1,
+"y": 751.5
+},
+"eig3p_c": {
+"external": false,
+"label": "eig3p",
+"x": 2490.3,
+"y": 472.1
+},
+"etoh_c": {
+"external": false,
+"label": "Ethanol",
+"x": 1673.9,
+"y": 1790.2
+},
+"etoh_e": {
+"external": true,
+"label": "Ethanol",
+"side": "r",
+"x": 1673.9,
+"y": 2070.2
+},
+"etoh_p": {
+"external": false,
+"label": "Ethanol",
+"side": "r",
+"x": 1673.9,
+"y": 1930.2
+},
+"f6p_c": {
+"external": false,
+"label": "F6P",
+"side": "l",
+"x": 940.6,
+"y": 536.0
+},
+"f6p_c@2": {
+"external": false,
+"label": "F6P",
+"metabolite": "f6p_c",
+"side": "b",
+"x": 1463.7,
+"y": 792.7
+},
+"fdp_c": {
+"external": false,
+"label": "FBP",
+"side": "r",
+"x": 940.6,
+"y": 688.0
+},
+"fgam_c": {
+"external": false,
+"label": "fgam",
+"x": 2112.2,
+"y": 225.0
+},
+"for_e": {
+"external": true,
+"label": "Formate",
+"side": "b",
+"x": 1020.8,
+"y": 1952.3
+},
+"for_p": {
+"external": false,
+"label": "Formate",
+"side": "l",
+"x": 1074.6,
+"y": 1895.3
+},
+"fpram_c": {
+"external": false,
+"label": "fpram",
+"x": 2252.3,
+"y": 225.7
+},
+"fprica_c": {
+"external": false,
+"label": "fprica",
+"x": 2895.5,
+"y": 229.0
+},
+"fru_e": {
+"external": true,
+"label": "D-Fructose",
+"x": 552.4,
+"y": 335.1
+},
+"fru_p": {
+"external": false,
+"label": "D-Fructose",
+"x": 692.4,
+"y": 335.1
+},
+"fum_c": {
+"external": false,
+"label": "Fumarate",
+"x": 1655.8,
+"y": 1086.0
+},
+"fum_e": {
+"external": true,
+"label": "Fumarate",
+"x": 1347.7,
+"y": 1003.6
+},
+"fum_p": {
+"external": false,
+"label": "Fumarate",
+"x": 1487.7,
+"y": 1003.6
+},
+"g3p_c": {
+"external": false,
+"label": "GAP",
+"side": "r",
+"x": 940.6,
+"y": 796.0
+},
+"g3p_c@2": {
+"external": false,
+"label": "GAP",
+"metabolite": "g3p_c",
+"side": "r",
+"x": 1462.2,
+"y": 664.0
+},
+"g6p_c": {
+"external": false,
+"label": "G6P",
+"side": "l",
+"x": 940.6,
+"y": 424.0
+},
+"gar_c": {
+"external": false,
+"label": "gar",
+"x": 1916.8,
+"y": 224.5
+},
+"gdp_c": {
+"external": false,
+"label": "GDP C10H12N5O11P2",
+"x": 3326.7,
+"y": 92.9
+},
+"glc__D_e": {
+"external": true,
+"label": "D-Glucose",
+"side": "r",
+"x": 940.7,
+"y": 60.0
+},
+"glc__D_p": {
+"external": false,
+"label": "D-Glucose",
+"side": "l",
+"x": 940.7,
+"y": 200.0
+},
+"glcn_c": {
+"external": false,
+"label": "D-Gluconate",
+"side": "l",
+"x": 1248.9,
+"y": 298.8
+},
+"glcn_e": {
+"external": true,
+"label": "D-Gluconate",
+"x": 1318.0,
+"y": 184.6
+},
+"glcn_p": {
+"external": false,
+"label": "D-Gluconate",
+"x": 1248.9,
+"y": 184.6
+},
+"gln__L_c": {
+"external": false,
+"label": "L-Glutamine",
+"side": "l",
+"x": 2217.0,
+"y": 1555.6
+},
+"gln__L_e": {
+"external": true,
+"label": "L-Glutamine",
+"x": 2405.7,
+"y": 1602.5
+},
+"gln__L_p": {
+"external": false,
+"label": "L-Glutamine",
+"x": 2329.1,
+"y": 1602.2
+},
+"glu5p_c": {
+"external": false,
+"label": "L-Glutamate 5-phosphate",
+"x": 2381.2,
+"y": 1260.5
+},
+"glu5sa_c": {
+"external": false,
+"label": "glu5sa",
+"x": 2521.2,
+"y": 1260.5
+},
+"glu__L_c": {
+"external": false,
+"label": "L-Glutamate",
+"x": 2217.8,
+"y": 1370.8
+},
+"glu__L_e": {
+"external": true,
+"label": "L-Glutamate",
+"side": "r",
+"x": 2147.0,
+"y": 1165.1
+},
+"glu__L_p": {
+"external": false,
+"label": "L-Glutamate",
+"side": "l",
+"x": 2146.6,
+"y": 1231.1
+},
+"glx_c": {
+"external": false,
+"label": "Glyoxylate",
+"x": 1790.6,
+"y": 1346.0
+},
+"gly_c": {
+"external": false,
+"label": "Glycine",
+"side": "b",
+"x": 478.8,
+"y": 1245.1
+},
+"glyc3p_c": {
+"external": false,
+"label": "Glycerol 3-phosphate",
+"x": 720.6,
+"y": 796.0
+},
+"glyc__R_c": {
+"external": false,
+"label": "(R)-Glycerate",
+"x": 800.6,
+"y": 1168.0
+},
+"glyc__R_e": {
+"external": true,
+"label": "(R)-Glycerate",
+"side": "r",
+"x": 660.6,
+"y": 1308.0
+},
+"glyc__R_p": {
+"external": false,
+"label": "(R)-Glycerate",
+"x": 660.6,
+"y": 1168.0
+},
+"glyc_c": {
+"external": false,
+"label": "Glycerol",
+"side": "l",
+"x": 580.6,
+"y": 796.0
+},
+"glyc_e": {
+"external": true,
+"label": "Glycerol",
+"side": "r",
+"x": 580.6,
+"y": 630.8
+},
+"glyc_p": {
+"external": false,
+"label": "Glycerol",
+"side": "r",
+"x": 580.6,
+"y": 712.6
+},
+"gmp_c": {
+"external": false,
+"label": "GMP C10H12N5O8P",
+"x": 3190.9,
+"y": 92.1
+},
+"grxox_c": {
+"external": false,
+"label": "Glutaredoxin (oxidized)",
+"side": "b",
+"x": 490.1,
+"y": 2273.2
+},
+"grxrd_c": {
+"external": false,
+"label": "Glutaredoxin (reduced)",
+"x": 490.7,
+"y": 2128.9
+},
+"gthox_c": {
+"external": false,
+"label": "Oxidized glutathione",
+"side": "b",
+"x": 614.1,
+"y": 2276.5
+},
+"gthrd_c": {
+"external": false,
+"label": "Reduced glutathione",
+"x": 614.1,
+"y": 2129.6
+},
+"gtp_c": {
+"external": false,
+"label": "GTP C10H12N5O14P3",
+"side": "r",
+"x": 3479.3,
+"y": 94.8
+},
+"h2o_c": {
+"external": false,
+"label": "H2O H2O",
+"x": 416.7,
+"y": 2389.6
+},
+"h2o_c@2": {
+"external": false,
+"label": "H2O H2O",
+"metabolite": "h2o_c",
+"side": "b",
+"x": 178.3,
+"y": 2269.1
+},
+"h2o_e": {
+"external": true,
+"label": "H2O H2O",
+"side": "r",
+"x": 416.7,
+"y": 2657.6
+},
+"h2o_p": {
+"external": false,
+"label": "H2O H2O",
+"side": "r",
+"x": 416.7,
+"y": 2517.6
+},
+"h2s_c": {
+"external": false,
+"label": "Hydrogen sulfide",
+"side": "r",
+"x": 311.4,
+"y": 1040.1
+},
+"h_c": {
+"external": false,
+"label": "H+",
+"x": 178.3,
+"y": 2129.1
+},
+"h_e": {
+"external": true,
+"label": "H+",
+"side": "l",
+"x": 175.2,
+"y": 2659.4
+},
+"h_p": {
+"external": false,
+"label": "H+",
+"x": 175.2,
+"y": 2519.4
+},
+"hco3_c": {
+"external": false,
+"label": "Bicarbonate",
+"side": "b",
+"x": 2077.3,
+"y": 1918.8
+},
+"hcys__L_c": {
+"external": false,
+"label": "L-Homocysteine",
+"x": 2389.9,
+"y": 2187.5
+},
+"hdeACP_c": {
+"external": false,
+"label": "hdeACP",
+"x": 3114.0,
+"y": 2480.1
+},
+"hexACP_c": {
+"external": false,
+"label": "Hexanoyl-ACP (n-C6:0ACP)",
+"side": "b",
+"x": 1385.6,
+"y": 2908.3
+},
+"his__L_c": {
+"external": false,
+"label": "L-Histidine",
+"side": "r",
+"x": 2925.3,
+"y": 470.4
+},
+"hisp_c": {
+"external": false,
+"label": "L-Histidinol phosphate",
+"x": 2690.5,
+"y": 471.9
+},
+"histd_c": {
+"external": false,
+"label": "L-Histidinol",
+"x": 2800.2,
+"y": 471.1
+},
+"hom__L_c": {
+"external": false,
+"label": "L-Homoserine",
+"x": 2250.2,
+"y": 1989.1
+},
+"icit_c": {
+"external": false,
+"label": "Isocitrate",
+"side": "b",
+"x": 1883.8,
+"y": 1508.4
+},
+"ile__L_c": {
+"external": false,
+"label": "L-Isoleucine",
+"side": "r",
+"x": 3167.7,
+"y": 2071.2
+},
+"imacp_c": {
+"external": false,
+"label": "imacp",
+"x": 2580.9,
+"y": 471.3
+},
+"imp_c": {
+"external": false,
+"label": "IMP C10H11N4O8P",
+"side": "r",
+"x": 3032.2,
+"y": 229.4
+},
+"indole_c": {
+"external": false,
+"label": "Indole",
+"x": 2408.6,
+"y": 564.1
+},
+"lac__D_c": {
+"external": false,
+"label": "D-Lactate",
+"side": "r",
+"x": 928.4,
+"y": 1895.2
+},
+"lac__D_e": {
+"external": true,
+"label": "D-Lactate",
+"side": "r",
+"x": 817.8,
+"y": 2035.2
+},
+"lac__D_p": {
+"external": false,
+"label": "D-Lactate",
+"x": 817.8,
+"y": 1895.2
+},
+"leu__L_c": {
+"external": false,
+"label": "L-Leucine",
+"x": 93.2,
+"y": 1321.5
+},
+"lys__L_c": {
+"external": false,
+"label": "L-Lysine",
+"side": "r",
+"x": 2897.9,
+"y": 2309.2
+},
+"malACP_c": {
+"external": false,
+"label": "malACP",
+"side": "l",
+"x": 1385.6,
+"y": 2427.5
+},
+"mal__L_c": {
+"external": false,
+"label": "Malate",
+"x": 1567.0,
+"y": 1194.8
+},
+"mal__L_e": {
+"external": true,
+"label": "L-Malate",
+"x": 1292.8,
+"y": 1123.6
+},
+"mal__L_p": {
+"external": false,
+"label": "L-Malate",
+"x": 1432.8,
+"y": 1123.6
+},
+"malcoa_c": {
+"external": false,
+"label": "malcoa",
+"side": "l",
+"x": 1385.6,
+"y": 2307.5
+},
+"methf_c": {
+"external": false,
+"label": "methf",
+"x": 200.0,
+"y": 1245.1
+},
+"mlthf_c": {
+"external": false,
+"label": "mlthf",
+"side": "b",
+"x": 340.0,
+"y": 1245.1
+},
+"mlthf_c@2": {
+"external": false,
+"label": "mlthf",
+"metabolite": "mlthf_c",
+"side": "r",
+"x": 2570.7,
+"y": 2246.5
+},
+"mql8_c": {
+"external": false,
+"label": "Menaquinol 8",
+"side": "l",
+"x": 3266.4,
+"y": 770.0
+},
+"mql8_c@2": {
+"external": false,
+"label": "Menaquinol 8",
+"metabolite": "mql8_c",
+"side": "r",
+"x": 3395.0,
+"y": 847.9
+},
+"mqn8_c": {
+"external": false,
+"label": "Menaquinone 8",
+"side": "r",
+"x": 3382.0,
+"y": 773.0
+},
+"mqn8_c@2": {
+"external": false,
+"label": "Menaquinone 8",
+"metabolite": "mqn8_c",
+"side": "r",
+"x": 1826.6,
+"y": 1008.7
+},
+"mqn8_c@3": {
+"external": false,
+"label": "Menaquinone 8",
+"metabolite": "mqn8_c",
+"side": "l",
+"x": 3261.8,
+"y": 848.5
+},
+"myrsACP_c": {
+"external": false,
+"label": "myrsACP",
+"side": "b",
+"x": 2361.4,
+"y": 2909.9
+},
+"nad_c": {
+"external": false,
+"label": "nad",
+"side": "l",
+"x": 3028.4,
+"y": 1016.7
+},
+"nad_c@2": {
+"external": false,
+"label": "nad",
+"metabolite": "nad_c",
+"side": "r",
+"x": 2854.3,
+"y": 924.7
+},
+"nadh_c": {
+"external": false,
+"label": "nadh",
+"side": "l",
+"x": 3015.9,
+"y": 949.6
+},
+"nadh_c@2": {
+"external": false,
+"label": "nadh",
+"metabolite": "nadh_c",
+"side": "l",
+"x": 2772.0,
+"y": 913.8
+},
+"nadp_c": {
+"external": false,
+"label": "nadp",
+"side": "l",
+"x": 2736.0,
+"y": 973.8
+},
+"nadph_c": {
+"external": false,
+"label": "nadph",
+"side": "r",
+"x": 2900.0,
+"y": 973.8
+},
+"nh4_c": {
+"external": false,
+"label": "Ammonium",
+"x": 542.2,
+"y": 2393.7
+},
+"nh4_e": {
+"external": true,
+"label": "Ammonium",
+"side": "r",
+"x": 542.2,
+"y": 2660.1
+},
+"nh4_p": {
+"external": false,
+"label": "Ammonium",
+"side": "r",
+"x": 542.2,
+"y": 2520.1
+},
+"o2_c": {
+"external": false,
+"label": "O2 O2",
+"side": "l",
+"x": 2980.8,
+"y": 622.0
+},
+"o2_e": {
+"external": true,
+"label": "O2 O2",
+"x": 3328.8,
+"y": 622.0
+},
+"o2_p": {
+"external": false,
+"label": "O2 O2",
+"x": 3188.8,
+"y": 622.0
+},
+"oaa_c": {
+"external": false,
+"label": "Oxaloacetate",
+"side": "r",
+"x": 1582.2,
+"y": 1407.6
+},
+"ocACP_c": {
+"external": false,
+"label": "Octanoyl-ACP (n-C8:0ACP)",
+"side": "b",
+"x": 1604.9,
+"y": 2905.7
+},
+"ocdcaACP_c": {
+"external": false,
+"label": "ocdcaACP",
+"side": "b",
+"x": 2854.7,
+"y": 2924.2
+},
+"octeACP_c": {
+"external": false,
+"label": "octeACP",
+"side": "b",
+"x": 3345.0,
+"y": 2901.3
+},
+"orn_c": {
+"external": false,
+"label": "Ornithine",
+"x": 3020.3,
+"y": 1386.1
+},
+"orot5p_c": {
+"external": false,
+"label": "orot5p",
+"x": 2519.0,
+"y": 1752.7
+},
+"orot_c": {
+"external": false,
+"label": "Orotate C5H3N2O4",
+"side": "b",
+"x": 2404.8,
+"y": 1752.7
+},
+"palmACP_c": {
+"external": false,
+"label": "palmACP",
+"side": "b",
+"x": 2630.1,
+"y": 2911.0
+},
+"pap_c": {
+"external": false,
+"label": "pap",
+"side": "b",
+"x": 386.8,
+"y": 869.6
+},
+"paps_c": {
+"external": false,
+"label": "paps",
+"side": "l",
+"x": 312.0,
+"y": 777.4
+},
+"pep_c": {
+"external": false,
+"label": "PEP",
+"side": "l",
+"x": 940.6,
+"y": 1268.0
+},
+"phe__L_c": {
+"external": false,
+"label": "L-Phenylalanine",
+"side": "r",
+"x": 2399.0,
+"y": 1032.3
+},
+"phom_c": {
+"external": false,
+"label": "O-Phospho-L-homoserine",
+"x": 2390.2,
+"y": 1989.1
+},
+"phpyr_c": {
+"external": false,
+"label": "Phenylpyruvate",
+"side": "l",
+"x": 2259.0,
+"y": 1032.3
+},
+"pi_c": {
+"external": false,
+"label": "Phosphate",
+"x": 286.5,
+"y": 2358.7
+},
+"pi_e": {
+"external": true,
+"label": "Phosphate",
+"side": "r",
+"x": 286.5,
+"y": 2662.3
+},
+"pi_p": {
+"external": false,
+"label": "Phosphate",
+"side": "r",
+"x": 286.5,
+"y": 2522.3
+},
+"pphn_c": {
+"external": false,
+"label": "Prephenate",
+"side": "l",
+"x": 2259.0,
+"y": 892.3
+},
+"pran_c": {
+"external": false,
+"label": "pran",
+"x": 2117.4,
+"y": 564.6
+},
+"prbamp_c": {
+"external": false,
+"label": "1-(5-Phosphoribosyl)-AMP",
+"x": 2190.1,
+"y": 472.2
+},
+"prbatp_c": {
+"external": false,
+"label": "1-(5-Phosphoribosyl)-ATP",
+"x": 2050.1,
+"y": 472.9
+},
+"prfp_c": {
+"external": false,
+"label": "prfp",
+"x": 2289.8,
+"y": 471.7
+},
+"prlp_c": {
+"external": false,
+"label": "prlp",
+"x": 2378.7,
+"y": 471.2
+},
+"pro__L_c": {
+"external": false,
+"label": "L-Proline",
+"side": "r",
+"x": 2801.2,
+"y": 1260.5
+},
+"prpp_c": {
+"external": false,
+"label": "prpp",
+"side": "b",
+"x": 1919.3,
+"y": 473.7
+},
+"pser__L_c": {
+"external": false,
+"label": "O-Phospho-L-serine",
+"x": 619.6,
+"y": 1070.1
+},
+"pyr_c": {
+"external": false,
+"label": "Pyruvate",
+"x": 928.4,
+"y": 1755.2
+},
+"pyr_e": {
+"external": true,
+"label": "Pyruvate",
+"x": 610.1,
+"y": 1545.2
+},
+"pyr_p": {
+"external": false,
+"label": "Pyruvate",
+"x": 724.6,
+"y": 1546.4
+},
+"q8_c": {
+"external": false,
+"label": "Ubiquinone-8",
+"side": "r",
+"x": 3152.2,
+"y": 844.0
+},
+"q8h2_c": {
+"external": false,
+"label": "Ubiquinol-8",
+"side": "l",
+"x": 3052.1,
+"y": 842.1
+},
+"r5p_c": {
+"external": false,
+"label": "R5P",
+"side": "b",
+"x": 1486.2,
+"y": 540.0
+},
+"rib__D_c": {
+"external": false,
+"label": "D-Ribose",
+"side": "r",
+"x": 1486.2,
+"y": 400.0
+},
+"rib__D_e": {
+"external": true,
+"label": "D-Ribose",
+"x": 1551.8,
+"y": 260.0
+},
+"rib__D_p": {
+"external": false,
+"label": "D-Ribose",
+"x": 1486.2,
+"y": 260.0
+},
+"ru5p__D_c": {
+"external": false,
+"label": "Ru5P",
+"x": 1380.6,
+"y": 424.0
+},
+"s7p_c": {
+"external": false,
+"label": "S7P",
+"side": "l",
+"x": 1311.9,
+"y": 664.0
+},
+"ser__L_c": {
+"external": false,
+"label": "L-Serine",
+"x": 479.6,
+"y": 1071.0
+},
+"skm5p_c": {
+"external": false,
+"label": "Shikimate 5-phosphate",
+"x": 2064.8,
+"y": 752.3
+},
+"skm_c": {
+"external": false,
+"label": "Shikimate",
+"x": 1954.2,
+"y": 752.3
+},
+"sl26da_c": {
+"external": false,
+"label": "sl26da",
+"x": 2508.3,
+"y": 2309.2
+},
+"sl2a6o_c": {
+"external": false,
+"label": "sl2a6o",
+"x": 2368.3,
+"y": 2309.2
+},
+"so3_c": {
+"external": false,
+"label": "Sulfite",
+"side": "l",
+"x": 310.9,
+"y": 907.5
+},
+"so4_c": {
+"external": false,
+"label": "Sulfate",
+"side": "r",
+"x": 312.4,
+"y": 497.4
+},
+"so4_e": {
+"external": true,
+"label": "Sulfate",
+"x": 314.8,
+"y": 254.4
+},
+"so4_p": {
+"external": false,
+"label": "Sulfate",
+"side": "r",
+"x": 314.8,
+"y": 317.6
+},
+"succ_c": {
+"external": false,
+"label": "Succinate",
+"side": "r",
+"x": 1886.6,
+"y": 1064.8
+},
+"succ_e": {
+"external": true,
+"label": "Succinate",
+"side": "r",
+"x": 2082.2,
+"y": 934.9
+},
+"succ_p": {
+"external": false,
+"label": "Succinate",
+"x": 1942.2,
+"y": 934.9
+},
+"succoa_c": {
+"external": false,
+"label": "Succinyl-CoA",
+"side": "r",
+"x": 2014.2,
+"y": 1195.2
+},
+"suchms_c": {
+"external": false,
+"label": "O-Succinyl-L-homoserine",
+"side": "l",
+"x": 2249.7,
+"y": 2085.9
+},
+"t3c11vaceACP_c": {
+"external": false,
+"label": "t3c11vaceACP",
+"side": "l",
+"x": 3345.0,
+"y": 2761.3
+},
+"t3c5ddeceACP_c": {
+"external": false,
+"label": "t3c5ddeceACP",
+"x": 2344.8,
+"y": 2998.2
+},
+"t3c7mrseACP_c": {
+"external": false,
+"label": "t3c7mrseACP",
+"x": 2904.8,
+"y": 2998.2
+},
+"t3c9palmeACP_c": {
+"external": false,
+"label": "t3c9palmeACP",
+"side": "l",
+"x": 3114.0,
+"y": 2629.1
+},
+"tddec2eACP_c": {
+"external": false,
+"label": "tddec2eACP",
+"side": "r",
+"x": 2111.1,
+"y": 2791.8
+},
+"tdeACP_c": {
+"external": false,
+"label": "tdeACP",
+"x": 3044.8,
+"y": 2998.2
+},
+"tdec2eACP_c": {
+"external": false,
+"label": "tdec2eACP",
+"side": "r",
+"x": 1864.2,
+"y": 2786.5
+},
+"thdp_c": {
+"external": false,
+"label": "thdp",
+"x": 2228.3,
+"y": 2309.2
+},
+"thex2eACP_c": {
+"external": false,
+"label": "thex2eACP",
+"side": "r",
+"x": 1385.6,
+"y": 2787.5
+},
+"thf_c": {
+"external": false,
+"label": "5,6,7,8-Tetrahydrofolate",
+"side": "r",
+"x": 473.9,
+"y": 1279.9
+},
+"thf_c@2": {
+"external": false,
+"label": "5,6,7,8-Tetrahydrofolate",
+"metabolite": "thf_c",
+"side": "r",
+"x": 2533.7,
+"y": 2156.9
+},
+"thr__L_c": {
+"external": false,
+"label": "L-Threonine",
+"x": 2560.4,
+"y": 1989.8
+},
+"tmrs2eACP_c": {
+"external": false,
+"label": "tmrs2eACP",
+"side": "r",
+"x": 2361.4,
+"y": 2789.9
+},
+"toct2eACP_c": {
+"external": false,
+"label": "toct2eACP",
+"side": "r",
+"x": 1604.0,
+"y": 2785.7
+},
+"toctd2eACP_c": {
+"external": false,
+"label": "toctd2eACP",
+"side": "r",
+"x": 2854.7,
+"y": 2804.2
+},
+"tpalm2eACP_c": {
+"external": false,
+"label": "tpalm2eACP",
+"side": "r",
+"x": 2631.2,
+"y": 2788.8
+},
+"trdox_c": {
+"external": false,
+"label": "Oxidized thioredoxin",
+"side": "b",
+"x": 400.1,
+"y": 2273.1
+},
+"trdrd_c": {
+"external": false,
+"label": "Reduced thioredoxin",
+"x": 401.6,
+"y": 2128.5
+},
+"trp__L_c": {
+"external": false,
+"label": "L-Tryptophan",
+"side": "r",
+"x": 2548.6,
+"y": 564.1
+},
+"tyr__L_c": {
+"external": false,
+"label": "L-Tyrosine",
+"side": "r",
+"x": 2539.0,
+"y": 892.3
+},
+"udp_c": {
+"external": false,
+"label": "UDP C9H11N2O12P2",
+"side": "b",
+"x": 2738.2,
+"y": 1754.5
+},
+"ump_c": {
+"external": false,
+"label": "UMP C9H11N2O9P",
+"x": 2634.3,
+"y": 1753.9
+},
+"utp_c": {
+"external": false,
+"label": "UTP C9H11N2O15P3",
+"x": 2850.8,
+"y": 1754.5
+},
+"val__L_c": {
+"external": false,
+"label": "L-Valine",
+"x": 430.1,
+"y": 1606.9
+},
+"xmp_c": {
+"external": false,
+"label": "xmp",
+"x": 3033.0,
+"y": 89.4
+},
+"xu5p__D_c": {
+"external": false,
+"label": "Xu5P",
+"side": "b",
+"x": 1296.6,
+"y": 540.0
+},
+"xyl__D_c": {
+"external": false,
+"label": "D-Xylose",
+"side": "r",
+"x": 1156.6,
+"y": 680.0
+},
+"xyl__D_e": {
+"external": true,
+"label": "D-Xylose",
+"side": "l",
+"x": 1156.6,
+"y": 889.8
+},
+"xyl__D_p": {
+"external": false,
+"label": "D-Xylose",
+"side": "r",
+"x": 1156.6,
+"y": 820.0
+},
+"xylu__D_c": {
+"external": false,
+"label": "D-Xylulose",
+"x": 1156.6,
+"y": 540.0
+}
+},
+"reactions": {
+"3HAD100": {
+"m": [
+1864.2,
+2726.5
+],
+"p": [
+"tdec2eACP_c"
+],
+"s": [
+"3hdecACP_c"
+]
+},
+"3HAD120": {
+"m": [
+2111.1,
+2732.8
+],
+"p": [
+"tddec2eACP_c"
+],
+"s": [
+"3hddecACP_c"
+]
+},
+"3HAD121": {
+"m": [
+2274.8,
+2998.2
+],
+"p": [
+"t3c5ddeceACP_c"
+],
+"s": [
+"3hcddec5eACP_c"
+]
+},
+"3HAD140": {
+"m": [
+2361.4,
+2729.9
+],
+"p": [
+"tmrs2eACP_c"
+],
+"s": [
+"3hmrsACP_c"
+]
+},
+"3HAD141": {
+"m": [
+2834.8,
+2998.2
+],
+"p": [
+"t3c7mrseACP_c"
+],
+"s": [
+"3hcmrs7eACP_c"
+]
+},
+"3HAD160": {
+"m": [
+2630.1,
+2731.0
+],
+"p": [
+"tpalm2eACP_c"
+],
+"s": [
+"3hpalmACP_c"
+]
+},
+"3HAD161": {
+"m": [
+3114.3,
+2699.1
+],
+"p": [
+"t3c9palmeACP_c"
+],
+"s": [
+"3hcpalm9eACP_c"
+]
+},
+"3HAD180": {
+"m": [
+2854.7,
+2744.2
+],
+"p": [
+"toctd2eACP_c"
+],
+"s": [
+"3hoctaACP_c"
+]
+},
+"3HAD181": {
+"m": [
+3345.8,
+2676.1
+],
+"p": [
+"t3c11vaceACP_c"
+],
+"s": [
+"3hcvac11eACP_c"
+]
+},
+"3HAD40": {
+"m": [
+1041.4,
+2566.1
+],
+"p": [
+"but2eACP_c"
+],
+"s": [
+"3haACP_c"
+]
+},
+"3HAD60": {
+"m": [
+1385.6,
+2727.5
+],
+"p": [
+"thex2eACP_c"
+],
+"s": [
+"3hhexACP_c"
+]
+},
+"3HAD80": {
+"m": [
+1604.0,
+2725.7
+],
+"p": [
+"toct2eACP_c"
+],
+"s": [
+"3hoctACP_c"
+]
+},
+"3OAR100": {
+"m": [
+1864.2,
+2606.5
+],
+"p": [
+"3hdecACP_c"
+],
+"s": [
+"3odecACP_c"
+]
+},
+"3OAR120": {
+"m": [
+2111.1,
+2612.8
+],
+"p": [
+"3hddecACP_c"
+],
+"s": [
+"3oddecACP_c"
+]
+},
+"3OAR121": {
+"m": [
+2134.8,
+2998.2
+],
+"p": [
+"3hcddec5eACP_c"
+],
+"s": [
+"3ocddec5eACP_c"
+]
+},
+"3OAR140": {
+"m": [
+2361.4,
+2609.9
+],
+"p": [
+"3hmrsACP_c"
+],
+"s": [
+"3omrsACP_c"
+]
+},
+"3OAR141": {
+"m": [
+2694.8,
+2998.2
+],
+"p": [
+"3hcmrs7eACP_c"
+],
+"s": [
+"3ocmrs7eACP_c"
+]
+},
+"3OAR160": {
+"m": [
+2630.1,
+2611.0
+],
+"p": [
+"3hpalmACP_c"
+],
+"s": [
+"3opalmACP_c"
+]
+},
+"3OAR161": {
+"m": [
+3114.9,
+2839.1
+],
+"p": [
+"3hcpalm9eACP_c"
+],
+"s": [
+"3ocpalm9eACP_c"
+]
+},
+"3OAR180": {
+"m": [
+2854.7,
+2624.2
+],
+"p": [
+"3hoctaACP_c"
+],
+"s": [
+"3ooctdACP_c"
+]
+},
+"3OAR181": {
+"m": [
+3345.0,
+2551.3
+],
+"p": [
+"3hcvac11eACP_c"
+],
+"s": [
+"3ocvac11eACP_c"
+]
+},
+"3OAR40": {
+"m": [
+1041.4,
+2446.1
+],
+"p": [
+"3haACP_c"
+],
+"s": [
+"actACP_c"
+]
+},
+"3OAR60": {
+"m": [
+1385.6,
+2607.5
+],
+"p": [
+"3hhexACP_c"
+],
+"s": [
+"3ohexACP_c"
+]
+},
+"3OAR80": {
+"m": [
+1604.0,
+2605.7
+],
+"p": [
+"3hoctACP_c"
+],
+"s": [
+"3ooctACP_c"
+]
+},
+"3OAS100": {
+"c": {
+"3odecACP_c": [
+1863.3,
+2494.9
+],
+"malACP_c": [
+1616.3,
+2388.4
+],
+"ocACP_c": [
+1750.7,
+2709.0
+]
+},
+"m": [
+1819.8,
+2470.3
+],
+"p": [
+"3odecACP_c"
+],
+"s": [
+"malACP_c",
+"ocACP_c"
+]
+},
+"3OAS120": {
+"c": {
+"3oddecACP_c": [
+2116.4,
+2497.3
+],
+"dcaACP_c": [
+1981.0,
+2681.2
+],
+"malACP_c": [
+1743.0,
+2377.6
+]
+},
+"m": [
+2073.1,
+2467.6
+],
+"p": [
+"3oddecACP_c"
+],
+"s": [
+"malACP_c",
+"dcaACP_c"
+]
+},
+"3OAS121": {
+"m": [
+1994.8,
+2998.2
+],
+"p": [
+"3ocddec5eACP_c"
+],
+"s": [
+"cdec3eACP_c"
+]
+},
+"3OAS140": {
+"c": {
+"3omrsACP_c": [
+2361.5,
+2491.0
+],
+"ddcaACP_c": [
+2214.2,
+2673.8
+],
+"malACP_c": [
+1863.8,
+2372.7
+]
+},
+"m": [
+2316.0,
+2457.7
+],
+"p": [
+"3omrsACP_c"
+],
+"s": [
+"malACP_c",
+"ddcaACP_c"
+]
+},
+"3OAS141": {
+"m": [
+2554.8,
+2998.2
+],
+"p": [
+"3ocmrs7eACP_c"
+],
+"s": [
+"cddec5eACP_c"
+]
+},
+"3OAS160": {
+"c": {
+"3opalmACP_c": [
+2630.5,
+2493.0
+],
+"malACP_c": [
+1993.9,
+2370.3
+],
+"myrsACP_c": [
+2493.2,
+2688.6
+]
+},
+"m": [
+2584.0,
+2461.6
+],
+"p": [
+"3opalmACP_c"
+],
+"s": [
+"malACP_c",
+"myrsACP_c"
+]
+},
+"3OAS161": {
+"c": {
+"tdeACP_c": [
+3098.4,
+3012.1
+]
+},
+"m": [
+3115.5,
+2979.1
+],
+"p": [
+"3ocpalm9eACP_c"
+],
+"s": [
+"tdeACP_c"
+]
+},
+"3OAS180": {
+"c": {
+"3ooctdACP_c": [
+2849.0,
+2515.6
+],
+"malACP_c": [
+2131.3,
+2300.5
+],
+"palmACP_c": [
+2748.7,
+2683.3
+]
+},
+"m": [
+2807.8,
+2489.8
+],
+"p": [
+"3ooctdACP_c"
+],
+"s": [
+"malACP_c",
+"palmACP_c"
+]
+},
+"3OAS181": {
+"m": [
+3250.7,
+2481.3
+],
+"p": [
+"3ocvac11eACP_c"
+],
+"s": [
+"hdeACP_c"
+]
+},
+"3OAS60": {
+"c": {
+"butACP_c": [
+1239.5,
+2623.9
+]
+},
+"m": [
+1385.6,
+2487.5
+],
+"p": [
+"3ohexACP_c"
+],
+"s": [
+"butACP_c",
+"malACP_c"
+]
+},
+"3OAS80": {
+"c": {
+"3ooctACP_c": [
+1591.0,
+2504.2
+],
+"hexACP_c": [
+1509.1,
+2705.2
+],
+"malACP_c": [
+1483.0,
+2419.3
+]
+},
+"m": [
+1557.6,
+2478.1
+],
+"p": [
+"3ooctACP_c"
+],
+"s": [
+"malACP_c",
+"hexACP_c"
+]
+},
+"ACALD": {
+"c": {
+"acald_c": [
+1543.8,
+1755.2
+]
+},
+"m": [
+1493.1,
+1762.5
+],
+"p": [
+"accoa_c"
+],
+"s": [
+"acald_c"
+]
+},
+"ACALDtex": {
+"m": [
+1569.1,
+2004.2
+],
+"p": [
+"acald_p"
+],
+"s": [
+"acald_e"
+]
+},
+"ACALDtpp": {
+"m": [
+1569.1,
+1864.2
+],
+"p": [
+"acald_c"
+],
+"s": [
+"acald_p"
+]
+},
+"ACCOAC": {
+"c": {
+"accoa_c": [
+1447.8,
+1977.2
+]
+},
+"m": [
+1387.0,
+2227.8
+],
+"p": [
+"malcoa_c"
+],
+"s": [
+"accoa_c"
+]
+},
+"ACGK": {
+"m": [
+2530.3,
+1386.1
+],
+"p": [
+"acg5p_c"
+],
+"s": [
+"acglu_c"
+]
+},
+"ACGS": {
+"c": {
+"glu__L_c": [
+2301.6,
+1394.1
+]
+},
+"m": [
+2390.3,
+1386.1
+],
+"p": [
+"acglu_c"
+],
+"s": [
+"glu__L_c"
+]
+},
+"ACHBS": {
+"m": [
+2686.4,
+2071.7
+],
+"p": [
+"2ahbut_c"
+],
+"s": [
+"2obut_c"
+]
+},
+"ACKr": {
+"m": [
+1488.6,
+1969.7
+],
+"p": [
+"actp_c"
+],
+"s": [
+"ac_c"
+]
+},
+"ACLS": {
+"m": [
+782.4,
+1756.9
+],
+"p": [
+"alac__S_c"
+],
+"s": [
+"pyr_c"
+]
+},
+"ACOATA": {
+"c": {
+"acACP_c": [
+895.7,
+2112.0
+],
+"accoa_c": [
+1140.7,
+1890.1
+]
+},
+"m": [
+951.4,
+2037.2
+],
+"p": [
+"acACP_c"
+],
+"s": [
+"accoa_c"
+]
+},
+"ACODA": {
+"m": [
+2950.3,
+1386.1
+],
+"p": [
+"orn_c"
+],
+"s": [
+"acorn_c"
+]
+},
+"ACONTa": {
+"m": [
+1748.3,
+1530.3
+],
+"p": [
+"acon_C_c"
+],
+"s": [
+"cit_c"
+]
+},
+"ACONTb": {
+"m": [
+1843.8,
+1529.2
+],
+"p": [
+"icit_c"
+],
+"s": [
+"acon_C_c"
+]
+},
+"ACOTA": {
+"m": [
+2810.3,
+1386.1
+],
+"p": [
+"acg5sa_c"
+],
+"s": [
+"acorn_c"
+]
+},
+"ACt2rpp": {
+"m": [
+1488.6,
+2109.7
+],
+"p": [
+"ac_c"
+],
+"s": [
+"ac_p"
+]
+},
+"ACtex": {
+"m": [
+1488.6,
+2249.7
+],
+"p": [
+"ac_p"
+],
+"s": [
+"ac_e"
+]
+},
+"ADK1": {
+"m": [
+3100.5,
+509.8
+],
+"p": [
+"adp_c"
+],
+"s": [
+"amp_c"
+]
+},
+"ADSK": {
+"m": [
+312.1,
+707.4
+],
+"p": [
+"paps_c"
+],
+"s": [
+"aps_c"
+]
+},
+"ADSL1r": {
+"m": [
+3030.9,
+439.4
+],
+"p": [
+"amp_c"
+],
+"s": [
+"dcamp_c"
+]
+},
+"ADSL2r": {
+"m": [
+2749.6,
+228.6
+],
+"p": [
+"aicar_c"
+],
+"s": [
+"25aics_c"
+]
+},
+"ADSS": {
+"m": [
+3031.8,
+299.4
+],
+"p": [
+"dcamp_c"
+],
+"s": [
+"imp_c"
+]
+},
+"AGPR": {
+"m": [
+2670.3,
+1386.1
+],
+"p": [
+"acg5p_c"
+],
+"s": [
+"acg5sa_c"
+]
+},
+"AICART": {
+"m": [
+2840.0,
+229.4
+],
+"p": [
+"fprica_c"
+],
+"s": [
+"aicar_c"
+]
+},
+"AIRC2": {
+"m": [
+2434.0,
+227.0
+],
+"p": [
+"5caiz_c"
+],
+"s": [
+"air_c"
+]
+},
+"AIRC3": {
+"m": [
+2543.5,
+227.4
+],
+"p": [
+"5caiz_c"
+],
+"s": [
+"5aizc_c"
+]
+},
+"AKGDH": {
+"c": {
+"akg_c": [
+2033.7,
+1325.5
+]
+},
+"m": [
+2031.8,
+1278.8
+],
+"p": [
+"succoa_c"
+],
+"s": [
+"akg_c"
+]
+},
+"AKGt2rpp": {
+"m": [
+2017.6,
+1487.8
+],
+"p": [
+"akg_c"
+],
+"s": [
+"akg_p"
+]
+},
+"AKGtex": {
+"c": {
+"akg_p": [
+2046.4,
+1560.1
+]
+},
+"m": [
+2068.8,
+1579.3
+],
+"p": [
+"akg_p"
+],
+"s": [
+"akg_e"
+]
+},
+"ALATA_L": {
+"m": [
+658.2,
+1865.2
+],
+"p": [
+"pyr_c"
+],
+"s": [
+"ala__L_c"
+]
+},
+"ALCD2x": {
+"m": [
+1619.7,
+1789.8
+],
+"p": [
+"acald_c"
+],
+"s": [
+"etoh_c"
+]
+},
+"ANPRT": {
+"c": {
+"anth_c": [
+2015.0,
+569.4
+]
+},
+"m": [
+2047.4,
+564.6
+],
+"p": [
+"pran_c"
+],
+"s": [
+"anth_c"
+]
+},
+"ANS": {
+"c": {
+"chor_c": [
+2216.5,
+700.6
+]
+},
+"m": [
+2150.7,
+673.3
+],
+"p": [
+"anth_c"
+],
+"s": [
+"chor_c"
+]
+},
+"ARGSL": {
+"m": [
+3371.0,
+1388.4
+],
+"p": [
+"arg__L_c"
+],
+"s": [
+"argsuc_c"
+]
+},
+"ARGSS": {
+"m": [
+3230.3,
+1386.1
+],
+"p": [
+"argsuc_c"
+],
+"s": [
+"citr__L_c"
+]
+},
+"ASAD": {
+"m": [
+2006.3,
+1990.0
+],
+"p": [
+"4pasp_c"
+],
+"s": [
+"aspsa_c"
+]
+},
+"ASNS1": {
+"c": {
+"asn__L_c": [
+1906.5,
+1622.7
+],
+"asp__L_c": [
+1896.9,
+1708.3
+]
+},
+"m": [
+1892.8,
+1671.3
+],
+"p": [
+"asn__L_c"
+],
+"s": [
+"asp__L_c"
+]
+},
+"ASNS2": {
+"c": {
+"asn__L_c": [
+1986.5,
+1636.5
+],
+"asp__L_c": [
+1981.3,
+1709.5
+]
+},
+"m": [
+1994.8,
+1671.4
+],
+"p": [
+"asn__L_c"
+],
+"s": [
+"asp__L_c"
+]
+},
+"ASPCT": {
+"c": {
+"cbp_c": [
+2057.1,
+1744.4
+]
+},
+"m": [
+2098.2,
+1746.9
+],
+"p": [
+"cbasp_c"
+],
+"s": [
+"asp__L_c",
+"cbp_c"
+]
+},
+"ASPK": {
+"m": [
+1938.6,
+1918.5
+],
+"p": [
+"4pasp_c"
+],
+"s": [
+"asp__L_c"
+]
+},
+"ASPTA": {
+"c": {
+"asp__L_c": [
+1757.1,
+1731.9
+]
+},
+"m": [
+1611.0,
+1657.0
+],
+"p": [
+"oaa_c"
+],
+"s": [
+"asp__L_c"
+]
+},
+"ATPM": {
+"m": [
+2830.3,
+1098.3
+],
+"p": [
+"adp_c@2"
+],
+"s": [
+"atp_c"
+]
+},
+"ATPPRT": {
+"m": [
+1989.3,
+473.3
+],
+"p": [
+"prbatp_c"
+],
+"s": [
+"prpp_c"
+]
+},
+"ATPS4rpp": {
+"m": [
+3425.6,
+511.2
+],
+"p": [
+"atp_c@2"
+],
+"s": [
+"adp_c"
+]
+},
+"BPNT": {
+"m": [
+456.8,
+869.6
+],
+"p": [
+"amp_c@2"
+],
+"s": [
+"pap_c"
+]
+},
+"Biomass": {
+"biomass": true,
+"m": [
+2559,
+1111
+],
+"p": [],
+"s": []
+},
+"CBPS": {
+"c": {
+"hco3_c": [
+2023.3,
+1909.9
+]
+},
+"m": [
+2036.4,
+1850.3
+],
+"p": [
+"cbp_c"
+],
+"s": [
+"hco3_c"
+]
+},
+"CHORM": {
+"m": [
+2259.0,
+822.3
+],
+"p": [
+"pphn_c"
+],
+"s": [
+"chor_c"
+]
+},
+"CHORS": {
+"m": [
+2213.8,
+751.8
+],
+"p": [
+"chor_c"
+],
+"s": [
+"3psme_c"
+]
+},
+"CO2tex": {
+"m": [
+773.6,
+2587.6
+],
+"p": [
+"co2_p"
+],
+"s": [
+"co2_e"
+]
+},
+"CO2tpp": {
+"m": [
+773.6,
+2457.6
+],
+"p": [
+"co2_c"
+],
+"s": [
+"co2_p"
+]
+},
+"CS": {
+"c": {
+"accoa_c": [
+1426.8,
+1480.3
+]
+},
+"m": [
+1637.8,
+1472.4
+],
+"p": [
+"cit_c"
+],
+"s": [
+"accoa_c",
+"oaa_c"
+]
+},
+"CTPS2": {
+"m": [
+2962.0,
+1754.5
+],
+"p": [
+"ctp_c"
+],
+"s": [
+"utp_c"
+]
+},
+"CYSS": {
+"c": {
+"h2s_c": [
+301.7,
+1073.8
+]
+},
+"m": [
+269.6,
+1072.3
+],
+"p": [
+"cys__L_c"
+],
+"s": [
+"acser_c",
+"h2s_c"
+]
+},
+"CYSTL": {
+"m": [
+2319.9,
+2187.5
+],
+"p": [
+"hcys__L_c"
+],
+"s": [
+"cyst__L_c"
+]
+},
+"CYTBD2pp": {
+"c": {
+"mql8_c": [
+3283.3,
+724.3
+],
+"mqn8_c": [
+3371.3,
+726.2
+]
+},
+"m": [
+3328.4,
+720.2
+],
+"p": [
+"mqn8_c"
+],
+"s": [
+"mql8_c"
+]
+},
+"CYTBDpp": {
+"c": {
+"q8_c": [
+3145.3,
+794.3
+],
+"q8h2_c": [
+3058.8,
+791.9
+]
+},
+"m": [
+3104.5,
+784.6
+],
+"p": [
+"q8_c"
+],
+"s": [
+"q8h2_c"
+]
+},
+"CYTBO3_4pp": {
+"c": {
+"o2_c": [
+3016.3,
+718.5
+],
+"q8_c": [
+3197.0,
+737.6
+],
+"q8h2_c": [
+2996.1,
+721.7
+]
+},
+"m": [
+3112.8,
+718.0
+],
+"p": [
+"q8_c"
+],
+"s": [
+"o2_c",
+"q8h2_c"
+]
+},
+"DAPDC": {
+"m": [
+2827.9,
+2309.2
+],
+"p": [
+"lys__L_c"
+],
+"s": [
+"26dap__M_c"
+]
+},
+"DAPE": {
+"m": [
+2687.9,
+2309.2
+],
+"p": [
+"26dap__M_c"
+],
+"s": [
+"26dap_LL_c"
+]
+},
+"DDPA": {
+"m": [
+1588.1,
+752.3
+],
+"p": [
+"2dda7p_c"
+],
+"s": [
+"e4p_c"
+]
+},
+"DHAD1": {
+"m": [
+502.5,
+1760.9
+],
+"p": [
+"3mob_c"
+],
+"s": [
+"23dhmb_c"
+]
+},
+"DHAD2": {
+"m": [
+2965.0,
+2071.7
+],
+"p": [
+"3mop_c"
+],
+"s": [
+"23dhmp_c"
+]
+},
+"DHDPRy": {
+"m": [
+2158.3,
+2309.2
+],
+"p": [
+"thdp_c"
+],
+"s": [
+"23dhdp_c"
+]
+},
+"DHDPS": {
+"m": [
+2090.7,
+2059.7
+],
+"p": [
+"23dhdp_c"
+],
+"s": [
+"aspsa_c"
+]
+},
+"DHFR": {
+"m": [
+473.9,
+1349.9
+],
+"p": [
+"thf_c"
+],
+"s": [
+"dhf_c"
+]
+},
+"DHORD2": {
+"c": {
+"dhor__S_c": [
+2321.1,
+1779.8
+],
+"orot_c": [
+2389.1,
+1796.6
+]
+},
+"m": [
+2343.4,
+1796.5
+],
+"p": [
+"orot_c"
+],
+"s": [
+"dhor__S_c"
+]
+},
+"DHORD5": {
+"c": {
+"dhor__S_c": [
+2324.6,
+1709.2
+],
+"orot_c": [
+2399.7,
+1697.1
+]
+},
+"m": [
+2349.9,
+1688.0
+],
+"p": [
+"orot_c"
+],
+"s": [
+"dhor__S_c"
+]
+},
+"DHORTS": {
+"m": [
+2238.2,
+1746.9
+],
+"p": [
+"cbasp_c"
+],
+"s": [
+"dhor__S_c"
+]
+},
+"DHQS": {
+"m": [
+1692.7,
+752.3
+],
+"p": [
+"3dhq_c"
+],
+"s": [
+"2dda7p_c"
+]
+},
+"DHQTi": {
+"m": [
+1772.2,
+752.3
+],
+"p": [
+"3dhsk_c"
+],
+"s": [
+"3dhq_c"
+]
+},
+"DTMPK": {
+"m": [
+3232.7,
+1614.5
+],
+"p": [
+"dtdp_c"
+],
+"s": [
+"dtmp_c"
+]
+},
+"DUTPDP": {
+"m": [
+2948.2,
+1614.5
+],
+"p": [
+"dump_c"
+],
+"s": [
+"dutp_c"
+]
+},
+"D_LACt2pp": {
+"m": [
+875.4,
+1895.2
+],
+"p": [
+"lac__D_c"
+],
+"s": [
+"lac__D_p"
+]
+},
+"D_LACtex": {
+"m": [
+817.8,
+1965.2
+],
+"p": [
+"lac__D_p"
+],
+"s": [
+"lac__D_e"
+]
+},
+"EAR100x": {
+"m": [
+1878.0,
+2841.9
+],
+"p": [
+"dcaACP_c"
+],
+"s": [
+"tdec2eACP_c"
+]
+},
+"EAR100y": {
+"m": [
+1840.4,
+2839.9
+],
+"p": [
+"dcaACP_c"
+],
+"s": [
+"tdec2eACP_c"
+]
+},
+"EAR120x": {
+"m": [
+2111.1,
+2852.8
+],
+"p": [
+"ddcaACP_c"
+],
+"s": [
+"tddec2eACP_c"
+]
+},
+"EAR120y": {
+"c": {
+"ddcaACP_c": [
+2073.6,
+2895.4
+],
+"tddec2eACP_c": [
+2068.3,
+2806.3
+]
+},
+"m": [
+2074.0,
+2855.0
+],
+"p": [
+"ddcaACP_c"
+],
+"s": [
+"tddec2eACP_c"
+]
+},
+"EAR121x": {
+"m": [
+2414.8,
+2979.8
+],
+"p": [
+"cddec5eACP_c"
+],
+"s": [
+"t3c5ddeceACP_c"
+]
+},
+"EAR121y": {
+"m": [
+2414.8,
+3013.5
+],
+"p": [
+"cddec5eACP_c@2"
+],
+"s": [
+"t3c5ddeceACP_c"
+]
+},
+"EAR140x": {
+"m": [
+2361.4,
+2849.9
+],
+"p": [
+"myrsACP_c"
+],
+"s": [
+"tmrs2eACP_c"
+]
+},
+"EAR140y": {
+"c": {
+"myrsACP_c": [
+2321.5,
+2895.9
+],
+"tmrs2eACP_c": [
+2319.2,
+2804.4
+]
+},
+"m": [
+2326.4,
+2852.1
+],
+"p": [
+"myrsACP_c"
+],
+"s": [
+"tmrs2eACP_c"
+]
+},
+"EAR141x": {
+"m": [
+2975.3,
+2973.9
+],
+"p": [
+"tdeACP_c"
+],
+"s": [
+"t3c7mrseACP_c"
+]
+},
+"EAR141y": {
+"m": [
+2975.2,
+3017.1
+],
+"p": [
+"tdeACP_c"
+],
+"s": [
+"t3c7mrseACP_c"
+]
+},
+"EAR160x": {
+"m": [
+2630.1,
+2851.0
+],
+"p": [
+"palmACP_c"
+],
+"s": [
+"tpalm2eACP_c"
+]
+},
+"EAR160y": {
+"c": {
+"palmACP_c": [
+2581.7,
+2901.0
+],
+"tpalm2eACP_c": [
+2584.6,
+2800.0
+]
+},
+"m": [
+2589.7,
+2848.8
+],
+"p": [
+"palmACP_c"
+],
+"s": [
+"tpalm2eACP_c"
+]
+},
+"EAR161x": {
+"m": [
+3090.7,
+2554.3
+],
+"p": [
+"hdeACP_c"
+],
+"s": [
+"t3c9palmeACP_c"
+]
+},
+"EAR161y": {
+"m": [
+3138.4,
+2554.7
+],
+"p": [
+"hdeACP_c"
+],
+"s": [
+"t3c9palmeACP_c"
+]
+},
+"EAR180x": {
+"m": [
+2854.7,
+2864.2
+],
+"p": [
+"ocdcaACP_c"
+],
+"s": [
+"toctd2eACP_c"
+]
+},
+"EAR180y": {
+"c": {
+"ocdcaACP_c": [
+2822.0,
+2903.7
+],
+"toctd2eACP_c": [
+2816.7,
+2820.4
+]
+},
+"m": [
+2824.1,
+2865.1
+],
+"p": [
+"ocdcaACP_c"
+],
+"s": [
+"toctd2eACP_c"
+]
+},
+"EAR181x": {
+"m": [
+3322.3,
+2832.8
+],
+"p": [
+"octeACP_c"
+],
+"s": [
+"t3c11vaceACP_c"
+]
+},
+"EAR181y": {
+"m": [
+3371.6,
+2832.5
+],
+"p": [
+"octeACP_c"
+],
+"s": [
+"t3c11vaceACP_c"
+]
+},
+"EAR40x": {
+"m": [
+1041.4,
+2686.1
+],
+"p": [
+"butACP_c"
+],
+"s": [
+"but2eACP_c"
+]
+},
+"EAR60x": {
+"m": [
+1385.6,
+2847.5
+],
+"p": [
+"hexACP_c"
+],
+"s": [
+"thex2eACP_c"
+]
+},
+"EAR60y": {
+"c": {
+"hexACP_c": [
+1334.7,
+2901.3
+],
+"thex2eACP_c": [
+1334.7,
+2795.3
+]
+},
+"m": [
+1341.7,
+2848.3
+],
+"p": [
+"hexACP_c"
+],
+"s": [
+"thex2eACP_c"
+]
+},
+"EAR80x": {
+"m": [
+1604.0,
+2845.7
+],
+"p": [
+"ocACP_c"
+],
+"s": [
+"toct2eACP_c"
+]
+},
+"EAR80y": {
+"c": {
+"ocACP_c": [
+1569.9,
+2889.7
+],
+"toct2eACP_c": [
+1565.5,
+2802.0
+]
+},
+"m": [
+1575.1,
+2849.0
+],
+"p": [
+"ocACP_c"
+],
+"s": [
+"toct2eACP_c"
+]
+},
+"ENO": {
+"m": [
+940.6,
+1208.0
+],
+"p": [
+"pep_c"
+],
+"s": [
+"2pg_c"
+]
+},
+"ETOHtex": {
+"m": [
+1673.9,
+2000.2
+],
+"p": [
+"etoh_p"
+],
+"s": [
+"etoh_e"
+]
+},
+"ETOHtrpp": {
+"m": [
+1673.9,
+1860.2
+],
+"p": [
+"etoh_c"
+],
+"s": [
+"etoh_p"
+]
+},
+"EX_ac_e": {
+"boundary": true,
+"end": [
+1558.6,
+2319.7
+],
+"p": [],
+"s": [
+"ac_e"
+]
+},
+"EX_acald_e": {
+"boundary": true,
+"end": [
+1569.1,
+2144.2
+],
+"p": [],
+"s": [
+"acald_e"
+]
+},
+"EX_akg_e": {
+"boundary": true,
+"end": [
+2186.6,
+1612.5
+],
+"p": [],
+"s": [
+"akg_e"
+]
+},
+"EX_co2_e": {
+"boundary": true,
+"end": [
+773.6,
+2727.6
+],
+"p": [],
+"s": [
+"co2_e"
+]
+},
+"EX_etoh_e": {
+"boundary": true,
+"end": [
+1673.9,
+2140.2
+],
+"p": [],
+"s": [
+"etoh_e"
+]
+},
+"EX_for_e": {
+"boundary": true,
+"end": [
+950.8,
+1952.3
+],
+"p": [],
+"s": [
+"for_e"
+]
+},
+"EX_fru_e": {
+"boundary": true,
+"end": [
+482.4,
+335.1
+],
+"p": [],
+"s": [
+"fru_e"
+]
+},
+"EX_fum_e": {
+"boundary": true,
+"end": [
+1277.7,
+1003.6
+],
+"p": [],
+"s": [
+"fum_e"
+]
+},
+"EX_glc__D_e": {
+"boundary": true,
+"end": [
+940.7,
+-10.0
+],
+"p": [],
+"s": [
+"glc__D_e"
+]
+},
+"EX_glcn_e": {
+"boundary": true,
+"end": [
+1388.0,
+184.6
+],
+"p": [],
+"s": [
+"glcn_e"
+]
+},
+"EX_gln__L_e": {
+"boundary": true,
+"end": [
+2475.7,
+1602.5
+],
+"p": [],
+"s": [
+"gln__L_e"
+]
+},
+"EX_glu__L_e": {
+"boundary": true,
+"end": [
+2147.0,
+1095.1
+],
+"p": [],
+"s": [
+"glu__L_e"
+]
+},
+"EX_glyc__R_e": {
+"boundary": true,
+"end": [
+660.6,
+1378.0
+],
+"p": [],
+"s": [
+"glyc__R_e"
+]
+},
+"EX_glyc_e": {
+"boundary": true,
+"end": [
+580.6,
+560.8
+],
+"p": [],
+"s": [
+"glyc_e"
+]
+},
+"EX_h2o_e": {
+"boundary": true,
+"end": [
+416.7,
+2727.6
+],
+"p": [],
+"s": [
+"h2o_e"
+]
+},
+"EX_h_e": {
+"boundary": true,
+"end": [
+175.2,
+2729.4
+],
+"p": [],
+"s": [
+"h_e"
+]
+},
+"EX_lac__D_e": {
+"boundary": true,
+"end": [
+817.8,
+2105.2
+],
+"p": [],
+"s": [
+"lac__D_e"
+]
+},
+"EX_mal__L_e": {
+"boundary": true,
+"end": [
+1222.8,
+1123.6
+],
+"p": [],
+"s": [
+"mal__L_e"
+]
+},
+"EX_nh4_e": {
+"boundary": true,
+"end": [
+542.2,
+2730.1
+],
+"p": [],
+"s": [
+"nh4_e"
+]
+},
+"EX_o2_e": {
+"boundary": true,
+"end": [
+3398.8,
+622.0
+],
+"p": [],
+"s": [
+"o2_e"
+]
+},
+"EX_pi_e": {
+"boundary": true,
+"end": [
+286.5,
+2732.3
+],
+"p": [],
+"s": [
+"pi_e"
+]
+},
+"EX_pyr_e": {
+"boundary": true,
+"end": [
+540.1,
+1545.0
+],
+"p": [],
+"s": [
+"pyr_e"
+]
+},
+"EX_rib__D_e": {
+"boundary": true,
+"end": [
+1621.8,
+260.0
+],
+"p": [],
+"s": [
+"rib__D_e"
+]
+},
+"EX_so4_e": {
+"boundary": true,
+"end": [
+384.8,
+254.4
+],
+"p": [],
+"s": [
+"so4_e"
+]
+},
+"EX_succ_e": {
+"boundary": true,
+"end": [
+2082.2,
+864.9
+],
+"p": [],
+"s": [
+"succ_e"
+]
+},
+"EX_xyl__D_e": {
+"boundary": true,
+"end": [
+1226.6,
+889.8
+],
+"p": [],
+"s": [
+"xyl__D_e"
+]
+},
+"FBA": {
+"c": {
+"dhap_c": [
+923.5,
+765.5
+]
+},
+"m": [
+940.6,
+716.0
+],
+"p": [
+"g3p_c",
+"dhap_c"
+],
+"s": [
+"fdp_c"
+]
+},
+"FBP": {
+"c": {
+"f6p_c": [
+849.8,
+525.3
+],
+"fdp_c": [
+848.9,
+685.6
+]
+},
+"m": [
+852.6,
+604.0
+],
+"p": [
+"f6p_c"
+],
+"s": [
+"fdp_c"
+]
+},
+"FORt2pp": {
+"m": [
+1077.6,
+1845.7
+],
+"p": [],
+"s": [
+"for_p"
+]
+},
+"FORtex": {
+"c": {
+"for_p": [
+1079.0,
+1921.2
+]
+},
+"m": [
+1054.9,
+1931.2
+],
+"p": [
+"for_p"
+],
+"s": [
+"for_e"
+]
+},
+"FORtppi": {
+"c": {
+"for_p": [
+1115.2,
+1873.0
+]
+},
+"m": [
+1121.6,
+1831.3
+],
+"p": [
+"for_p"
+],
+"s": []
+},
+"FRD2": {
+"c": {
+"fum_c": [
+1687.2,
+1018.6
+],
+"mqn8_c@2": [
+1797.3,
+983.5
+],
+"succ_c": [
+1832.2,
+1005.9
+]
+},
+"m": [
+1755.7,
+995.0
+],
+"p": [
+"succ_c",
+"mqn8_c@2"
+],
+"s": [
+"fum_c"
+]
+},
+"FRUpts2pp": {
+"c": {
+"f6p_c": [
+927.9,
+381.5
+]
+},
+"m": [
+828.4,
+335.7
+],
+"p": [
+"f6p_c"
+],
+"s": [
+"fru_p"
+]
+},
+"FRUtex": {
+"m": [
+622.4,
+335.1
+],
+"p": [
+"fru_p"
+],
+"s": [
+"fru_e"
+]
+},
+"FUM": {
+"m": [
+1592.2,
+1148.4
+],
+"p": [
+"mal__L_c"
+],
+"s": [
+"fum_c"
+]
+},
+"FUMt2_2pp": {
+"c": {
+"fum_c": [
+1625.1,
+1021.1
+]
+},
+"m": [
+1557.7,
+1003.8
+],
+"p": [
+"fum_c"
+],
+"s": [
+"fum_p"
+]
+},
+"FUMtex": {
+"m": [
+1417.7,
+1003.6
+],
+"p": [
+"fum_p"
+],
+"s": [
+"fum_e"
+]
+},
+"G3PD2": {
+"m": [
+790.6,
+796.0
+],
+"p": [
+"dhap_c"
+],
+"s": [
+"glyc3p_c"
+]
+},
+"G3PT": {
+"c": {
+"glyc3p_c": [
+699.4,
+843.4
+],
+"glyc_c": [
+598.5,
+842.5
+]
+},
+"m": [
+646.3,
+846.4
+],
+"p": [
+"glyc_c"
+],
+"s": [
+"glyc3p_c"
+]
+},
+"G5SADs": {
+"m": [
+2591.2,
+1260.5
+],
+"p": [
+"1pyr5c_c"
+],
+"s": [
+"glu5sa_c"
+]
+},
+"G5SD": {
+"m": [
+2451.2,
+1260.5
+],
+"p": [
+"glu5sa_c"
+],
+"s": [
+"glu5p_c"
+]
+},
+"G6PDH2r": {
+"m": [
+1041.4,
+424.0
+],
+"p": [
+"6pgl_c"
+],
+"s": [
+"g6p_c"
+]
+},
+"GAPD": {
+"m": [
+940.6,
+876.0
+],
+"p": [
+"13dpg_c"
+],
+"s": [
+"g3p_c"
+]
+},
+"GARFT": {
+"m": [
+2010.3,
+224.9
+],
+"p": [
+"fgam_c"
+],
+"s": [
+"gar_c"
+]
+},
+"GHMT2r": {
+"c": {
+"mlthf_c": [
+418.8,
+1196.6
+]
+},
+"m": [
+479.6,
+1141.0
+],
+"p": [
+"gly_c",
+"mlthf_c"
+],
+"s": [
+"ser__L_c"
+]
+},
+"GK1": {
+"m": [
+3260.9,
+92.5
+],
+"p": [
+"gdp_c"
+],
+"s": [
+"gmp_c"
+]
+},
+"GLCNt2rpp": {
+"m": [
+1248.9,
+241.4
+],
+"p": [
+"glcn_c"
+],
+"s": [
+"glcn_p"
+]
+},
+"GLCNtex": {
+"m": [
+1280.1,
+184.6
+],
+"p": [
+"glcn_p"
+],
+"s": [
+"glcn_e"
+]
+},
+"GLCptspp": {
+"m": [
+941.3,
+321.5
+],
+"p": [
+"g6p_c"
+],
+"s": [
+"glc__D_p"
+]
+},
+"GLCtex_copy1": {
+"m": [
+940.7,
+130.0
+],
+"p": [
+"glc__D_p"
+],
+"s": [
+"glc__D_e"
+]
+},
+"GLNS": {
+"c": {
+"gln__L_c": [
+2266.1,
+1522.7
+],
+"glu__L_c": [
+2266.2,
+1407.0
+]
+},
+"m": [
+2264.2,
+1465.6
+],
+"p": [
+"gln__L_c"
+],
+"s": [
+"glu__L_c"
+]
+},
+"GLNabcpp": {
+"c": {
+"gln__L_c": [
+2219.6,
+1598.1
+]
+},
+"m": [
+2259.2,
+1600.7
+],
+"p": [
+"gln__L_c"
+],
+"s": [
+"gln__L_p"
+]
+},
+"GLNtex": {
+"m": [
+2365.2,
+1602.2
+],
+"p": [
+"gln__L_p"
+],
+"s": [
+"gln__L_e"
+]
+},
+"GLU5K": {
+"c": {
+"glu__L_c": [
+2258.3,
+1303.7
+]
+},
+"m": [
+2311.2,
+1260.5
+],
+"p": [
+"glu5p_c"
+],
+"s": [
+"glu__L_c"
+]
+},
+"GLUDy": {
+"m": [
+2119.0,
+1370.4
+],
+"p": [
+"akg_c"
+],
+"s": [
+"glu__L_c"
+]
+},
+"GLUN": {
+"m": [
+2217.4,
+1460.8
+],
+"p": [
+"glu__L_c"
+],
+"s": [
+"gln__L_c"
+]
+},
+"GLUPRT": {
+"m": [
+1918.9,
+403.7
+],
+"p": [],
+"s": [
+"prpp_c"
+]
+},
+"GLUSy": {
+"c": {
+"akg_c": [
+2103.8,
+1620.6
+],
+"gln__L_c": [
+2163.4,
+1524.6
+],
+"glu__L_c": [
+2163.4,
+1403.9
+]
+},
+"m": [
+2165.0,
+1465.2
+],
+"p": [
+"glu__L_c"
+],
+"s": [
+"akg_c",
+"gln__L_c"
+]
+},
+"GLUt2rpp": {
+"c": {
+"glu__L_c": [
+2176.5,
+1325.4
+]
+},
+"m": [
+2146.6,
+1276.8
+],
+"p": [
+"glu__L_c"
+],
+"s": [
+"glu__L_p"
+]
+},
+"GLUtex": {
+"m": [
+2147.0,
+1199.9
+],
+"p": [
+"glu__L_p"
+],
+"s": [
+"glu__L_e"
+]
+},
+"GLYCAt2rpp": {
+"m": [
+730.6,
+1168.0
+],
+"p": [
+"glyc__R_c"
+],
+"s": [
+"glyc__R_p"
+]
+},
+"GLYCAtex": {
+"m": [
+660.6,
+1238.0
+],
+"p": [
+"glyc__R_p"
+],
+"s": [
+"glyc__R_e"
+]
+},
+"GLYCK2": {
+"m": [
+870.6,
+1168.0
+],
+"p": [
+"2pg_c"
+],
+"s": [
+"glyc__R_c"
+]
+},
+"GLYCL": {
+"c": {
+"thf_c": [
+450.9,
+1244.5
+]
+},
+"m": [
+410.0,
+1245.1
+],
+"p": [
+"mlthf_c"
+],
+"s": [
+"gly_c",
+"thf_c"
+]
+},
+"GLYCtex": {
+"m": [
+580.6,
+670.2
+],
+"p": [
+"glyc_p"
+],
+"s": [
+"glyc_e"
+]
+},
+"GLYCtpp": {
+"m": [
+580.6,
+752.6
+],
+"p": [
+"glyc_p"
+],
+"s": [
+"glyc_c"
+]
+},
+"GLYK": {
+"m": [
+650.6,
+796.0
+],
+"p": [
+"glyc3p_c"
+],
+"s": [
+"glyc_c"
+]
+},
+"GMPS2": {
+"m": [
+3103.0,
+89.8
+],
+"p": [
+"gmp_c"
+],
+"s": [
+"xmp_c"
+]
+},
+"GND": {
+"m": [
+1301.4,
+424.0
+],
+"p": [
+"ru5p__D_c"
+],
+"s": [
+"6pgc_c"
+]
+},
+"GNK": {
+"m": [
+1249.4,
+354.0
+],
+"p": [
+"6pgc_c"
+],
+"s": [
+"glcn_c"
+]
+},
+"GRXR": {
+"m": [
+490.1,
+2203.2
+],
+"p": [
+"grxrd_c"
+],
+"s": [
+"grxox_c"
+]
+},
+"GTHOr": {
+"m": [
+614.1,
+2206.5
+],
+"p": [
+"gthrd_c"
+],
+"s": [
+"gthox_c"
+]
+},
+"H2Otex": {
+"m": [
+416.7,
+2587.6
+],
+"p": [
+"h2o_p"
+],
+"s": [
+"h2o_e"
+]
+},
+"H2Otpp": {
+"m": [
+416.7,
+2461.6
+],
+"p": [
+"h2o_c"
+],
+"s": [
+"h2o_p"
+]
+},
+"HCO3E": {
+"m": [
+2122.5,
+1917.3
+],
+"p": [
+"hco3_c"
+],
+"s": [
+"co2_c@2"
+]
+},
+"HISTD": {
+"m": [
+2855.3,
+470.8
+],
+"p": [
+"his__L_c"
+],
+"s": [
+"histd_c"
+]
+},
+"HISTP": {
+"m": [
+2742.8,
+471.5
+],
+"p": [
+"histd_c"
+],
+"s": [
+"hisp_c"
+]
+},
+"HSDy": {
+"m": [
+2172.7,
+1990.2
+],
+"p": [
+"hom__L_c"
+],
+"s": [
+"aspsa_c"
+]
+},
+"HSK": {
+"m": [
+2320.2,
+1989.1
+],
+"p": [
+"phom_c"
+],
+"s": [
+"hom__L_c"
+]
+},
+"HSST": {
+"m": [
+2250.2,
+2038.0
+],
+"p": [
+"suchms_c"
+],
+"s": [
+"hom__L_c"
+]
+},
+"HSTPT": {
+"m": [
+2638.2,
+471.6
+],
+"p": [
+"hisp_c"
+],
+"s": [
+"imacp_c"
+]
+},
+"Htex": {
+"m": [
+175.2,
+2589.4
+],
+"p": [
+"h_p"
+],
+"s": [
+"h_e"
+]
+},
+"ICDHyr": {
+"c": {
+"akg_c": [
+2000.0,
+1419.3
+],
+"icit_c": [
+1927.3,
+1490.3
+]
+},
+"m": [
+1961.0,
+1456.4
+],
+"p": [
+"akg_c"
+],
+"s": [
+"icit_c"
+]
+},
+"ICL": {
+"c": {
+"glx_c": [
+1897.7,
+1360.3
+]
+},
+"m": [
+1885.4,
+1460.8
+],
+"p": [
+"glx_c",
+"succ_c"
+],
+"s": [
+"icit_c"
+]
+},
+"IG3PS": {
+"m": [
+2429.2,
+470.8
+],
+"p": [
+"eig3p_c"
+],
+"s": [
+"prlp_c"
+]
+},
+"IGPDH": {
+"m": [
+2522.9,
+471.7
+],
+"p": [
+"imacp_c"
+],
+"s": [
+"eig3p_c"
+]
+},
+"IGPS": {
+"m": [
+2250.2,
+564.1
+],
+"p": [
+"3ig3p_c"
+],
+"s": [
+"2cpr5p_c"
+]
+},
+"ILETA": {
+"m": [
+3097.7,
+2071.2
+],
+"p": [
+"3mop_c"
+],
+"s": [
+"ile__L_c"
+]
+},
+"IMPC": {
+"m": [
+2962.2,
+229.0
+],
+"p": [
+"fprica_c"
+],
+"s": [
+"imp_c"
+]
+},
+"IMPD": {
+"m": [
+3032.6,
+159.4
+],
+"p": [
+"xmp_c"
+],
+"s": [
+"imp_c"
+]
+},
+"IPMD": {
+"m": [
+93.0,
+1671.5
+],
+"p": [
+"3c4mop_c"
+],
+"s": [
+"3c2hmp_c"
+]
+},
+"IPPMIa": {
+"c": {
+"3c2hmp_c": [
+93.8,
+1772.1
+]
+},
+"m": [
+125.5,
+1766.3
+],
+"p": [
+"2ippm_c"
+],
+"s": [
+"3c2hmp_c"
+]
+},
+"IPPMIb": {
+"m": [
+252.4,
+1764.3
+],
+"p": [
+"3c3hmp_c"
+],
+"s": [
+"2ippm_c"
+]
+},
+"IPPS": {
+"m": [
+362.5,
+1762.9
+],
+"p": [
+"3c3hmp_c"
+],
+"s": [
+"3mob_c"
+]
+},
+"KARA1": {
+"m": [
+642.4,
+1758.9
+],
+"p": [
+"alac__S_c"
+],
+"s": [
+"23dhmb_c"
+]
+},
+"KARA2": {
+"m": [
+2826.4,
+2071.7
+],
+"p": [
+"23dhmp_c"
+],
+"s": [
+"2ahbut_c"
+]
+},
+"KAS14": {
+"c": {
+"actACP_c": [
+852.8,
+2426.1
+],
+"malACP_c": [
+1076.0,
+2045.3
+]
+},
+"m": [
+847.5,
+2268.5
+],
+"p": [
+"actACP_c"
+],
+"s": [
+"malACP_c",
+"acACP_c"
+]
+},
+"KAS15": {
+"c": {
+"accoa_c": [
+1128.7,
+2002.8
+],
+"malACP_c": [
+1184.9,
+2168.5
+]
+},
+"m": [
+1042.9,
+2317.3
+],
+"p": [
+"actACP_c"
+],
+"s": [
+"malACP_c",
+"accoa_c"
+]
+},
+"LDH_D": {
+"m": [
+928.4,
+1825.2
+],
+"p": [
+"pyr_c"
+],
+"s": [
+"lac__D_c"
+]
+},
+"LEUTAi": {
+"m": [
+93.2,
+1391.5
+],
+"p": [
+"leu__L_c"
+],
+"s": [
+"4mop_c"
+]
+},
+"MALS": {
+"m": [
+1683.0,
+1273.2
+],
+"p": [
+"mal__L_c"
+],
+"s": [
+"glx_c"
+]
+},
+"MALt2_2pp": {
+"c": {
+"mal__L_c": [
+1554.6,
+1137.5
+]
+},
+"m": [
+1502.2,
+1124.4
+],
+"p": [
+"mal__L_c"
+],
+"s": [
+"mal__L_p"
+]
+},
+"MALtex": {
+"m": [
+1362.8,
+1123.6
+],
+"p": [
+"mal__L_p"
+],
+"s": [
+"mal__L_e"
+]
+},
+"MCOATA": {
+"m": [
+1385.6,
+2367.5
+],
+"p": [
+"malACP_c"
+],
+"s": [
+"malcoa_c"
+]
+},
+"MDH": {
+"c": {
+"oaa_c": [
+1546.3,
+1348.4
+]
+},
+"m": [
+1549.4,
+1279.6
+],
+"p": [
+"oaa_c"
+],
+"s": [
+"mal__L_c"
+]
+},
+"ME1": {
+"c": {
+"pyr_c": [
+1149.3,
+1480.9
+]
+},
+"m": [
+1418.6,
+1262.0
+],
+"p": [
+"pyr_c"
+],
+"s": [
+"mal__L_c"
+]
+},
+"ME2": {
+"c": {
+"pyr_c": [
+1165.9,
+1502.6
+]
+},
+"m": [
+1422.6,
+1274.0
+],
+"p": [
+"pyr_c"
+],
+"s": [
+"mal__L_c"
+]
+},
+"METS": {
+"c": {
+"thf_c@2": [
+2502.0,
+2186.1
+]
+},
+"m": [
+2459.9,
+2187.5
+],
+"p": [
+"thf_c@2"
+],
+"s": [
+"hcys__L_c"
+]
+},
+"MTHFC": {
+"m": [
+130.0,
+1245.1
+],
+"p": [
+"10fthf_c"
+],
+"s": [
+"methf_c"
+]
+},
+"MTHFD": {
+"m": [
+270.0,
+1245.1
+],
+"p": [
+"methf_c"
+],
+"s": [
+"mlthf_c"
+]
+},
+"MTHFR2": {
+"m": [
+2461.7,
+2250.9
+],
+"p": [],
+"s": [
+"mlthf_c@2"
+]
+},
+"NADH16pp": {
+"c": {
+"nad_c": [
+3217.2,
+1015.4
+],
+"nadh_c": [
+3054.9,
+993.9
+],
+"q8_c": [
+3074.3,
+945.1
+],
+"q8h2_c": [
+3145.7,
+952.7
+]
+},
+"m": [
+3116.8,
+986.0
+],
+"p": [
+"q8h2_c",
+"nad_c"
+],
+"s": [
+"q8_c",
+"nadh_c"
+]
+},
+"NADH17pp": {
+"c": {
+"mql8_c@2": [
+3380.6,
+879.9
+],
+"mqn8_c@3": [
+3287.6,
+897.1
+]
+},
+"m": [
+3348.8,
+880.5
+],
+"p": [
+"mql8_c@2"
+],
+"s": [
+"mqn8_c@3"
+]
+},
+"NADTRHD": {
+"c": {
+"nad_c@2": [
+2861.1,
+980.1
+],
+"nadh_c@2": [
+2759.3,
+977.7
+]
+},
+"m": [
+2812.0,
+973.8
+],
+"p": [
+"nadp_c",
+"nadh_c@2"
+],
+"s": [
+"nadph_c",
+"nad_c@2"
+]
+},
+"NDPK1": {
+"m": [
+3396.7,
+93.3
+],
+"p": [
+"gtp_c"
+],
+"s": [
+"gdp_c"
+]
+},
+"NDPK2": {
+"m": [
+2789.2,
+1754.5
+],
+"p": [
+"utp_c"
+],
+"s": [
+"udp_c"
+]
+},
+"NDPK4": {
+"m": [
+3372.7,
+1614.5
+],
+"p": [
+"dttp_c"
+],
+"s": [
+"dtdp_c"
+]
+},
+"NDPK5": {
+"m": [
+3325.0,
+263.8
+],
+"p": [
+"dgtp_c"
+],
+"s": [
+"dgdp_c"
+]
+},
+"NDPK6": {
+"m": [
+2808.2,
+1614.5
+],
+"p": [
+"dutp_c"
+],
+"s": [
+"dudp_c"
+]
+},
+"NDPK7": {
+"m": [
+3243.4,
+1895.5
+],
+"p": [
+"dctp_c"
+],
+"s": [
+"dcdp_c"
+]
+},
+"NDPK8": {
+"m": [
+3170.1,
+323.1
+],
+"p": [
+"datp_c"
+],
+"s": [
+"dadp_c"
+]
+},
+"NH4tex": {
+"m": [
+542.2,
+2590.1
+],
+"p": [
+"nh4_p"
+],
+"s": [
+"nh4_e"
+]
+},
+"NH4tpp": {
+"m": [
+542.2,
+2456.5
+],
+"p": [
+"nh4_c"
+],
+"s": [
+"nh4_p"
+]
+},
+"NTP5": {
+"m": [
+3032.0,
+1824.5
+],
+"p": [
+"cdp_c"
+],
+"s": [
+"ctp_c"
+]
+},
+"O2tex": {
+"m": [
+3258.8,
+622.0
+],
+"p": [
+"o2_p"
+],
+"s": [
+"o2_e"
+]
+},
+"O2tpp": {
+"m": [
+3112.8,
+622.0
+],
+"p": [
+"o2_c"
+],
+"s": [
+"o2_p"
+]
+},
+"OCBT": {
+"m": [
+3090.3,
+1386.1
+],
+"p": [
+"citr__L_c"
+],
+"s": [
+"orn_c"
+]
+},
+"OMCDC": {
+"m": [
+93.1,
+1531.5
+],
+"p": [
+"4mop_c"
+],
+"s": [
+"3c4mop_c"
+]
+},
+"OMPDC": {
+"c": {
+"co2_c@3": [
+2605.0,
+1751.7
+]
+},
+"m": [
+2571.6,
+1752.7
+],
+"p": [
+"co2_c@3",
+"ump_c"
+],
+"s": [
+"orot5p_c"
+]
+},
+"ORPT": {
+"m": [
+2449.0,
+1752.7
+],
+"p": [
+"orot_c"
+],
+"s": [
+"orot5p_c"
+]
+},
+"P5CR": {
+"m": [
+2731.2,
+1260.5
+],
+"p": [
+"pro__L_c"
+],
+"s": [
+"1pyr5c_c"
+]
+},
+"PAPSR": {
+"c": {
+"pap_c": [
+330.8,
+884.2
+]
+},
+"m": [
+312.0,
+847.4
+],
+"p": [
+"so3_c",
+"pap_c"
+],
+"s": [
+"paps_c"
+]
+},
+"PDH": {
+"m": [
+1116.7,
+1757.3
+],
+"p": [
+"accoa_c"
+],
+"s": [
+"pyr_c"
+]
+},
+"PFK": {
+"m": [
+940.6,
+612.0
+],
+"p": [
+"fdp_c"
+],
+"s": [
+"f6p_c"
+]
+},
+"PFL": {
+"c": {
+"accoa_c": [
+1218.2,
+1789.1
+],
+"pyr_c": [
+994.4,
+1791.3
+]
+},
+"m": [
+1076.1,
+1786.1
+],
+"p": [
+"accoa_c"
+],
+"s": [
+"pyr_c"
+]
+},
+"PGCD": {
+"m": [
+846.1,
+1068.7
+],
+"p": [
+"3php_c"
+],
+"s": [
+"3pg_c"
+]
+},
+"PGI": {
+"m": [
+940.6,
+476.0
+],
+"p": [
+"f6p_c"
+],
+"s": [
+"g6p_c"
+]
+},
+"PGK": {
+"m": [
+940.6,
+1008.0
+],
+"p": [
+"13dpg_c"
+],
+"s": [
+"3pg_c"
+]
+},
+"PGL": {
+"m": [
+1173.4,
+424.0
+],
+"p": [
+"6pgc_c"
+],
+"s": [
+"6pgl_c"
+]
+},
+"PGM": {
+"m": [
+940.6,
+1116.0
+],
+"p": [
+"3pg_c"
+],
+"s": [
+"2pg_c"
+]
+},
+"PHETA1": {
+"m": [
+2329.0,
+1032.3
+],
+"p": [
+"phpyr_c"
+],
+"s": [
+"phe__L_c"
+]
+},
+"PIt2rpp": {
+"c": {
+"pi_c": [
+259.6,
+2397.8
+]
+},
+"m": [
+257.3,
+2442.3
+],
+"p": [
+"pi_c"
+],
+"s": [
+"pi_p"
+]
+},
+"PItex": {
+"m": [
+286.5,
+2592.3
+],
+"p": [
+"pi_p"
+],
+"s": [
+"pi_e"
+]
+},
+"PItpp": {
+"m": [
+286.1,
+2440.3
+],
+"p": [
+"pi_p"
+],
+"s": [
+"pi_c"
+]
+},
+"PPA": {
+"m": [
+178.3,
+2199.1
+],
+"p": [
+"h_c"
+],
+"s": [
+"h2o_c@2"
+]
+},
+"PPC": {
+"c": {
+"oaa_c": [
+1324.8,
+1398.8
+],
+"pep_c": [
+1015.5,
+1280.2
+]
+},
+"m": [
+1084.2,
+1312.4
+],
+"p": [
+"oaa_c"
+],
+"s": [
+"pep_c"
+]
+},
+"PPCK": {
+"c": {
+"oaa_c": [
+1323.3,
+1418.2
+]
+},
+"m": [
+1080.2,
+1328.4
+],
+"p": [
+"pep_c"
+],
+"s": [
+"oaa_c"
+]
+},
+"PPND": {
+"m": [
+2329.0,
+892.3
+],
+"p": [
+"34hpp_c"
+],
+"s": [
+"pphn_c"
+]
+},
+"PPNDH": {
+"m": [
+2259.0,
+962.3
+],
+"p": [
+"phpyr_c"
+],
+"s": [
+"pphn_c"
+]
+},
+"PPS": {
+"c": {
+"pep_c": [
+835.0,
+1274.4
+],
+"pyr_c": [
+821.9,
+1593.7
+]
+},
+"m": [
+852.6,
+1376.0
+],
+"p": [
+"pep_c"
+],
+"s": [
+"pyr_c"
+]
+},
+"PRAGSr": {
+"m": [
+1916.8,
+303.7
+],
+"p": [
+"gar_c"
+],
+"s": []
+},
+"PRAIS": {
+"m": [
+2305.3,
+226.1
+],
+"p": [
+"air_c"
+],
+"s": [
+"fpram_c"
+]
+},
+"PRAIi": {
+"m": [
+2153.0,
+564.1
+],
+"p": [
+"2cpr5p_c"
+],
+"s": [
+"pran_c"
+]
+},
+"PRAMPC": {
+"m": [
+2260.1,
+471.8
+],
+"p": [
+"prfp_c"
+],
+"s": [
+"prbamp_c"
+]
+},
+"PRASCSi": {
+"m": [
+2633.4,
+228.2
+],
+"p": [
+"25aics_c"
+],
+"s": [
+"5aizc_c"
+]
+},
+"PRATPP": {
+"m": [
+2120.1,
+472.5
+],
+"p": [
+"prbamp_c"
+],
+"s": [
+"prbatp_c"
+]
+},
+"PRFGS": {
+"m": [
+2182.3,
+225.3
+],
+"p": [
+"fpram_c"
+],
+"s": [
+"fgam_c"
+]
+},
+"PRMICI": {
+"m": [
+2340.1,
+471.5
+],
+"p": [
+"prlp_c"
+],
+"s": [
+"prfp_c"
+]
+},
+"PRPPS": {
+"c": {
+"r5p_c": [
+1590.1,
+492.3
+]
+},
+"m": [
+1702.6,
+473.8
+],
+"p": [
+"prpp_c"
+],
+"s": [
+"r5p_c"
+]
+},
+"PSCVT": {
+"m": [
+2125.1,
+751.8
+],
+"p": [
+"3psme_c"
+],
+"s": [
+"skm5p_c"
+]
+},
+"PSERT": {
+"m": [
+706.1,
+1069.6
+],
+"p": [
+"pser__L_c"
+],
+"s": [
+"3php_c"
+]
+},
+"PSP_L": {
+"m": [
+549.6,
+1070.5
+],
+"p": [
+"ser__L_c"
+],
+"s": [
+"pser__L_c"
+]
+},
+"PTAr": {
+"c": {
+"accoa_c": [
+1442.7,
+1768.5
+]
+},
+"m": [
+1487.7,
+1829.7
+],
+"p": [
+"actp_c"
+],
+"s": [
+"accoa_c"
+]
+},
+"PYK": {
+"m": [
+940.6,
+1400.0
+],
+"p": [
+"pyr_c"
+],
+"s": [
+"pep_c"
+]
+},
+"PYRt2rpp": {
+"c": {
+"pyr_c": [
+875.5,
+1623.8
+]
+},
+"m": [
+783.7,
+1547.0
+],
+"p": [
+"pyr_c"
+],
+"s": [
+"pyr_p"
+]
+},
+"PYRtex": {
+"m": [
+680.1,
+1545.4
+],
+"p": [
+"pyr_p"
+],
+"s": [
+"pyr_e"
+]
+},
+"RBK": {
+"m": [
+1486.2,
+470.0
+],
+"p": [
+"r5p_c"
+],
+"s": [
+"rib__D_c"
+]
+},
+"RIBabcpp": {
+"m": [
+1486.2,
+330.0
+],
+"p": [
+"rib__D_c"
+],
+"s": [
+"rib__D_p"
+]
+},
+"RIBtex": {
+"m": [
+1518.6,
+260.0
+],
+"p": [
+"rib__D_p"
+],
+"s": [
+"rib__D_e"
+]
+},
+"RNDR1": {
+"c": {
+"adp_c": [
+3128.8,
+466.4
+]
+},
+"m": [
+3120.0,
+420.6
+],
+"p": [
+"dadp_c"
+],
+"s": [
+"adp_c"
+]
+},
+"RNDR1b": {
+"c": {
+"adp_c": [
+3210.5,
+468.6
+]
+},
+"m": [
+3218.1,
+426.0
+],
+"p": [
+"dadp_c"
+],
+"s": [
+"adp_c"
+]
+},
+"RNDR2": {
+"c": {
+"gdp_c": [
+3297.3,
+118.1
+]
+},
+"m": [
+3288.4,
+148.0
+],
+"p": [
+"dgdp_c"
+],
+"s": [
+"gdp_c"
+]
+},
+"RNDR2b": {
+"c": {
+"gdp_c": [
+3357.0,
+122.3
+]
+},
+"m": [
+3359.9,
+154.2
+],
+"p": [
+"dgdp_c"
+],
+"s": [
+"gdp_c"
+]
+},
+"RNDR3": {
+"m": [
+3103.4,
+1895.5
+],
+"p": [
+"dcdp_c"
+],
+"s": [
+"cdp_c"
+]
+},
+"RNDR4": {
+"m": [
+2738.2,
+1684.5
+],
+"p": [
+"dudp_c"
+],
+"s": [
+"udp_c"
+]
+},
+"RPE": {
+"m": [
+1336.6,
+484.0
+],
+"p": [
+"xu5p__D_c"
+],
+"s": [
+"ru5p__D_c"
+]
+},
+"RPI": {
+"m": [
+1440.6,
+488.0
+],
+"p": [
+"ru5p__D_c"
+],
+"s": [
+"r5p_c"
+]
+},
+"SADT2": {
+"m": [
+312.3,
+567.4
+],
+"p": [
+"aps_c"
+],
+"s": [
+"so4_c"
+]
+},
+"SDPDS": {
+"m": [
+2578.3,
+2309.2
+],
+"p": [
+"26dap_LL_c"
+],
+"s": [
+"sl26da_c"
+]
+},
+"SDPTA": {
+"m": [
+2438.3,
+2309.2
+],
+"p": [
+"sl2a6o_c"
+],
+"s": [
+"sl26da_c"
+]
+},
+"SERAT": {
+"m": [
+409.6,
+1071.4
+],
+"p": [
+"acser_c"
+],
+"s": [
+"ser__L_c"
+]
+},
+"SHK3Dr": {
+"m": [
+1897.3,
+752.3
+],
+"p": [
+"skm_c"
+],
+"s": [
+"3dhsk_c"
+]
+},
+"SHKK": {
+"m": [
+2010.8,
+752.3
+],
+"p": [
+"skm5p_c"
+],
+"s": [
+"skm_c"
+]
+},
+"SHSL1": {
+"m": [
+2249.7,
+2128.1
+],
+"p": [
+"cyst__L_c"
+],
+"s": [
+"suchms_c"
+]
+},
+"SO4t2pp": {
+"m": [
+315.7,
+402.3
+],
+"p": [
+"so4_c"
+],
+"s": [
+"so4_p"
+]
+},
+"SO4tex": {
+"m": [
+314.8,
+287.6
+],
+"p": [
+"so4_p"
+],
+"s": [
+"so4_e"
+]
+},
+"SUCCt1pp": {
+"c": {
+"succ_c": [
+1870.6,
+1018.5
+]
+},
+"m": [
+1890.7,
+982.3
+],
+"p": [
+"succ_p"
+],
+"s": [
+"succ_c"
+]
+},
+"SUCCt2_2pp": {
+"c": {
+"succ_c": [
+1939.6,
+1055.1
+]
+},
+"m": [
+1948.7,
+1006.4
+],
+"p": [
+"succ_c"
+],
+"s": [
+"succ_p"
+]
+},
+"SUCCtex": {
+"m": [
+2012.2,
+934.9
+],
+"p": [
+"succ_p"
+],
+"s": [
+"succ_e"
+]
+},
+"SUCDi": {
+"c": {
+"fum_c": [
+1707.6,
+1050.2
+],
+"succ_c": [
+1831.0,
+1039.3
+]
+},
+"m": [
+1770.2,
+1045.6
+],
+"p": [
+"fum_c"
+],
+"s": [
+"succ_c"
+]
+},
+"SUCOAS": {
+"c": {
+"succ_c": [
+1936.4,
+1085.0
+]
+},
+"m": [
+1971.0,
+1126.0
+],
+"p": [
+"succoa_c"
+],
+"s": [
+"succ_c"
+]
+},
+"SULR": {
+"m": [
+311.4,
+970.1
+],
+"p": [
+"h2s_c"
+],
+"s": [
+"so3_c"
+]
+},
+"SULabcpp": {
+"c": {
+"so4_c": [
+296.8,
+447.2
+],
+"so4_p": [
+290.2,
+360.8
+]
+},
+"m": [
+268.6,
+403.9
+],
+"p": [
+"so4_c"
+],
+"s": [
+"so4_p"
+]
+},
+"T2DECAI": {
+"c": {
+"cdec3eACP_c": [
+1756.6,
+2875.7
+]
+},
+"m": [
+1797.1,
+2785.6
+],
+"p": [
+"cdec3eACP_c"
+],
+"s": [
+"tdec2eACP_c"
+]
+},
+"TALA": {
+"c": {
+"e4p_c": [
+1382.6,
+771.5
+],
+"f6p_c@2": [
+1384.9,
+788.8
+],
+"g3p_c@2": [
+1389.8,
+657.4
+],
+"s7p_c": [
+1384.1,
+656.2
+]
+},
+"m": [
+1389.8,
+716.0
+],
+"p": [
+"e4p_c",
+"f6p_c@2"
+],
+"s": [
+"g3p_c@2",
+"s7p_c"
+]
+},
+"THD2pp": {
+"c": {
+"nad_c@2": [
+2808.4,
+866.6
+],
+"nadh_c@2": [
+2765.2,
+755.5
+],
+"nadp_c": [
+2722.9,
+742.5
+],
+"nadph_c": [
+2837.9,
+889.5
+]
+},
+"m": [
+2808.0,
+793.8
+],
+"p": [
+"nadph_c",
+"nad_c@2"
+],
+"s": [
+"nadp_c",
+"nadh_c@2"
+]
+},
+"THDPS": {
+"m": [
+2298.3,
+2309.2
+],
+"p": [
+"sl2a6o_c"
+],
+"s": [
+"thdp_c"
+]
+},
+"THRD_L": {
+"c": {
+"thr__L_c": [
+2543.1,
+2049.3
+]
+},
+"m": [
+2577.3,
+2071.7
+],
+"p": [
+"2obut_c"
+],
+"s": [
+"thr__L_c"
+]
+},
+"THRS": {
+"m": [
+2460.2,
+1989.1
+],
+"p": [
+"thr__L_c"
+],
+"s": [
+"phom_c"
+]
+},
+"TKT1": {
+"c": {
+"g3p_c@2": [
+1394.0,
+653.1
+],
+"r5p_c": [
+1390.9,
+521.7
+],
+"s7p_c": [
+1383.3,
+655.2
+],
+"xu5p__D_c": [
+1387.2,
+524.2
+]
+},
+"m": [
+1388.6,
+596.0
+],
+"p": [
+"g3p_c@2",
+"s7p_c"
+],
+"s": [
+"xu5p__D_c",
+"r5p_c"
+]
+},
+"TKT2": {
+"c": {
+"e4p_c": [
+1304.7,
+573.1
+],
+"f6p_c": [
+1024.4,
+607.5
+],
+"g3p_c": [
+981.5,
+616.8
+],
+"xu5p__D_c": [
+1239.7,
+633.5
+]
+},
+"m": [
+1128.6,
+612.0
+],
+"p": [
+"f6p_c",
+"g3p_c"
+],
+"s": [
+"e4p_c",
+"xu5p__D_c"
+]
+},
+"TMDS": {
+"c": {
+"dhf_c@2": [
+3120.2,
+1613.0
+]
+},
+"m": [
+3088.2,
+1614.5
+],
+"p": [
+"dhf_c@2",
+"dtmp_c"
+],
+"s": [
+"dump_c"
+]
+},
+"TPI": {
+"m": [
+900.6,
+796.0
+],
+"p": [
+"g3p_c"
+],
+"s": [
+"dhap_c"
+]
+},
+"TRDR": {
+"m": [
+401.9,
+2201.3
+],
+"p": [
+"trdrd_c"
+],
+"s": [
+"trdox_c"
+]
+},
+"TRPS2": {
+"m": [
+2478.6,
+564.1
+],
+"p": [
+"trp__L_c"
+],
+"s": [
+"indole_c"
+]
+},
+"TRPS3": {
+"m": [
+2338.6,
+564.1
+],
+"p": [
+"indole_c"
+],
+"s": [
+"3ig3p_c"
+]
+},
+"TYRTA": {
+"m": [
+2469.0,
+892.3
+],
+"p": [
+"34hpp_c"
+],
+"s": [
+"tyr__L_c"
+]
+},
+"UMPK": {
+"m": [
+2680.9,
+1754.5
+],
+"p": [
+"udp_c"
+],
+"s": [
+"ump_c"
+]
+},
+"VALTA": {
+"m": [
+401.9,
+1675.8
+],
+"p": [
+"3mob_c"
+],
+"s": [
+"val__L_c"
+]
+},
+"VPAMTr": {
+"m": [
+460.0,
+1676.9
+],
+"p": [
+"val__L_c"
+],
+"s": [
+"3mob_c"
+]
+},
+"XYLI1": {
+"m": [
+1156.6,
+610.0
+],
+"p": [
+"xylu__D_c"
+],
+"s": [
+"xyl__D_c"
+]
+},
+"XYLK": {
+"m": [
+1226.6,
+540.0
+],
+"p": [
+"xu5p__D_c"
+],
+"s": [
+"xylu__D_c"
+]
+},
+"XYLt2pp": {
+"m": [
+1156.6,
+750.0
+],
+"p": [
+"xyl__D_c"
+],
+"s": [
+"xyl__D_p"
+]
+},
+"XYLtex": {
+"m": [
+1156.6,
+851.5
+],
+"p": [
+"xyl__D_p"
+],
+"s": [
+"xyl__D_e"
+]
+}
+},
+"regions": [
+{
+"anchor": "start",
+"label": "Pyrimidines",
+"x": 2526.6,
+"y": 1855.5
+},
+{
+"anchor": "start",
+"label": "Fatty acid elongation",
+"x": 1863,
+"y": 2351
+},
+{
+"anchor": "end",
+"label": "Fatty acid initiation",
+"x": 773,
+"y": 2032
+},
+{
+"anchor": "start",
+"label": "C1 pool",
+"x": 239,
+"y": 1172
+},
+{
+"anchor": "start",
+"label": "Purines",
+"x": 2295.1,
+"y": 151.7
+},
+{
+"anchor": "start",
+"label": "Aromatic amino acids",
+"x": 1582.8,
+"y": 708.5
+},
+{
+"anchor": "start",
+"label": "Histidine",
+"x": 1592.1,
+"y": 414.7
+},
+{
+"anchor": "start",
+"label": "Sulfate",
+"x": 123,
+"y": 214
+},
+{
+"anchor": "start",
+"label": "Redox proteins",
+"x": 366.7,
+"y": 2332.8
+},
+{
+"anchor": "start",
+"label": "Water, phosphate and nitrogen uptake",
+"x": 212,
+"y": 2783
+},
+{
+"anchor": "start",
+"label": "Electron transport",
+"x": 3226.0,
+"y": 994.4
+},
+{
+"anchor": "start",
+"label": "Energy and maintenance",
+"x": 2583,
+"y": 557
+},
+{
+"anchor": "end",
+"label": "Glucose uptake",
+"x": 901,
+"y": 136
+},
+{
+"anchor": "end",
+"label": "Glycolysis",
+"x": 901,
+"y": 975
+},
+{
+"anchor": "middle",
+"label": "Citric acid cycle",
+"x": 1787,
+"y": 1255
+},
+{
+"anchor": "start",
+"label": "Pentose phosphate",
+"x": 963,
+"y": 364
+},
+{
+"anchor": "start",
+"label": "Unsaturated fatty acids",
+"x": 1980.0,
+"y": 3093.1
+}
+],
+"source": "the authors' Escher map at commit 08dd438, scripts/make_ich360_layout.py",
+"world": [
+3556,
+3058
+]
+}

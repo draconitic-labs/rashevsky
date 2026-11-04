@@ -7,7 +7,7 @@
     "reactions_matched": 3861,
     "reactions_with_flux": 526
   },
-  "escher_reactions_in_data": 95,
+  "escher_reactions_in_data": 349,
   "escher_schema": "https://raw.githubusercontent.com/opencobra/escher/master/py/escher/static/jsonschema/1-0-0",
   "escher_schema_valid": true,
   "max_abs_difference_exact_events_vs_independent_recompute": 0.0,

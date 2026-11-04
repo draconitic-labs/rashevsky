@@ -29,12 +29,12 @@ from common import CORE, engine, write_result
 TOL = 1e-6
 
 
-def fresh():
-    m = cobra.io.read_sbml_model(str(CORE))
-    return m
+def compare(CORE, published=None) -> dict:
+    """Every comparison on one SBML file; `published` is a growth rate from the literature, if any."""
 
+    def fresh():
+        return cobra.io.read_sbml_model(str(CORE))
 
-def main() -> int:
     model = fresh()
     checks = {}
 
@@ -43,13 +43,13 @@ def main() -> int:
     ours = engine("fba", CORE)
     simplex = engine("fba", CORE, "--backend", "simplex")
     checks["fba_objective"] = {
-        "published": 0.8739,
+        "published": published,
         "cobrapy": ref.objective_value,
         "rashevsky_highs": ours["objective"],
         "rashevsky_simplex": simplex["objective"],
         "pass": abs(ours["objective"] - ref.objective_value) < TOL
         and abs(simplex["objective"] - ref.objective_value) < TOL
-        and round(ours["objective"], 4) == 0.8739,
+        and (published is None or round(ours["objective"], 4) == published),
     }
 
     # FVA at fractions of 1.0 and 0.9
@@ -208,11 +208,19 @@ def main() -> int:
         "pass": int((ref_mm_c > 1e-9).sum()) == len(ours_mm_c["uptake"]),
     }
 
+    return checks
+
+
+def record(name: str, checks: dict) -> int:
     passed = all(c["pass"] for c in checks.values())
-    write_result("v01_core_cobrapy", {"cobrapy_version": cobra.__version__, "checks": checks, "pass": passed})
-    for name, c in checks.items():
-        print(f"  {'ok ' if c['pass'] else 'BAD'} {name}: { {k: v for k, v in c.items() if k != 'pass'} }")
+    write_result(name, {"cobrapy_version": cobra.__version__, "checks": checks, "pass": passed})
+    for key, c in checks.items():
+        print(f"  {'ok ' if c['pass'] else 'BAD'} {key}: { {k: v for k, v in c.items() if k != 'pass'} }")
     return 0 if passed else 1
+
+
+def main() -> int:
+    return record("v01_core_cobrapy", compare(CORE, published=0.8739))
 
 
 if __name__ == "__main__":

@@ -2,12 +2,14 @@
 
 import { emit, h, invoke, on, pickFile, pickSave, setModel, solve, state, toast } from '../core.js';
 
+const BIGG = 'Downloads once. BiGG terms: research, education, non-profit.';
 const CATALOG = [
-  { name: 'e_coli_core', title: 'E. coli core', detail: '95 reactions. Central carbon metabolism, with a hand-drawn map.', bundled: true },
-  { name: 'iML1515', title: 'E. coli iML1515', detail: '2,712 reactions. Genome scale, from BiGG Models.' },
-  { name: 'iJO1366', title: 'E. coli iJO1366', detail: '2,583 reactions. Genome scale, from BiGG Models.' },
-  { name: 'Human-GEM', title: 'Human-GEM', detail: '12,748 reactions. Human metabolism, reaches the Atlas map.' },
-  { name: 'Recon3D', title: 'Recon3D', detail: '10,600 reactions. Human metabolism, from BiGG Models.' },
+  { name: 'iCH360', title: 'E. coli iCH360', detail: '349 reactions. Energy and biosynthesis, on the authors\' map.', bundled: true },
+  { name: 'e_coli_core', title: 'E. coli core', detail: '95 reactions. The textbook model.', terms: BIGG },
+  { name: 'iML1515', title: 'E. coli iML1515', detail: '2,712 reactions. Genome scale.', terms: BIGG },
+  { name: 'iJO1366', title: 'E. coli iJO1366', detail: '2,583 reactions. Genome scale.', terms: BIGG },
+  { name: 'Human-GEM', title: 'Human-GEM', detail: '12,748 reactions. Human metabolism, reaches the Atlas map.', terms: 'Downloads once. CC BY 4.0.' },
+  { name: 'Recon3D', title: 'Recon3D', detail: '10,600 reactions. Human metabolism.', terms: BIGG },
 ];
 
 let refs = {};
@@ -44,12 +46,12 @@ async function exportSbml() {
   }
 }
 
-async function openPath(path, curated = false) {
+async function openPath(path) {
   refs.status.textContent = 'Opening';
   try {
     const view = await invoke('open_file', { path });
     lastPath = path;
-    setModel(view, curated);
+    setModel(view);
     await solve();
     refs.status.textContent = '';
     emit('navigate', 'map');
@@ -63,7 +65,7 @@ async function openCatalog(item) {
   if (item.bundled) {
     const view = await invoke('open_bundled', { name: item.name });
     lastPath = null;
-    setModel(view, true);
+    setModel(view);
     await solve();
     emit('navigate', 'map');
     return;
@@ -93,7 +95,7 @@ export default {
           refs.status)),
       refs.current,
       h('div', { class: 'catalog' }, CATALOG.map((item) => h('button', { class: 'catalog-item', type: 'button', onclick: () => openCatalog(item) },
-        h('strong', {}, item.title), h('span', {}, item.detail), !item.bundled && h('span', { class: 'hint' }, 'Downloads once')))),
+        h('strong', {}, item.title), h('span', {}, item.detail), item.terms && h('span', { class: 'hint' }, item.terms)))),
     );
     on('model', renderCurrent);
     refs.terms = h('details', { class: 'terms' }, h('summary', {}, 'Terms of the built-in models and data'));

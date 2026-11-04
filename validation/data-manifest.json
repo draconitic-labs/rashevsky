@@ -1,5 +1,17 @@
 [
   {
+    "file": "e_coli_core.xml.gz",
+    "url": "http://bigg.ucsd.edu/static/models/e_coli_core.xml.gz",
+    "sha256": "182a4dbb2a5899ea7e71134cc99f2e409d382f1c32c02984e27fe34e5e34ca79",
+    "source": "Orth et al. 2010; BiGG Models, non-commercial terms"
+  },
+  {
+    "file": "iCH360_full_map.json",
+    "url": "https://raw.githubusercontent.com/marco-corrao/iCH360/08dd4388096dcf0c88f36d7229c0b06688582744/Visualisation/model_map/full_map.json",
+    "sha256": "071232f8c77e0842b4ef27f40e3f607502558debbe7e38add79a14bd74b7945d",
+    "source": "Corrao et al. 2025; MIT. Source of models/ich360/layout.json"
+  },
+  {
     "file": "iML1515.xml.gz",
     "url": "http://bigg.ucsd.edu/static/models/iML1515.xml.gz",
     "sha256": "2555e0f7e55a8cb8e770b9bb29cdaeb5db171941c414e7a232ff2d8e0228e308",

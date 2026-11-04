@@ -16,6 +16,9 @@ import json
 import re
 
 
+MOST_UNCERTAIN = 1000.0  # kJ/mol
+
+
 def read_species_and_reactions(path: str):
     text = gzip.open(path, "rt").read() if path.endswith(".gz") else open(path).read()
     species = dict(re.findall(r'<species[^>]*?id="M_([^"]+)"[^>]*?compartment="([^"]+)"', text))
@@ -66,7 +69,7 @@ def main() -> None:
     out = {}
     skipped = {}
     for rid, stoich in reactions.items():
-        if len(stoich) < 2 or rid.startswith(("BIOMASS", "ATPM", "EX_")):
+        if len(stoich) < 2 or rid.startswith(("BIOMASS", "Biomass", "ATPM", "EX_")):
             skipped[rid] = "boundary or pseudo reaction"
             continue
         compartments = {species[m] for m in stoich}
@@ -87,6 +90,10 @@ def main() -> None:
             estimate = cc.standard_dg_prime(reaction)
             value = estimate.value.m_as("kJ/mol")
             sigma = estimate.error.m_as("kJ/mol")
+            # eQuilibrator reports about 1e5 when it has no estimate, which constrains nothing.
+            if sigma > MOST_UNCERTAIN:
+                skipped[rid] = "no usable estimate"
+                continue
         except Exception as exc:  # noqa: BLE001
             skipped[rid] = f"{type(exc).__name__}: {exc}"[:120]
             continue

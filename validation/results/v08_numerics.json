@@ -77,12 +77,12 @@
   },
   "pass": true,
   "tfa": {
-    "fba_objective": 0.8739215069684304,
+    "fba_objective": 0.8656270306509495,
     "fluxes_against_gibbs": {},
-    "largest_excess_beyond_two_sigma": 1.3322676295501878e-14,
+    "largest_excess_beyond_two_sigma": 9.814371537686384e-14,
     "pass": true,
-    "reactions_with_energies": 48,
+    "reactions_with_energies": 186,
     "source": "eQuilibrator component contribution, equilibrator-api, pH 7.5, pMg 3.0, I 0.25 M, 298.15 K; data CC BY 4.0, doi:10.5281/zenodo.4128543",
-    "tfa_objective": 0.8739215069684304
+    "tfa_objective": 0.8656270306509494
   }
 }
