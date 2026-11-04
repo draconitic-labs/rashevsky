@@ -19,6 +19,12 @@ import drive
 
 OUT = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else pathlib.Path(__file__).resolve().parents[2] / "docs" / "screenshots"
 RUN_BUTTON = (1486, 52)
+# The navigation rail, from the top. Keys would work too, unless a slider has the focus.
+RAIL = {"map": 100, "screen": 165, "ranges": 228, "samples": 292, "kinetics": 355, "atlas": 419, "models": 482, "checks": 546}
+
+
+def go(session, view, settle=0.8):
+    session.click(38, RAIL[view], settle=settle)
 
 
 def problems(session):
@@ -38,33 +44,36 @@ def main() -> int:
         s.shot(OUT / "knockout.png")
         s.key("Escape", settle=0.5)
         s.click(967, 923, settle=1.0)  # Restore all, so that what follows starts from the whole network
-        s.key("2", settle=0.6)
-        s.click(1151, 53, settle=0.5)  # At once: two at a time
+        s.click(107, 863, settle=1.0)  # Oxygen uptake to zero: succinate couples to growth only without it
+        go(s, "screen", settle=0.6)
+        s.click(1151, 53, settle=0.5)  # At once: every pair
         s.key("Down", settle=0.2)
         s.key("Return", settle=0.5)
-        s.click(*RUN_BUTTON, settle=8)
+        s.click(*RUN_BUTTON, settle=20)
         s.shot(OUT / "screen.png")
-        s.key("3", settle=2.5)
+        go(s, "map", settle=0.6)
+        s.click(290, 863, settle=1.0)  # Oxygen back to unlimited
+        go(s, "ranges", settle=2.5)
         s.shot(OUT / "ranges.png")
-        s.key("4", settle=0.6)
+        go(s, "samples", settle=0.6)
         s.click(*RUN_BUTTON, settle=6)
         s.shot(OUT / "samples.png")
-        s.key("5", settle=2.5)
+        go(s, "kinetics", settle=2.5)
         s.shot(OUT / "kinetics.png")
         s.click(636, 52, settle=3)  # the steady state and control tab
         s.shot(OUT / "control.png")
-        s.key("7", settle=0.8)
+        go(s, "models", settle=0.8)
         s.shot(OUT / "models.png")
-        s.key("8", settle=1.2)
+        go(s, "checks", settle=1.2)
         s.shot(OUT / "checks.png")
-        s.key("1", settle=1)
+        go(s, "map", settle=1)
         found += problems(s)
     human = pathlib.Path(os.environ.get("RASHEVSKY_DATA", "")) / "Human-GEM.xml"
     if human.exists():
         with drive.Session(args=[str(human)]) as s:
             time.sleep(10)
             s.shot(OUT / "human-map.png")
-            s.key("6", settle=7)
+            go(s, "atlas", settle=7)
             s.shot(OUT / "atlas.png")
             found += problems(s)
     print("errors in the interface:", found or "none")

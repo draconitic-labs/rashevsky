@@ -349,10 +349,10 @@ fn screen_sets(m: &Model, req: &ScreenRequest) -> Reply<Vec<(Vec<String>, Vec<us
         ("reaction", 1) => singles_reaction(),
         ("gene", 2) | ("reaction", 2) => {
             let base = if req.kind == "gene" { singles_gene() } else { singles_reaction() };
-            // Only sets that disable something can change the answer, and lethal ones cannot recover.
+            // A deletion that is lethal alone stays lethal in a pair. One that disables nothing alone stays
+            // in: two isozymes disable a reaction only together.
             let viable: Vec<&(Vec<String>, Vec<usize>)> = base
                 .iter()
-                .filter(|(_, disabled)| !disabled.is_empty())
                 .filter(|(_, disabled)| {
                     let mut trial = m.clone();
                     for &j in disabled {
@@ -377,7 +377,10 @@ fn screen_sets(m: &Model, req: &ScreenRequest) -> Reply<Vec<(Vec<String>, Vec<us
                     };
                     disabled.sort_unstable();
                     disabled.dedup();
-                    out.push((ids, disabled));
+                    // A pair that disables nothing is the unperturbed network again.
+                    if !disabled.is_empty() {
+                        out.push((ids, disabled));
+                    }
                 }
             }
             out
@@ -426,7 +429,14 @@ pub async fn start_screen(state: State<'_, AppState>, request: ScreenRequest) ->
                     let growth = if s.status == Status::Optimal { s.objective } else { 0.0 };
                     let (mut guaranteed, mut possible) = (None, None);
                     if let (Some(t), Status::Optimal) = (target, s.status) {
-                        session.set_row_bounds(retention, growth, f64::INFINITY).map_err(text)?;
+                        // A warm start can find the exact optimum just out of reach by rounding. The table
+                        // shows three digits, so this slack does not show.
+                        let slack = 1e-9 * (1.0 + growth.abs());
+                        let (low, high) = match sense {
+                            Sense::Maximize => (growth - slack, f64::INFINITY),
+                            Sense::Minimize => (f64::NEG_INFINITY, growth + slack),
+                        };
+                        session.set_row_bounds(retention, low, high).map_err(text)?;
                         let mut cost = vec![0.0; objective.len()];
                         cost[t] = 1.0;
                         session.set_objective(Sense::Minimize, &cost).map_err(text)?;
@@ -823,5 +833,29 @@ pub fn validation() -> Reply<Value> {
 pub fn qa_log(line: String) {
     if std::env::var_os("RASHEVSKY_QA").is_some() {
         eprintln!("QA {line}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_pair_screen_includes_isozymes_that_disable_nothing_alone() {
+        let doc = rashevsky::sbml::read::read_bytes(CORE_XML).unwrap();
+        let model = Model::from_document(&doc).unwrap();
+        let request: ScreenRequest =
+            serde_json::from_value(json!({"kind": "gene", "order": 2, "min_growth": 0.05})).unwrap();
+        let sets = screen_sets(&model, &request).unwrap();
+        let names = |pair: (&str, &str)| -> Vec<String> {
+            let found = sets
+                .iter()
+                .find(|(ids, _)| ids.iter().any(|g| g == pair.0) && ids.iter().any(|g| g == pair.1))
+                .unwrap_or_else(|| panic!("{pair:?} is not in the screen"));
+            found.1.iter().map(|&j| model.reactions[j].id.clone()).collect()
+        };
+        // Pyruvate formate-lyase has two activating enzymes, so only deleting both stops it.
+        assert_eq!(names(("b0902", "b3951")), ["PFL"]);
+        assert!(sets.len() > 5000, "{}", sets.len());
     }
 }

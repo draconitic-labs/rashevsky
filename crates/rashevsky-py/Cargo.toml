@@ -10,6 +10,9 @@ description = "Python bindings of the Rashevsky metabolic modelling engine"
 publish = false
 
 [lib]
+# An extension module cannot link a test binary without libpython. python/tests covers this crate.
+test = false
+doctest = false
 name = "rashevsky"
 crate-type = ["cdylib", "rlib"]
 
