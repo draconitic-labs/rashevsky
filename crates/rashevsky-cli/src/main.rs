@@ -172,6 +172,38 @@ enum Command {
         #[arg(long)]
         open_boundaries: bool,
     },
+    /// Project a pFBA flux solution onto the Biochemistry site's map (JSON, optional SVG).
+    Overlay {
+        model: PathBuf,
+        #[command(flatten)]
+        edits: Edits,
+        /// The site's scene file.
+        #[arg(long)]
+        scene: PathBuf,
+        /// Rhea identifier index built by scripts/build_scene_index.py.
+        #[arg(long)]
+        rhea: Option<PathBuf>,
+        /// Also draw the overlay to this SVG file.
+        #[arg(long)]
+        svg: Option<PathBuf>,
+    },
+    /// Write an Escher map with a force-directed layout and its reaction data from pFBA.
+    Escher {
+        model: PathBuf,
+        #[command(flatten)]
+        edits: Edits,
+        /// Map file to write.
+        #[arg(long)]
+        map: PathBuf,
+        /// Reaction data file to write.
+        #[arg(long)]
+        data: PathBuf,
+        /// Only this subsystem, when the model has them.
+        #[arg(long)]
+        subsystem: Option<String>,
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+    },
     /// Uniform flux samples with convergence diagnostics.
     Sample {
         model: PathBuf,
@@ -546,6 +578,35 @@ fn run(cli: Cli) -> Result<()> {
             let m = Model::read_sbml(model)?;
             let list = rashevsky::tasks::parse_task_list(&std::fs::read_to_string(tasks)?)?;
             emit(&out, &rashevsky::tasks::check_tasks(&m, &list, !open_boundaries)?)
+        }
+        Command::Overlay { model, edits, scene, rhea, svg } => {
+            let m = load(&model, &edits)?;
+            let scene: rashevsky::io::overlay::Scene = serde_json::from_str(&std::fs::read_to_string(scene)?)?;
+            let rhea_events: BTreeMap<String, Vec<String>> = match rhea {
+                Some(path) => serde_json::from_str(&std::fs::read_to_string(path)?)?,
+                None => BTreeMap::new(),
+            };
+            let s = cb::pfba(&m, 1.0)?;
+            let objective = m.objective.iter().map(|&(j, c)| c * s.fluxes[j]).sum::<f64>();
+            let overlay = rashevsky::io::overlay::build_overlay(&m, &s.fluxes, Some(objective), &scene, &rhea_events)?;
+            if let Some(path) = svg {
+                std::fs::write(path, rashevsky::io::overlay::render_svg(&scene, &overlay))?;
+            }
+            emit(&out, &overlay)
+        }
+        Command::Escher { model, edits, map, data, subsystem, seed } => {
+            let m = load(&model, &edits)?;
+            let reactions: Vec<usize> = (0..m.reactions.len())
+                .filter(|&j| !m.reactions[j].id.starts_with("BIOMASS"))
+                .filter(|&j| subsystem.as_ref().is_none_or(|sub| m.reactions[j].subsystem.as_ref() == Some(sub)))
+                .collect();
+            let layout = rashevsky::io::layout::force_layout(&m, &reactions, seed, 400);
+            let name = subsystem.clone().unwrap_or_else(|| m.id.clone());
+            let map_doc = rashevsky::io::escher::map_json(&m, &layout, &name);
+            std::fs::write(map, serde_json::to_string(&map_doc)?)?;
+            let s = cb::pfba(&m, 1.0)?;
+            std::fs::write(data, serde_json::to_string_pretty(&rashevsky::io::escher::reaction_data(&m, &s.fluxes))?)?;
+            emit(&out, &serde_json::json!({"nodes": layout.metabolites.len() + layout.reactions.len(), "reactions": layout.reactions.len(), "objective": s.objective}))
         }
         Command::Sample { model, edits, method, chains, samples, thinning, burn_in, seed, fraction, full } => {
             let m = load(&model, &edits)?;

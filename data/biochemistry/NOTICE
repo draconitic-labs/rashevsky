@@ -1,0 +1,5 @@
+scene.json and rhea-events.json derive from the Atlas of Human Biochemistry
+(biochemistry.draconitic.com), Copyright 2026 Draconitic, Apache License 2.0.
+Layout: the Atlas's metabolism scene, release human-metabolism-r97-expanded-20261025.
+Scientific content: Reactome release 97 (https://reactome.org), with Rhea identifiers.
+Regenerate rhea-events.json with scripts/build_scene_index.py.

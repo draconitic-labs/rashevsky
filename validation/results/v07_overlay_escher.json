@@ -1,0 +1,19 @@
+{
+  "coverage": {
+    "events_ec_only": 771,
+    "events_exact": 414,
+    "events_in_scene": 2039,
+    "events_with_flux": 230,
+    "reactions_matched": 3861,
+    "reactions_with_flux": 526
+  },
+  "escher_reactions_in_data": 95,
+  "escher_schema": "https://raw.githubusercontent.com/opencobra/escher/master/py/escher/static/jsonschema/1-0-0",
+  "escher_schema_valid": true,
+  "max_abs_difference_exact_events_vs_independent_recompute": 0.0,
+  "objective_human_gem": 138.53269864419127,
+  "overlay_svg": "validation/results/human_gem_overlay.svg",
+  "pass": true,
+  "scene_release": "human-metabolism-r97-expanded-20261025",
+  "unknown_event_ids": []
+}

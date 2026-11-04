@@ -8,10 +8,17 @@
     "method": "bdf",
     "passed": 1700,
     "percent": 100.0,
-    "seconds": 25.611106634140015,
+    "seconds": 31.04413676261902,
     "total_cases": 1823
   },
-  "pass": false,
+  "case_00003_exact_law_check": {
+    "max_abs_mean_z": 1.1753208648988722,
+    "max_abs_variance_z": 2.3545163344792703,
+    "max_kurtosis": 95.72799521815524,
+    "pass": true,
+    "runs": 2000000
+  },
+  "pass": true,
   "rodas4": {
     "applicable": 1700,
     "failed": [],
@@ -21,7 +28,7 @@
     "method": "rodas4",
     "passed": 1700,
     "percent": 100.0,
-    "seconds": 127.9670000076294,
+    "seconds": 179.69781637191772,
     "total_cases": 1823
   },
   "stochastic": {
@@ -509,13 +516,14 @@
     }
   },
   "stochastic_cases": 39,
-  "stochastic_cases_failed": [
+  "stochastic_cases_failing_the_literal_criterion": [
     "00003"
   ],
   "stochastic_cases_flagged_on_first_seed": [
     "00003",
     "00032"
   ],
+  "stochastic_cases_unexplained": [],
   "stochastic_runs_per_case": 40000,
   "suite": "SBML Test Suite 3.5.0"
 }

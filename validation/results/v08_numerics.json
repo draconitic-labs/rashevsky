@@ -1,0 +1,88 @@
+{
+  "dfba": {
+    "dt_0.005": {
+      "biomass_end": 1.7418955486203347,
+      "glucose_end": 0.021856628337703302
+    },
+    "dt_0.01": {
+      "biomass_end": 1.7424900528442726,
+      "glucose_end": 0.019288203449013122
+    },
+    "dt_0.02": {
+      "biomass_end": 1.7437976546006126,
+      "glucose_end": 0.012887569316040452
+    },
+    "dt_0.04": {
+      "biomass_end": 1.7462991714155196,
+      "glucose_end": 0.017842475527186374
+    },
+    "observed_order": [
+      0.9358799299792674,
+      1.1371642545804512
+    ],
+    "pass": true
+  },
+  "integrators": {
+    "pass": true,
+    "study": {
+      "bdf_0.0001": {
+        "max_rel_error": 0.00014435496072724696,
+        "rejected": 1,
+        "rhs_evals": 438,
+        "steps": 174
+      },
+      "bdf_1e-06": {
+        "max_rel_error": 1.1664184901315697e-06,
+        "rejected": 2,
+        "rhs_evals": 916,
+        "steps": 352
+      },
+      "bdf_1e-08": {
+        "max_rel_error": 1.7085890336397805e-08,
+        "rejected": 0,
+        "rhs_evals": 1937,
+        "steps": 685
+      },
+      "bdf_1e-10": {
+        "max_rel_error": 5.15420377196065e-10,
+        "rejected": 0,
+        "rhs_evals": 4347,
+        "steps": 1410
+      },
+      "rodas4_0.0001": {
+        "max_rel_error": 1.7075076930897543e-05,
+        "rejected": 6,
+        "rhs_evals": 433,
+        "steps": 67
+      },
+      "rodas4_1e-06": {
+        "max_rel_error": 1.4103468581306112e-07,
+        "rejected": 4,
+        "rhs_evals": 1761,
+        "steps": 290
+      },
+      "rodas4_1e-08": {
+        "max_rel_error": 1.733745035691851e-09,
+        "rejected": 4,
+        "rhs_evals": 9837,
+        "steps": 1636
+      },
+      "rodas4_1e-10": {
+        "max_rel_error": 3.220381303520746e-11,
+        "rejected": 6,
+        "rhs_evals": 63487,
+        "steps": 10576
+      }
+    }
+  },
+  "pass": true,
+  "tfa": {
+    "fba_objective": 0.8739215069684304,
+    "fluxes_against_gibbs": {},
+    "largest_excess_beyond_two_sigma": 1.3322676295501878e-14,
+    "pass": true,
+    "reactions_with_energies": 48,
+    "source": "eQuilibrator component contribution, equilibrator-api, pH 7.5, pMg 3.0, I 0.25 M, 298.15 K; data CC BY 4.0, doi:10.5281/zenodo.4128543",
+    "tfa_objective": 0.8739215069684304
+  }
+}

@@ -8,6 +8,7 @@
 pub mod cb;
 pub mod error;
 pub mod gpr;
+pub mod io;
 pub mod kinetic;
 pub mod linalg;
 pub mod lp;

@@ -1,5 +1,5 @@
 target/
-/data/
+
 *.pyc
 __pycache__/
 .ipynb_checkpoints/
@@ -7,3 +7,4 @@ __pycache__/
 /python/*.so
 /web/pkg/
 /results/
+/data/thermo/*.tmp
