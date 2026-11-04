@@ -1,9 +1,10 @@
 // Knockout screens: every single or double deletion, ranked for a production target.
 
-import { emit, fmt, follow, h, invoke, on, perturbation, state, toast } from '../core.js';
+import { conditionsKey, deletionNote, emit, fmt, follow, h, invoke, on, perturbation, state, toast } from '../core.js';
 import { scatter } from '../chart.js';
 
 let refs = {};
+let ranUnder = null;
 let rows = [];
 let sort = { key: 'guaranteed', down: true };
 let job = null;
@@ -76,7 +77,10 @@ function renderTable(reference) {
 
 function applyToMap(row) {
   const kind = refs.kind.value;
-  emit('apply-design', { genes: kind === 'gene' ? row.ids : [], reactions: kind === 'reaction' ? row.ids : [] });
+  emit('apply-design', {
+    genes: kind === 'gene' ? [...new Set([...state.genes, ...row.ids])] : state.genes,
+    reactions: kind === 'reaction' ? [...new Set([...state.reactions, ...row.ids])] : state.reactions,
+  });
 }
 
 function choose(row, reference) {
@@ -114,8 +118,10 @@ async function run() {
     order: Number(refs.order.value),
     target: refs.target.value || null,
     min_growth: 0.05,
-    ...perturbation(false),
+    ...perturbation(),
   };
+  ranUnder = conditionsKey();
+  refs.stale.hidden = true;
   refs.run.textContent = 'Stop';
   refs.run.classList.add('button-cut');
   refs.progress.hidden = false;
@@ -189,9 +195,12 @@ export default {
           refs.note)));
     refs.results.hidden = true;
     refs.empty = h('div', { class: 'empty' }, h('h2', {}, 'Rank every deletion for a product'), h('p', {}, 'Choose what to delete and a target, then run the screen.'));
+    refs.stale = h('span', { class: 'stale-note', hidden: true }, 'Deletions or uptake limits changed since this run');
+    refs.stale.hidden = true;
+    on('solution', () => { refs.stale.hidden = ranUnder === null || ranUnder === conditionsKey(); });
     el.append(
       h('header', { class: 'view-head' },
-        h('h1', {}, 'Knockout screen'),
+        h('div', { class: 'view-title' }, h('h1', {}, 'Knockout screen'), deletionNote(), refs.stale),
         h('div', { class: 'controls' },
           h('label', { class: 'field' }, 'Delete', refs.kind),
           h('label', { class: 'field' }, 'At once', refs.order),

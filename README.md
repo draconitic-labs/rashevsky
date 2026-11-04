@@ -23,11 +23,13 @@ Each row is a named published result or another tool on the same input, with the
 | Check | Reference | Result |
 | --- | --- | --- |
 | `e_coli_core` growth | 0.8739 1/h, BiGG and COBRApy | 0.873922, equal to COBRApy within 1e-11 |
-| Flux variability | COBRApy, tolerance 1e-6 | largest difference 3e-11 on `e_coli_core`, 2e-6 on iML1515 |
+| Flux variability | COBRApy, tolerance 1e-6 | largest difference 3e-11 on `e_coli_core` |
 | iML1515 gene essentiality | Keio screens, Monk et al. 2017: 93.4 % | 93.48 % of 23,617 phenotypes; 1 row differs from the paper, traced to the model file |
 | Human-GEM | 57 essential tasks, Robinson et al. 2020 | 57 of 57, same verdicts as RAVEN |
+| Recon3D | COBRApy | same objective within 1e-15, all 2,248 gene deletions within 5e-14 relative |
+| Enzyme constraints | Published `eciML1515`, 7 conditions | within 3e-14 of an optimum certified by a dual bound |
 | Yeast glycolysis | Teusink et al. 2000, libRoadRunner | same steady state within 1e-14 |
-| Control coefficients | COPASI | largest difference 3e-7 |
+| Control coefficients | COPASI | largest difference 3e-7 for flux, 1.4e-6 for concentration |
 | Control theorems | exact | hold to 6e-12 on five published models |
 | SBML semantic suite | SBML Test Suite 3.5.0 | 1,700 of 1,700 applicable cases, with either integrator |
 | Stochastic suite | DSMTS | 38 of 39 by the suite's criterion; case 00003 exceeds it because of its kurtosis, and matches its exact law |
@@ -69,6 +71,8 @@ rashevsky sample model.xml --method chrr --fraction 0.9
 rashevsky tasks Human-GEM.xml metabolicTasks_Essential.txt
 rashevsky simulate models/teusink/BIOMD0000000064.xml --end 20 --method bdf
 rashevsky mca models/teusink/BIOMD0000000064.xml
+rashevsky sobol models/teusink/BIOMD0000000064.xml --range KmPFKF6P=0.05:0.2:log --range gR=2:10 --output GLK
+rashevsky fit model.xml --start k1=0.5 --data measured.csv --profile k1
 rashevsky --help
 ```
 

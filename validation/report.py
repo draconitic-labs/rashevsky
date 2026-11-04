@@ -84,6 +84,8 @@ def main() -> None:
     numerics = R["v08_numerics"]
     export = R.get("v09_sbml_export")
     perf = R.get("v10_performance")
+    recon = R["v11_recon3d"]
+    ec = R["v12_ecmodel"]
 
     w = []
     add = w.append
@@ -102,6 +104,8 @@ def main() -> None:
         ("Human-GEM balance", "same imbalanced set as COBRApy", f"{human['balanced_reactions']:,} of {human['internal_reactions']:,} balanced, {human['imbalanced_reactions']} imbalanced, {human['formula_missing']} undetermined", not human["imbalanced_only_in_rashevsky"] and not human["imbalanced_only_in_cobrapy"]),
         ("Control theorems", "under 1e-8 on five models", f"worst scaled residual {max(x['worst'] for x in t['theorems'].values()):.1e}", all(x["pass"] for x in t["theorems"].values())),
         ("Teusink steady state", "the curators' table; libRoadRunner within 1e-5", f"all {len(t['table'])} values in tolerance; libRoadRunner {t['steady_state_max_rel_difference_species']:.1e}", all(r["pass"] for r in t["table"]) and t["steady_state_max_rel_difference_species"] < 1e-5),
+        ("Recon3D", "same size, objective and 2,248 gene deletions within 1e-6 relative of COBRApy, FVA within 1e-5", f"objective {recon['checks']['objective']['rashevsky']:.4f}, deletions {recon['checks']['gene_deletions']['max_relative_difference']:.1e}, FVA {recon['checks']['fva']['max_abs_difference']:.1e}", recon["pass"]),
+        ("Enzyme constraints on eciML1515", "within 1e-6 of a certified optimum in 7 conditions", f"largest difference {max(c['module_relative_difference'] for c in ec['conditions']):.1e}", ec["pass"]),
         ("SBML semantic suite", "at least 95 % of applicable cases", f"{suite['rodas4']['passed']} of {suite['rodas4']['applicable']} with Rodas4, {suite['bdf']['passed']} of {suite['bdf']['applicable']} with BDF", suite["rodas4"]["percent"] >= 95 and suite["bdf"]["percent"] >= 95),
     ]
     for name, criterion, result, ok in rows:
@@ -140,6 +144,18 @@ def main() -> None:
     add("## Human-GEM\n\n`validation/v03_human_gem.py`\n")
     add(f"Human-GEM v2.1.1: {human['model']['reactions']:,} reactions, {human['model']['metabolites']:,} metabolites, {human['model']['genes']:,} genes, read in {human['load_seconds']:.2f} s. Essential tasks of Robinson et al. 2020: {human['essential_passed']} of {human['essential_tasks']} pass, with the verdict on every task equal to that of RAVEN's Python port on the same files ({human['seconds_essential_rashevsky']:.1f} s against {human['seconds_essential_raven_glpk']:.1f} s with GLPK). The verification list gives {human['verification_passed']} of {human['verification_tasks']}, same verdicts.\n")
     add(f"Of {human['internal_reactions']:,} internal reactions, {human['balanced_reactions']:,} ({human['balanced_percent_of_internal']:.1f} %) balance in elements and charge and {human['imbalanced_reactions']} do not, the same set as COBRApy's `check_mass_balance`. Another {human['formula_missing']} involve a metabolite without a formula. This engine reports those as undetermined, and COBRApy counts them as imbalanced.\n")
+
+    add("## Recon3D\n\n`validation/v11_recon3d.py`\n")
+    rc = recon["checks"]
+    add(f"Recon3D from BiGG Models (Brunk et al. 2018) against COBRApy with GLPK. Reactions, metabolites and genes: {rc['shape']['reactions'][0]:,}, {rc['shape']['metabolites'][0]:,} and {rc['shape']['genes'][0]:,} in both. Biomass objective {rc['objective']['rashevsky']:.6f} against {rc['objective']['cobrapy']:.6f}, relative difference {rc['objective']['relative_difference']:.1e}. FVA at 100 % of the optimum on {rc['fva']['reactions']} reactions chosen by a fixed seed: largest difference {rc['fva']['max_abs_difference']:.1e}. All {rc['gene_deletions']['genes']:,} single gene deletions, of which {rc['gene_deletions']['growth_changed']} change the objective and {rc['gene_deletions']['lethal']} stops it: largest relative difference {rc['gene_deletions']['max_relative_difference']:.1e}. After `rashevsky convert`, libSBML finds {rc['export']['libsbml_errors']} errors and COBRApy reads the same objective.\n")
+
+    add("## Enzyme constraints\n\n`validation/v12_ecmodel.py`\n")
+    add(f"The published `eciML1515` batch model (ecModels commit {ec['source_commit'][:7]}) with its pool of {ec['protein_pool']:.4f} g/gDW. The file's `_REV` and isozyme reactions were folded back into {ec['folded_reactions']:,} reactions and its enzymes read out as {ec['isozyme_direction_pairs']:,} data rows for the enzyme module. The reference is the same program with the enzyme rows eliminated by algebra, solved by HiGHS and closed by a dual upper bound, which holds for any dual vector because every variable has finite bounds.\n")
+    add("| Condition | Certified optimum | Upper bound | Enzyme module | Engine on the GECKO file | COBRApy on the GECKO file | Verdict |\n| --- | --- | --- | --- | --- | --- | --- |")
+    for c in ec["conditions"]:
+        add(f"| {c['condition']} | {c['certified_optimum']:.8f} | {c['certificate_upper_bound']:.8f} | {c['engine_enzyme_module']:.8f} ({c['module_relative_difference']:.0e}) | {c['engine_gecko_file']:.8f} ({c['direct_relative_difference']:.0e}) | {c['cobrapy_glpk_gecko_file']:.8f} ({c['cobrapy_relative_difference']:.0e}) | {verdict(c['pass'])} |")
+    add("\nRelative differences from the certified optimum are in brackets. COBRApy cannot read the file as published, because it decodes `R_protein__32__pseudoreaction` to an identifier with a space, so it reads a copy with that one encoding replaced.\n")
+    add("This check found a defect. HiGHS removes matrix entries at or below `small_matrix_value`, 1e-9 by default. `eciML1515` has 17 enzyme costs at or below that value, the smallest 5.6e-11, and without them those enzymes are free: the same file then gave 0.49713418 without oxygen against a true 0.49712429. The engine now sets 1e-12, the lowest value HiGHS accepts.\n")
 
     add("## Kinetic models\n\n`validation/v04_teusink_mca.py`\n")
     add("Reference values: Table 4 of Teusink et al. 2000 as reproduced by the BioModels curators in the notes of BIOMD0000000064, together with their curated model's column. The publisher's site refused direct access to the paper (HTTP 403), so the table was read from those notes. The curators note that the G6P of the curated model differs slightly from the paper's. Tolerance: one unit in the last printed digit of the curators' column.\n")
@@ -207,7 +223,8 @@ def main() -> None:
     add("### Thermodynamics\n")
     tf = numerics["tfa"]
     add(f"TFA on `e_coli_core` with {tf['reactions_with_energies']} eQuilibrator energies: growth {tf['tfa_objective']:.6f} against {tf['fba_objective']:.6f} without them, {len(tf['fluxes_against_gibbs'])} fluxes against their Gibbs energy, and every reported `DrG'` within two standard uncertainties of its value recomputed from the reported concentrations (largest excess {tf['largest_excess_beyond_two_sigma']:.1e} kJ/mol). The sign logic also has Rust tests on small networks with known answers.\n")
-    add("Enzyme constraints have Rust tests on cases with closed-form answers (`v = kcat P / MW`). No published enzyme-constrained result is reproduced here.\n")
+    add("### Sensitivity and estimation\n")
+    add("Rust tests, with Python and command-line tests of the same calls. Local sensitivities equal the analytic derivatives of a birth-death model and central finite differences on the Teusink model. Sobol indices match the closed form of a product of independent inputs at 2,000,000 samples, and the Ishigami function. On a fixed sample the model route gives the same indices as the closed-form output, from solved steady states and from a late time point. A fit recovers known rates from noise-free data, its profile brackets them, and a non-identifiable pair gives an open profile.\n")
 
     if perf:
         add("## Performance\n\n`validation/v10_performance.py`\n")

@@ -208,15 +208,18 @@ function renderMedium() {
   list.replaceChildren();
   const model = state.model;
   if (!model) return;
-  // Carbon sources first, then oxygen and nitrogen; water, protons, ions and carbon dioxide are
-  // left open and would only crowd the panel.
+  // Carbon sources first, then oxygen and nitrogen. Open uptakes of anything else, and water, protons,
+  // ions and carbon dioxide, would only crowd the panel.
   const rank = (m) => {
     const label = exchangeLabel(m.id).toLowerCase();
-    if (/co2|carbon dioxide|h2o|water|\bh\+|proton|phosphate|sulfate|sulphate|^pi$|^fe|iron|mg2|ca2|^k\b|^na|^cl|cobalt|copper|zinc|mn2|mo|ni2|tungstate|selen/.test(`${m.id} ${label}`)) return null;
-    if (/o2_e|oxygen|^o2$/.test(`${m.id} ${label}`)) return 1;
-    if (/nh4|ammoni/.test(`${m.id} ${label}`)) return 2;
-    if (/glucose|^glc/.test(`${label} ${m.id}`) || m.limit < 200) return 0;
-    return null;
+    const id = m.id.toLowerCase();
+    if (/co2|carbon dioxide/.test(`${id} ${label}`)) return null;
+    if (/(^|_)o2(_|$)|^oxygen$/.test(id) || /^(o2|oxygen)$/.test(label)) return 1;
+    if (/nh4|ammoni/.test(`${id} ${label}`)) return 2;
+    if (/^(d-)?glucose$/.test(label) || /^ex_glc/.test(id)) return 0;
+    if (m.limit >= 200) return null;
+    if (/h2o|water|\bh\+|proton|phosphate|sulfate|sulphate|^pi$|^fe|iron|mg2|ca2|^k\b|^na|^cl|cobalt|copper|zinc|mn2|\bmo\b|ni2|tungstate|selen/.test(`${id} ${label}`)) return null;
+    return 0;
   };
   const shown = model.medium
     .map((m) => ({ m, r: rank(m) }))
@@ -230,7 +233,6 @@ function renderMedium() {
     const finite = m.limit < 200;
     const top = finite ? Math.max(30, m.limit * 2) : 60;
     const current = state.bounds.get(m.id);
-    const consume = r.equation.endsWith(' ') || r.lb < 0;
     const value = current ? -current[0] : m.limit;
     const out = h('output', {}, value >= top ? 'Unlimited' : value.toFixed(1));
     const slider = h('input', {
@@ -244,7 +246,6 @@ function renderMedium() {
         mediumChanged();
       },
     });
-    void consume;
     list.append(h('label', { class: 'slider' }, h('span', { class: 'slider-name' }, exchangeLabel(m.id), out), slider));
   };
   shown.forEach(add);

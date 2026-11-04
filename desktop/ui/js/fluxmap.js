@@ -154,6 +154,7 @@ export class FluxMap {
     this.shown = new Array(reactionIds.length).fill(0);
     this.target = new Array(reactionIds.length).fill(0);
     this.maxFlux = 1;
+    this.ranked = null;
     this.particles = [];
     this.layerDirty = true;
     this.computeReveal();
@@ -203,15 +204,37 @@ export class FluxMap {
     this.disabled = new Set(disabled);
     this.growth = growth;
     let top = 1e-9;
-    for (const r of this.reactions) top = Math.max(top, Math.abs(fluxes[r.modelIndex] ?? 0));
+    const carrying = [];
+    for (const r of this.reactions) {
+      const size = Math.abs(fluxes[r.modelIndex] ?? 0);
+      top = Math.max(top, size);
+      if (size > 1e-7) carrying.push(size);
+    }
     this.maxFlux = top;
+    // Fluxes on a large map cluster, so its colour shows rank among the fluxes on view.
+    this.ranked = this.large ? carrying.sort((a, b) => a - b) : null;
     this.transition = 0;
     this.seedParticles();
     this.layerDirty = true;
   }
 
+  get large() {
+    return this.reactions.length > 150;
+  }
+
   magnitude(v) {
     if (this.maxFlux <= 0) return 0;
+    if (this.ranked?.length > 1) {
+      const size = Math.abs(v);
+      let low = 0;
+      let high = this.ranked.length;
+      while (low < high) {
+        const middle = (low + high) >> 1;
+        if (this.ranked[middle] < size) low = middle + 1;
+        else high = middle;
+      }
+      return low / (this.ranked.length - 1);
+    }
     return Math.min(1, Math.log1p(Math.abs(v) * 8) / Math.log1p(this.maxFlux * 8));
   }
 
@@ -227,7 +250,7 @@ export class FluxMap {
       const pathLength = (r.incoming[0]?.length ?? 0) + (r.outgoing[0]?.length ?? 0);
       const dense = Math.max(1, Math.round(pathLength / 90));
       // Large maps thin out, so that flow stays readable and the frame rate stays up.
-      const thin = this.reactions.length > 150 ? 0.4 : 1;
+      const thin = this.large ? 0.3 : 1;
       for (let k = 0; k < Math.max(1, Math.round(count * Math.min(dense, 4) * thin)); k++) {
         const previous = old[kept];
         kept += 1;
@@ -443,6 +466,7 @@ export class FluxMap {
 
     // Nodes and labels. Labels keep a constant size on screen until zoomed well in.
     const fontSize = Math.min(15, 12.5 / Math.max(0.55, k));
+    const namesFit = fontSize * k >= 8;
     g.font = `550 ${fontSize}px "Public Sans", sans-serif`;
     g.textAlign = 'center';
     g.textBaseline = 'alphabetic';
@@ -460,12 +484,15 @@ export class FluxMap {
       g.strokeStyle = n.flux > 1e-7 ? ramp(m) : '#566070';
       g.stroke();
       const selected = this.selected?.kind === 'metabolite' && this.selected.id === n.id;
-      if (selected || (this.hover?.kind === 'metabolite' && this.hover.id === n.id)) {
+      const hovered = this.hover?.kind === 'metabolite' && this.hover.id === n.id;
+      if (selected || hovered) {
         g.beginPath();
         g.arc(n.x, n.y, radius * 1.9, 0, Math.PI * 2);
         g.strokeStyle = '#ece8df';
         g.stroke();
       }
+      // Names too small to read are left out until the map is zoomed in.
+      if (!namesFit && !selected && !hovered) continue;
       // A dark halo keeps labels legible where lines pass.
       const gap = radius + 5 / Math.max(0.65, Math.sqrt(k));
       let lx = n.x;
@@ -550,6 +577,8 @@ export class FluxMap {
     const k = this.view.k;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.globalCompositeOperation = 'lighter';
+    // Particles add up where they overlap, so a dense map uses smaller, fainter ones.
+    const [baseSize, growSize, alpha] = this.large ? [4, 7, 0.5] : [7, 13, 0.92];
     for (const p of this.particles) {
       const v = this.target[p.r.modelIndex] ?? 0;
       if (this.reachedByReveal(p.r.order) < 1) continue;
@@ -568,8 +597,8 @@ export class FluxMap {
       const [sx, sy] = this.worldToScreen(point[0], point[1]);
       if (sx < -20 || sy < -20 || sx > this.size.w + 20 || sy > this.size.h + 20) continue;
       const sprite = this.sprites[Math.round(m * (SPRITE_STEPS - 1))];
-      const size = (7 + m * 13) * Math.min(1.5, Math.max(0.75, Math.sqrt(k)));
-      g.globalAlpha = 0.92;
+      const size = (baseSize + m * growSize) * Math.min(1.5, Math.max(0.75, Math.sqrt(k)));
+      g.globalAlpha = alpha;
       g.drawImage(sprite, sx - size / 2, sy - size / 2, size, size);
     }
     g.globalCompositeOperation = 'source-over';

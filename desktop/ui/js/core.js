@@ -80,6 +80,29 @@ export function perturbation(includeKnockouts = true) {
   };
 }
 
+/** The deletions an analysis runs under, shown beside its controls. */
+export function deletionNote() {
+  const note = h('div', { class: 'deleted-note', hidden: true });
+  const render = () => {
+    const names = [...state.genes, ...state.reactions];
+    note.hidden = names.length === 0;
+    note.replaceChildren(
+      h('span', { class: 'tray-label' }, 'Deleted'),
+      h('code', { class: 'ident' }, names.join(', ')),
+      h('button', { class: 'link', type: 'button', onclick: () => { state.genes = []; state.reactions = []; solve(); } }, 'Restore all'),
+    );
+  };
+  note.hidden = true;
+  on('solution', render);
+  on('model', render);
+  return note;
+}
+
+/** Identifies the deletions and bounds behind a result, to tell when it no longer applies. */
+export function conditionsKey() {
+  return JSON.stringify(perturbation());
+}
+
 let solveTicket = 0;
 export async function solve() {
   if (!state.model) return;

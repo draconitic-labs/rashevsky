@@ -24,6 +24,8 @@ differs is reported, since a changed upstream file changes the results.
 | File | Source | Terms |
 | --- | --- | --- |
 | `iML1515.xml.gz` | BiGG Models; Monk et al. 2017 | As `e_coli_core` above |
+| `Recon3D.xml.gz` | BiGG Models; Brunk et al. 2018 | As `e_coli_core` above |
+| `ecmodels/eciML1515_batch.xml` | SysBioChalmers/ecModels at commit 8c50008; Sanchez et al. 2017, Domenzain et al. 2022 | CC BY 4.0 |
 | `Human-GEM.xml`, `metabolicTasks_*.txt` | SysBioChalmers/Human-GEM v2.1.1; Robinson et al. 2020 | CC BY 4.0 |
 | `semantic_tests.zip`, `stochastic_tests.zip` | SBML Test Suite 3.5.0 | LGPL |
 | `monk_2017_data11.xlsx` | Supplementary Data 11 of Monk et al. 2017 | Journal supplement; read at validation time, not redistributed |

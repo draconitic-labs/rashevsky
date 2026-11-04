@@ -1,6 +1,6 @@
 // What a network can do: production envelopes and flux variability.
 
-import { fmt, h, invoke, on, perturbation, state, toast } from '../core.js';
+import { deletionNote, fmt, h, invoke, on, perturbation, state, toast } from '../core.js';
 import { lineChart } from '../chart.js';
 
 let refs = {};
@@ -87,7 +87,7 @@ export default {
     refs.rows = h('tbody');
     el.append(
       h('header', { class: 'view-head' },
-        h('h1', {}, 'Ranges'),
+        h('div', { class: 'view-title' }, h('h1', {}, 'Ranges'), deletionNote()),
         h('div', { class: 'controls' },
           h('label', { class: 'field' }, 'Horizontal', refs.control),
           h('label', { class: 'field' }, 'Vertical', refs.target))),

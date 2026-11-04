@@ -23,6 +23,8 @@ function rows(v) {
   const sampling = v.v06_sampling;
   const overlay = v.v07_overlay_escher;
   const numerics = v.v08_numerics;
+  const recon = v.v11_recon3d.checks;
+  const enzyme = v.v12_ecmodel;
   const worst = Math.max(...Object.values(teusink.theorems).map((t) => t.worst));
   const failingCases = suite.stochastic_cases_failing_the_literal_criterion ?? [];
   return [
@@ -31,6 +33,8 @@ function rows(v) {
     row('Double gene deletions', 'COBRApy within 1e-5', `${count(core.double_gene_deletion.pairs)} pairs, largest difference ${fmt.sci(core.double_gene_deletion.max_abs_difference)}`, core.double_gene_deletion.pass),
     row('iML1515 essentiality', 'Keio screens, Monk et al. 2017, 93.4 %', `${keio.accuracy_percent.toFixed(2)} % of ${count(keio.phenotypes)} phenotypes`, keio.pass),
     row('Human-GEM tasks', 'All 57 essential tasks, Robinson et al. 2020', `${human.essential_passed} of ${human.essential_tasks}, same verdicts as RAVEN`, human.pass),
+    row('Recon3D', 'COBRApy, 2,248 gene deletions within 1e-6', `Objective ${recon.objective.rashevsky.toFixed(4)}, largest difference ${fmt.sci(recon.gene_deletions.max_relative_difference)}`, v.v11_recon3d.pass),
+    row('Enzyme constraints', 'Published eciML1515, certified optimum in 7 conditions', `Largest difference ${fmt.sci(Math.max(...enzyme.conditions.map((c) => c.module_relative_difference)))}`, enzyme.pass),
     row('Yeast glycolysis', 'Teusink et al. 2000 Table 4, libRoadRunner', `Largest relative difference ${fmt.sci(teusink.steady_state_max_rel_difference_species)}`, teusink.pass),
     row('Control coefficients', 'COPASI within 1e-4', `Largest difference ${fmt.sci(teusink.flux_control_max_abs_difference_vs_copasi)}`, teusink.pass),
     row('Control theorems', 'Hold to 1e-8 on five models', `Worst residual ${fmt.sci(worst)}`, worst < 1e-8),

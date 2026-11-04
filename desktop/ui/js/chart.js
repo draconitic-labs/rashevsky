@@ -93,8 +93,9 @@ function extent(values, pad = 0.04) {
     }
   }
   if (!Number.isFinite(lo)) return [0, 1];
+  if (lo === 0 && hi === 0) return [0, 1];
   if (lo === hi) {
-    const d = Math.abs(lo) * 0.1 || 1;
+    const d = Math.abs(lo) * 0.1;
     return [lo - d, hi + d];
   }
   const d = (hi - lo) * pad;
@@ -226,8 +227,19 @@ export function heatmap(canvas, spec) {
   });
   g.fillStyle = INK;
   g.font = '11.5px "Public Sans", sans-serif';
-  g.textBaseline = 'middle';
+  // The colour scale, in the free corner above the row names.
+  const barWidth = left - 22;
+  for (let x = 0; x < barWidth; x++) {
+    g.fillStyle = colour(limit * ((2 * x) / (barWidth - 1) - 1));
+    g.fillRect(10 + x, 12, 1, 9);
+  }
+  g.fillStyle = INK;
+  g.textBaseline = 'top';
+  g.textAlign = 'left';
+  g.fillText(`\u2212${limit}`, 10, 25);
   g.textAlign = 'right';
+  g.fillText(`+${limit}`, 10 + barWidth, 25);
+  g.textBaseline = 'middle';
   rows.forEach((name, i) => g.fillText(name, left - 7, top + (i + 0.5) * ch));
   cols.forEach((name, j) => {
     g.save();

@@ -29,6 +29,8 @@ const VALIDATION: &[(&str, &str)] = &[
     ("v06_sampling", include_str!("../../../validation/results/v06_sampling.json")),
     ("v07_overlay_escher", include_str!("../../../validation/results/v07_overlay_escher.json")),
     ("v08_numerics", include_str!("../../../validation/results/v08_numerics.json")),
+    ("v11_recon3d", include_str!("../../../validation/results/v11_recon3d.json")),
+    ("v12_ecmodel", include_str!("../../../validation/results/v12_ecmodel.json")),
 ];
 
 /// Everything the window shares with this process.

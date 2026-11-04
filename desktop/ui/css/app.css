@@ -79,6 +79,10 @@ button { font: inherit; color: inherit; }
 .field-inline { flex-direction: row; align-items: center; gap: 8px; }
 .inline { display: inline-flex; align-items: center; gap: 8px; }
 .controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.view-title { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.deleted-note { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; font-size: 12.5px; color: #ffc0c8; }
+.deleted-note .ident { color: #ffc0c8; }
+.stale-note { font-size: 12.5px; color: var(--flavin); }
 .view-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 24px; flex: none; }
 .hint { color: var(--text-3); font-size: 12.5px; }
 input[type="range"] { accent-color: var(--flavin); width: 100%; margin: 0; }
@@ -158,7 +162,7 @@ input[type="checkbox"] { accent-color: var(--flavin); width: 16px; height: 16px;
 .legend-ramp { width: 120px; height: 8px; border-radius: 4px; }
 .fps { position: absolute; right: 70px; bottom: 12px; font-size: 12px; color: var(--text-3); }
 
-.inspector { position: absolute; top: 112px; right: 14px; bottom: 44px; width: 324px; background: rgba(27, 31, 35, 0.97); border: 1px solid var(--line-strong); border-radius: var(--radius-panel); padding: 13px 14px; display: flex; flex-direction: column; gap: 13px; overflow-y: auto; transform: translateX(calc(100% + 24px)); visibility: hidden; transition: transform 0.2s ease, visibility 0.2s; z-index: 4; }
+.inspector { position: absolute; top: 112px; right: 14px; bottom: 44px; width: 324px; background: rgb(27, 31, 35); border: 1px solid var(--line-strong); border-radius: var(--radius-panel); padding: 13px 14px; display: flex; flex-direction: column; gap: 13px; overflow-y: auto; transform: translateX(calc(100% + 24px)); visibility: hidden; transition: transform 0.2s ease, visibility 0.2s; z-index: 4; }
 .inspector.is-open { transform: none; visibility: visible; }
 .inspector.is-open ~ .zoom, .zoom:has(~ .inspector.is-open) { transform: translateX(-338px); }
 .inspector-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }

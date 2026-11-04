@@ -1,9 +1,10 @@
 // Uniform samples of the feasible flux space, and whether the chains have mixed.
 
-import { fmt, follow, h, invoke, on, perturbation, ramp, state, toast } from '../core.js';
+import { conditionsKey, deletionNote, fmt, follow, h, invoke, on, perturbation, ramp, state, toast } from '../core.js';
 import { bars } from '../chart.js';
 
 let refs = {};
+let ranUnder = null;
 let result = null;
 let busy = false;
 
@@ -11,6 +12,8 @@ async function run() {
   if (busy) return;
   busy = true;
   refs.run.disabled = true;
+  ranUnder = conditionsKey();
+  refs.stale.hidden = true;
   refs.status.textContent = 'Sampling';
   try {
     const keep = refs.keep.checked ? Number(refs.fraction.value) : null;
@@ -92,9 +95,12 @@ export default {
     refs.gridHead = h('div', { class: 'grid-head', hidden: true }, refs.filter);
     refs.gridHead.hidden = true;
     refs.empty = h('div', { class: 'empty' }, h('h2', {}, 'Sample what the network can do'), h('p', {}, 'Each reaction gets a distribution of fluxes over the feasible space, with convergence checks.'));
+    refs.stale = h('span', { class: 'stale-note', hidden: true }, 'Deletions or uptake limits changed since this run');
+    refs.stale.hidden = true;
+    on('solution', () => { refs.stale.hidden = ranUnder === null || ranUnder === conditionsKey(); });
     el.append(
       h('header', { class: 'view-head' },
-        h('h1', {}, 'Flux samples'),
+        h('div', { class: 'view-title' }, h('h1', {}, 'Flux samples'), deletionNote(), refs.stale),
         h('div', { class: 'controls' },
           h('label', { class: 'field' }, 'Sampler', refs.method),
           h('label', { class: 'field' }, 'Per chain', refs.samples),

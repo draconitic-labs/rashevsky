@@ -22,16 +22,23 @@ class Session:
     def __init__(self, size=(1560, 980), screen=(1760, 1200), args=(), binary=BINARY, title="^Rashevsky$"):
         SCRATCH.mkdir(parents=True, exist_ok=True)
         (SCRATCH / "tmp").mkdir(exist_ok=True)
-        self.log_path = SCRATCH / f"app-{int(time.time())}.log"
+        self.log_path = SCRATCH / f"app-{time.time_ns()}.log"
         self.log = self.log_path.open("w")
         read_fd, write_fd = os.pipe()
         self.xvfb = subprocess.Popen(
             ["Xvfb", "-displayfd", str(write_fd), "-screen", "0", f"{screen[0]}x{screen[1]}x24", "-nolisten", "tcp"],
             pass_fds=(write_fd,), stdout=self.log, stderr=self.log, start_new_session=True)
         os.close(write_fd)
-        if not select.select([read_fd], [], [], 15)[0]:
-            raise RuntimeError("the private display did not start")
-        self.display = ":" + os.read(read_fd, 100).decode().strip()
+        # Xvfb writes the number and the newline separately and dies if the pipe has closed in between.
+        number = b""
+        while not number.endswith(b"\n"):
+            if not select.select([read_fd], [], [], 15)[0]:
+                raise RuntimeError("the private display did not start")
+            chunk = os.read(read_fd, 100)
+            if not chunk:
+                raise RuntimeError(f"the private display exited; see {self.log_path}")
+            number += chunk
+        self.display = ":" + number.decode().strip()
         os.close(read_fd)
         self.env = os.environ.copy()
         self.env.update(DISPLAY=self.display, GDK_BACKEND="x11", WEBKIT_DISABLE_COMPOSITING_MODE="1",
