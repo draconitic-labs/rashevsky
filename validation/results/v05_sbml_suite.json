@@ -8,15 +8,71 @@
     "method": "bdf",
     "passed": 1700,
     "percent": 100.0,
-    "seconds": 31.04413676261902,
+    "seconds": 28.41742777824402,
     "total_cases": 1823
   },
-  "case_00003_exact_law_check": {
-    "max_abs_mean_z": 1.1753208648988722,
-    "max_abs_variance_z": 2.3545163344792703,
-    "max_kurtosis": 95.72799521815524,
-    "pass": true,
-    "runs": 2000000
+  "case_00003_exact_law_check": null,
+  "other_forms": {
+    "l2v1": {
+      "applicable": 1051,
+      "failed": [],
+      "passed": 1051
+    },
+    "l2v2": {
+      "applicable": 1234,
+      "failed": [],
+      "passed": 1234
+    },
+    "l2v3": {
+      "applicable": 1234,
+      "failed": [],
+      "passed": 1234
+    },
+    "l2v4": {
+      "applicable": 1251,
+      "failed": [],
+      "passed": 1251
+    },
+    "l2v5": {
+      "applicable": 1251,
+      "failed": [
+        {
+          "case": "01399",
+          "detail": "S1 at t = 0: got 5, expected 10"
+        }
+      ],
+      "passed": 1250
+    },
+    "l2v5_after_round_trip": {
+      "applicable": 1251,
+      "failed": [
+        {
+          "case": "01399",
+          "detail": "S1 at t = 0: got 5, expected 10"
+        }
+      ],
+      "passed": 1250
+    },
+    "l3v1": {
+      "applicable": 1490,
+      "failed": [],
+      "passed": 1490
+    },
+    "l3v1_after_round_trip": {
+      "applicable": 1490,
+      "failed": [],
+      "passed": 1490
+    },
+    "l3v2": {
+      "applicable": 1569,
+      "failed": [],
+      "passed": 1569
+    },
+    "newest_after_round_trip": {
+      "applicable": 1700,
+      "failed": [],
+      "passed": 1700
+    }
   },
   "pass": true,
   "rodas4": {
@@ -28,7 +84,7 @@
     "method": "rodas4",
     "passed": 1700,
     "percent": 100.0,
-    "seconds": 179.69781637191772,
+    "seconds": 112.43952631950378,
     "total_cases": 1823
   },
   "stochastic": {
@@ -62,18 +118,11 @@
           "points": 51,
           "runs": 40000,
           "seed": 20261104,
-          "y_failures": 10,
-          "z_failures": 0
-        },
-        {
-          "points": 51,
-          "runs": 40000,
-          "seed": 77,
-          "y_failures": 4,
+          "y_failures": 2,
           "z_failures": 0
         }
       ],
-      "pass": false
+      "pass": true
     },
     "00004": {
       "attempts": [
@@ -418,14 +467,7 @@
           "runs": 40000,
           "seed": 20261104,
           "y_failures": 0,
-          "z_failures": 4
-        },
-        {
-          "points": 102,
-          "runs": 40000,
-          "seed": 77,
-          "y_failures": 0,
-          "z_failures": 0
+          "z_failures": 2
         }
       ],
       "pass": true
@@ -485,7 +527,7 @@
           "runs": 40000,
           "seed": 20261104,
           "y_failures": 0,
-          "z_failures": 2
+          "z_failures": 0
         }
       ],
       "pass": true
@@ -508,21 +550,16 @@
           "points": 51,
           "runs": 40000,
           "seed": 20261104,
-          "y_failures": 0,
-          "z_failures": 0
+          "y_failures": 1,
+          "z_failures": 1
         }
       ],
       "pass": true
     }
   },
   "stochastic_cases": 39,
-  "stochastic_cases_failing_the_literal_criterion": [
-    "00003"
-  ],
-  "stochastic_cases_flagged_on_first_seed": [
-    "00003",
-    "00032"
-  ],
+  "stochastic_cases_failing_the_literal_criterion": [],
+  "stochastic_cases_flagged_on_first_seed": [],
   "stochastic_cases_unexplained": [],
   "stochastic_runs_per_case": 40000,
   "suite": "SBML Test Suite 3.5.0"

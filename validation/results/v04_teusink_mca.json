@@ -1,7 +1,7 @@
 {
-  "concentration_control_max_abs_difference_vs_copasi": 1.3855887694702584e-06,
+  "concentration_control_max_abs_difference_vs_copasi": 2.2278952434007238e-06,
   "copasi_version": "4.48.311 (Source)",
-  "flux_control_max_abs_difference_vs_copasi": 3.418028313717514e-07,
+  "flux_control_max_abs_difference_vs_copasi": 4.270572694364816e-07,
   "pass": true,
   "roadrunner_version": "2.11.0",
   "steady_state_max_rel_difference_fluxes": 6.465336119743693e-15,
@@ -166,18 +166,18 @@
       "pass": true,
       "reactions": 24,
       "residuals": {
-        "concentration_connectivity": 5.907024980682018e-13,
-        "concentration_kernel": 1.644906433284632e-12,
-        "concentration_summation": 1.5394469336236008e-14,
-        "flux_connectivity": 2.374881834646733e-14,
-        "flux_kernel": 1.9996245818058199e-13,
-        "flux_summation": 1.1324274851176597e-14,
-        "unscaled_concentration_connectivity": 1.6409784325673845e-09,
-        "unscaled_flux_connectivity": 8.795398600700883e-11
+        "concentration_connectivity": 1.859815149480254e-12,
+        "concentration_kernel": 2.2959412149248237e-12,
+        "concentration_summation": 7.767169749644556e-15,
+        "flux_connectivity": 5.2477474981482804e-14,
+        "flux_kernel": 2.9831692671677956e-13,
+        "flux_summation": 4.6629367034256575e-15,
+        "unscaled_concentration_connectivity": 2.1015046265034848e-09,
+        "unscaled_flux_connectivity": 6.267584334973658e-11
       },
       "states": 25,
       "title": "Hynne 2001 yeast glycolysis",
-      "worst": 1.644906433284632e-12
+      "worst": 2.2959412149248237e-12
     },
     "BIOMD0000000064": {
       "conserved_moieties": 8,
@@ -212,7 +212,7 @@
         "unscaled_flux_connectivity": 2.0817659739531364e-11
       },
       "states": 16,
-      "title": "Bakker 2001 Trypanosoma glycolysis",
+      "title": "Bakker2001_Glycolysis as named in the file",
       "worst": 8.756276426631596e-14
     },
     "BIOMD0000000172": {

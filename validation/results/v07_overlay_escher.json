@@ -1,9 +1,9 @@
 {
   "coverage": {
-    "events_ec_only": 771,
-    "events_exact": 414,
+    "events_ec_only": 809,
+    "events_exact": 376,
     "events_in_scene": 2039,
-    "events_with_flux": 230,
+    "events_with_flux": 268,
     "reactions_matched": 3861,
     "reactions_with_flux": 526
   },

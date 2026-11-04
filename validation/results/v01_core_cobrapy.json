@@ -5,7 +5,7 @@
       "pass": true
     },
     "double_gene_deletion": {
-      "max_abs_difference": 8.423373110133525e-12,
+      "max_abs_difference": 8.877121260297827e-12,
       "pairs": 9316,
       "pass": true
     },
@@ -17,18 +17,18 @@
       "rashevsky_simplex": 0.8739215069685253
     },
     "fva_fraction_0.9": {
-      "max_abs_difference": 9.521272659185342e-13,
+      "max_abs_difference": 5.044853423896711e-13,
       "pass": true,
       "reactions": 95,
       "tolerance": 1e-06,
-      "worst_reaction": "ATPS4r"
+      "worst_reaction": "THD2"
     },
     "fva_fraction_1.0": {
-      "max_abs_difference": 3.342401148067729e-11,
+      "max_abs_difference": 3.935518577691255e-12,
       "pass": true,
       "reactions": 95,
       "tolerance": 1e-06,
-      "worst_reaction": "MALS"
+      "worst_reaction": "SUCOAS"
     },
     "linear_moma_distance": {
       "cobrapy": 70.96499763492453,
@@ -51,7 +51,7 @@
       "rashevsky": 6.787057500000002
     },
     "moma_distance": {
-      "cobrapy_osqp": 220.4800708604787,
+      "cobrapy_osqp": 220.48007086047917,
       "knockout": "PGI",
       "pass": true,
       "rashevsky_highs_qp": 220.4804840370879,
@@ -63,12 +63,12 @@
       "rashevsky": 518.4220855176067
     },
     "production_envelope": {
-      "max_abs_difference": 5.619948950652542e-13,
+      "max_abs_difference": 1.1368683772161603e-13,
       "pass": true,
       "points": 20
     },
     "room_objective": {
-      "cobrapy_highs": 29.999999999999677,
+      "cobrapy_highs": 29.999999999997932,
       "cobrapy_status": "optimal",
       "pass": true,
       "rashevsky": 30.0
@@ -79,7 +79,7 @@
       "pass": true
     },
     "single_reaction_deletion": {
-      "max_abs_difference": 1.4988010832439613e-14,
+      "max_abs_difference": 9.769962616701378e-15,
       "pass": true,
       "reactions": 95
     }
