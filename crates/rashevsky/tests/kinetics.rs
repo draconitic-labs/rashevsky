@@ -110,12 +110,13 @@ fn control_coefficient_matches_a_perturbation() {
     // Scale the transport law directly by compiling a copy with a modified Vmax.
     let text = std::fs::read_to_string(TEUSINK).unwrap();
     let bump = 1.001f64;
-    let needle = "id=\"VmGLT\" value=\"97.264\"";
+    let needle = "metaid=\"_773963\" units=\"mmolepermin\" value=\"97.264\"";
     assert!(text.contains(needle), "the local Vmax of the transporter is expected in this form");
-    let high = KineticModel::from_sbml_str(&text.replace(needle, &format!("id=\"VmGLT\" value=\"{}\"", 97.264 * bump)))
-        .unwrap();
-    let low = KineticModel::from_sbml_str(&text.replace(needle, &format!("id=\"VmGLT\" value=\"{}\"", 97.264 / bump)))
-        .unwrap();
+    let with_vmax = |value: f64| {
+        let replaced = format!("metaid=\"_773963\" units=\"mmolepermin\" value=\"{value}\"");
+        KineticModel::from_sbml_str(&text.replace(needle, &replaced)).unwrap()
+    };
+    let (high, low) = (with_vmax(97.264 * bump), with_vmax(97.264 / bump));
     let flux = |model: &KineticModel| steady_state(model, &SteadyOptions::default()).unwrap().fluxes[adh];
     let numeric = (flux(&high).ln() - flux(&low).ln()) / (2.0 * bump.ln());
     assert!((analytic - numeric).abs() < 1e-3, "{analytic} vs {numeric}");
