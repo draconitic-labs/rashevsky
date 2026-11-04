@@ -2,8 +2,8 @@
 """Flux sampling on e_coli_core and iCH360: CHRR and OptGP against COBRApy's OptGP.
 
 The biomass reaction is held at 90 % of its optimum or more, which makes the polytope small enough
-for all samplers to mix. Means are compared in units of the pooled standard deviation of the sampled
-flux, since the absolute scale differs across reactions.
+for all samplers to mix. Means are compared in units of the standard deviation of the flux in COBRApy's
+sample, since the absolute scale differs across reactions.
 
 Pass: split R-hat at most 1.05 for CHRR; over reactions that vary, the mean of each sampler within
 0.15 of a flux standard deviation of the mean of the others.
@@ -55,12 +55,18 @@ def stock_cobrapy_on_ich360(chrr: dict) -> dict:
     sampler = OptGPSampler(at_biomass_floor(ICH360, "Biomass"), processes=4, thinning=200, seed=11)
     samples = sampler.sample(1500)
     samples = samples[sampler.validate(samples.to_numpy()) == "v"]
-    means = dict(zip(chrr["reactions"], chrr["diagnostics"]["mean"]))
+    at = chrr["reactions"].index("ASNS2")
+    mean_chrr, sd_chrr = chrr["diagnostics"]["mean"][at], chrr["diagnostics"]["sd"][at]
+    mean_stock, sd_stock = float(samples["ASNS2"].mean()), float(samples["ASNS2"].std())
     return {
         "valid_samples": int(len(samples)),
         "asns1_largest_flux": float(samples["ASNS1"].abs().max()),
-        "asns1_mean_chrr": means["ASNS1"],
-        "asns2_distance_from_chrr_in_flux_sd": abs(means["ASNS2"] - float(samples["ASNS2"].mean())) / float(samples["ASNS2"].std()),
+        "asns1_mean_chrr": chrr["diagnostics"]["mean"][chrr["reactions"].index("ASNS1")],
+        "asns2_mean_chrr": mean_chrr,
+        "asns2_mean_stock": mean_stock,
+        "asns2_sd_chrr": sd_chrr,
+        "asns2_sd_stock": sd_stock,
+        "asns2_distance_in_sd_of_chrr": abs(mean_chrr - mean_stock) / sd_chrr,
     }
 
 

@@ -21,7 +21,7 @@
     "file": "Human-GEM.xml",
     "url": "https://raw.githubusercontent.com/SysBioChalmers/Human-GEM/v2.1.1/model/Human-GEM.xml",
     "sha256": "dc0efd8009a8b680bde7040440f2e3592027dd118833445092ebd8d7bc425ddf",
-    "source": "Robinson et al. 2020; CC BY 4.0. Tracks the main branch; the pinned digest is release v2.1.1"
+    "source": "Robinson et al. 2020; CC BY 4.0. Release v2.1.1"
   },
   {
     "file": "Recon3D.xml.gz",

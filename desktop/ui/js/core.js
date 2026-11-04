@@ -111,28 +111,39 @@ export async function solve() {
   try {
     const reply = await invoke('solve', { request });
     if (ticket !== solveTicket) return;
-    state.solution = reply;
     if (state.genes.length === 0 && state.reactions.length === 0 && reply.growth !== null) {
       state.reference = reply.growth;
     } else if (state.reference === null) {
       const base = await invoke('solve', { request: { method: 'fba', ...perturbation(false) } });
+      if (ticket !== solveTicket) return;
       state.reference = base.growth;
     }
+    state.solution = reply;
     emit('solution', reply);
   } catch (error) {
+    if (ticket !== solveTicket) return;
+    state.solution = null;
     toast(String(error));
+    emit('solve-failed');
   }
 }
 
 let referenceTicket = 0;
 export async function refreshReference() {
   const ticket = ++referenceTicket;
-  const base = await invoke('solve', { request: { method: 'fba', ...perturbation(false) } });
-  if (ticket === referenceTicket) state.reference = base.growth;
+  try {
+    const base = await invoke('solve', { request: { method: 'fba', ...perturbation(false) } });
+    if (ticket === referenceTicket) state.reference = base.growth;
+  } catch (error) {
+    if (ticket === referenceTicket) toast(String(error));
+  }
 }
 
 /** Makes a model the open one. `path` is the SBML file it was read from, when there is one. */
 export function setModel(view, path = null) {
+  // A reply still on its way is about the last model.
+  solveTicket += 1;
+  referenceTicket += 1;
   state.model = view;
   state.modelPath = path;
   state.byId = new Map(view.reactions.map((r, i) => [r.id, i]));
@@ -178,7 +189,9 @@ export const fmt = {
     return v.toExponential(1).replace('e-', 'e−').replace('e+', 'e');
   },
   percent(v) {
-    return `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)} %`;
+    const text = Math.abs(v).toFixed(1);
+    if (Number(text) === 0) return `${text} %`;
+    return `${v > 0 ? '+' : '−'}${text} %`;
   },
 };
 

@@ -28,7 +28,9 @@ impl Core {
         let model = Model::from_document(&doc).map_err(|e| JsError::new(&e.to_string()))?;
         let problem = split_problem(&model);
         let growth_row = problem.n_rows() - 1;
-        let session = Simplex::default().open(&problem).map_err(|e| JsError::new(&e.to_string()))?;
+        // Far above what this model needs, and short enough that a stuck solve cannot hang the page.
+        let solver = Simplex { max_iterations: 50_000, ..Simplex::default() };
+        let session = solver.open(&problem).map_err(|e| JsError::new(&e.to_string()))?;
         let applied = model.reactions.iter().map(|r| (r.lb, r.ub)).collect();
         Ok(Core { model, session, applied, growth_row })
     }
@@ -109,7 +111,7 @@ impl Core {
     }
 
     /// The two steps of pFBA: the most growth, then the least total flux that keeps it. `None` when the
-    /// bounds leave no steady state.
+    /// bounds leave no steady state, and an error when the solver gives no verdict.
     fn least_flux(&mut self, wanted: &[(f64, f64)]) -> engine::Result<Option<(f64, Vec<f64>)>> {
         let n = wanted.len();
         for (j, &(lb, ub)) in wanted.iter().enumerate() {
@@ -127,8 +129,10 @@ impl Core {
         self.session.set_row_bounds(self.growth_row, f64::NEG_INFINITY, f64::INFINITY)?;
         self.session.set_objective(Sense::Maximize, &growth)?;
         let first = self.session.solve()?;
-        if first.status != Status::Optimal {
-            return Ok(None);
+        match first.status {
+            Status::Optimal => {}
+            Status::Infeasible => return Ok(None),
+            other => return Err(engine::Error::Solver(format!("growth step ended with {other:?}"))),
         }
         self.session.set_row_bounds(self.growth_row, first.objective, f64::INFINITY)?;
         self.session.set_objective(Sense::Minimize, &vec![1.0; 2 * n])?;

@@ -629,6 +629,47 @@ fn namespaces_keep_to_the_element_that_declares_them() {
 }
 
 #[test]
+fn a_coefficient_under_the_pivot_tolerance_never_reads_as_infeasible() {
+    use rashevsky::lp::simplex::Simplex;
+    use rashevsky::lp::{Backend, Problem, Sense, Status};
+    // Growth needs an enzyme at 1e-10 per unit, and the enzyme is limited to 1e-9: growth 10.
+    let mut problem = Problem { sense: Some(Sense::Maximize), ..Problem::default() };
+    let uptake = problem.add_col(0.0, 0.0, 1000.0, false);
+    let enzyme = problem.add_col(0.0, 0.0, 1e-9, false);
+    let grow = problem.add_col(1.0, 0.0, 1000.0, false);
+    problem.add_row(0.0, 0.0, vec![(uptake, 1.0), (grow, -1.0)]);
+    problem.add_row(0.0, 0.0, vec![(enzyme, 1.0), (grow, -1e-10)]);
+    let highs = rashevsky::lp::default_backend().open(&problem).unwrap().solve().unwrap();
+    assert_eq!(highs.status, Status::Optimal);
+    assert!((highs.objective - 10.0).abs() < 1e-6, "{}", highs.objective);
+    let simplex = Simplex::default().open(&problem).unwrap().solve().unwrap();
+    assert!(
+        simplex.status == Status::Unknown
+            || (simplex.status == Status::Optimal && (simplex.objective - 10.0).abs() < 1e-6),
+        "{:?} {}",
+        simplex.status,
+        simplex.objective
+    );
+    // Without a coefficient that small, a dead end still is a verdict.
+    let mut none = Problem { sense: Some(Sense::Maximize), ..Problem::default() };
+    let x = none.add_col(1.0, 1.0, 2.0, false);
+    none.add_row(0.0, 0.0, vec![(x, 1.0)]);
+    assert_eq!(Simplex::default().open(&none).unwrap().solve().unwrap().status, Status::Infeasible);
+}
+
+#[test]
+fn an_objective_listing_a_reaction_twice_means_the_same_on_both_backends() {
+    use rashevsky::lp::simplex::Simplex;
+    let mut m = through_boundary_species();
+    m.objective = vec![(2, 1.0), (2, 1.0)];
+    let highs = cb::pfba(&m, 1.0).unwrap();
+    let simplex = cb::pfba_with(&m, 1.0, &Simplex::default()).unwrap();
+    assert_eq!(highs.status, Status::Optimal);
+    assert!((highs.objective - simplex.objective).abs() < 1e-9, "{} {}", highs.objective, simplex.objective);
+    assert!((highs.fluxes[2] - 10.0).abs() < 1e-9);
+}
+
+#[test]
 fn repeated_coefficients_in_a_row_add_up_after_a_refactor() {
     use rashevsky::lp::simplex::Simplex;
     use rashevsky::lp::{Backend, Problem, Sense, Status};

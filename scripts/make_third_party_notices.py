@@ -2,7 +2,8 @@
 """Writes THIRD-PARTY-NOTICES.md: the license text of everything linked into a release.
 
 MIT, BSD and Apache terms ask for their copyright lines and text in every copy, so the list of names is
-not enough. Texts come from the crates' own files, as published. `--check` only compares, for CI.
+not enough. Texts come from the crates' own files, as published, and from `licenses/` for what HiGHS compiles
+in without a license file of its own. `--check` only compares, for CI.
 """
 from __future__ import annotations
 
@@ -15,6 +16,15 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT / "THIRD-PARTY-NOTICES.md"
+# Parts of HiGHS whose source says only "see license.txt", with their upstream files in `licenses/`. IPX and
+# BASICLU offer GPL v3 or MIT, and ask an application to state its choice in its documentation.
+HIGHS_PARTS = [
+    ("IPX", "IPX, Copyright (c) 2018-2020  ERGO-Code\nUsed in Rashevsky under the MIT license.", "https://github.com/ERGO-Code/IPX"),
+    ("BASICLU", "BASICLU Copyright (c) 2016-2020  ERGO-Code\nUsed in Rashevsky under the MIT license.", "https://github.com/ERGO-Code/basiclu"),
+    ("cuPDLP", "", "https://github.com/COPT-Public/cuPDLP-C"),
+]
+# A crate that publishes no file of its own, and the crate of the same repository and holder that does.
+SAME_TEXT_AS = {"alloc-stdlib": "alloc-no-stdlib"}
 WORKSPACES = [
     (ROOT / "Cargo.toml", "x86_64-unknown-linux-gnu"),
     (ROOT / "Cargo.toml", "wasm32-unknown-unknown"),
@@ -108,6 +118,10 @@ def main() -> int:
         rows.append(f"| {package['name']} | {package['version']} | {package.get('license') or 'see its text below'} |")
         name = chosen_license(package.get("license"))
         files = license_files(package, name)
+        owner = package
+        if not files and package["name"] in SAME_TEXT_AS:
+            owner = next(p for p in sorted(packages.values(), key=lambda p: p["version"]) if p["name"] == SAME_TEXT_AS[package["name"]])
+            files = license_files(owner, name)
         if not files:
             without.append(label)
             authors = ", ".join(package.get("authors") or []) or f"the authors of {package['name']}"
@@ -118,7 +132,7 @@ def main() -> int:
             continue
         for path in files:
             text = path.read_text(errors="replace").strip()
-            relative = path.relative_to(pathlib.Path(package["manifest_path"]).parent)
+            relative = path.relative_to(pathlib.Path(owner["manifest_path"]).parent)
             key = text
             groups.setdefault(key, []).append(label if len(relative.parts) == 1 else f"{label} ({relative})")
     lines = [
@@ -126,7 +140,7 @@ def main() -> int:
         "",
         "Rashevsky links the HiGHS solver, built from source by the `highs-sys` crate, and the Rust crates below.",
         "Fonts and data are listed in `docs/DATA.md`. `scripts/make_third_party_notices.py` writes this file from `cargo metadata` and the texts the crates publish.",
-        "Where a crate offers a choice of licenses, this project takes the first of MIT and Apache-2.0 that it offers.",
+        "Where a crate offers a choice of licenses, this project takes MIT if offered, and otherwise Apache-2.0 if offered. Texts of other choices that a crate publishes are kept below as published.",
         "",
         "| Crate | Version | License |",
         "| --- | --- | --- |",
@@ -137,6 +151,10 @@ def main() -> int:
     ]
     for text, labels in sorted(groups.items(), key=lambda item: item[1][0]):
         lines += [f"### {', '.join(labels)}", "", "````text", text, "````", ""]
+    lines += ["## Compiled in with HiGHS", "", "Parts of the HiGHS source tree that `highs-sys` builds, which carry no license file there.", ""]
+    for name, statement, source in HIGHS_PARTS:
+        text = (ROOT / "licenses" / f"{name}.txt").read_text().strip()
+        lines += [f"### {name}", "", *([statement.replace("\n", "  \n"), ""] if statement else []), f"Source: {source}", "", "````text", text, "````", ""]
     body = "\n".join(lines)
     if "--check" in sys.argv:
         if not OUT.exists() or OUT.read_text() != body:

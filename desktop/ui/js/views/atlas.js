@@ -111,9 +111,12 @@ function draw() {
 
 async function load() {
   if (!state.model) return;
+  const model = state.model;
   try {
     refs.status.textContent = 'Projecting fluxes';
-    data = await invoke('atlas', { perturbation: perturbation() });
+    const reply = await invoke('atlas', { perturbation: perturbation() });
+    if (state.model !== model) return;
+    data = reply;
     const c = data.overlay.coverage;
     refs.status.textContent = '';
     refs.tiles.replaceChildren(
@@ -129,6 +132,13 @@ async function load() {
   } catch (error) {
     refs.status.textContent = '';
     toast(String(error));
+    // What is on view is about another model or other conditions.
+    data = null;
+    refs.tiles.replaceChildren();
+    const g = refs.canvas.getContext('2d', { alpha: false });
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.fillStyle = '#14171a';
+    g.fillRect(0, 0, refs.canvas.width, refs.canvas.height);
   }
 }
 

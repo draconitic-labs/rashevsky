@@ -115,6 +115,31 @@ fn malformed_ranges_and_tables_are_errors_with_a_message() {
 }
 
 #[test]
+fn a_map_of_nothing_is_refused() {
+    let folder = std::env::temp_dir().join(format!("rashevsky-cli-empty-{}", std::process::id()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let (map, data) = (folder.join("map.json"), folder.join("data.json"));
+    let output = Command::new(env!("CARGO_BIN_EXE_rashevsky"))
+        .args([
+            "escher",
+            CORE,
+            "--subsystem",
+            "Glycolysis",
+            "--map",
+            map.to_str().unwrap(),
+            "--data",
+            data.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    let wrote = map.exists();
+    std::fs::remove_dir(&folder).unwrap();
+    assert!(!output.status.success());
+    assert!(!wrote);
+    assert!(String::from_utf8_lossy(&output.stderr).contains("no reactions to draw in Glycolysis"));
+}
+
+#[test]
 fn an_automatic_map_leaves_out_biomass_whatever_its_case() {
     let folder = std::env::temp_dir().join(format!("rashevsky-cli-escher-{}", std::process::id()));
     std::fs::create_dir_all(&folder).unwrap();

@@ -59,6 +59,21 @@ pub struct Problem {
     pub hessian: Vec<(usize, usize, f64)>,
 }
 
+/// A row with repeated columns added up, in the order first seen. HiGHS refuses a repeat.
+pub(crate) fn merge_repeats(coefs: &[(usize, f64)]) -> Vec<(usize, f64)> {
+    let mut at = std::collections::HashMap::with_capacity(coefs.len());
+    let mut merged: Vec<(usize, f64)> = Vec::with_capacity(coefs.len());
+    for &(j, v) in coefs {
+        let place = *at.entry(j).or_insert(merged.len());
+        if place == merged.len() {
+            merged.push((j, v));
+        } else {
+            merged[place].1 += v;
+        }
+    }
+    merged
+}
+
 impl Problem {
     /// Number of columns.
     pub fn n_cols(&self) -> usize {
@@ -84,7 +99,7 @@ impl Problem {
 
     /// Adds a row and returns its index.
     pub fn add_row(&mut self, lb: f64, ub: f64, coefs: Vec<(usize, f64)>) -> usize {
-        self.rows.push(coefs);
+        self.rows.push(merge_repeats(&coefs));
         self.row_lb.push(lb);
         self.row_ub.push(ub);
         self.rows.len() - 1

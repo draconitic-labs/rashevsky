@@ -273,6 +273,7 @@ impl Session for HighsSession {
     }
 
     fn add_row(&mut self, lb: f64, ub: f64, coefs: &[(usize, f64)]) -> Result<usize> {
+        let coefs = super::merge_repeats(coefs);
         let index: Vec<c_int> = coefs.iter().map(|&(j, _)| j as c_int).collect();
         let value: Vec<f64> = coefs.iter().map(|&(_, v)| v).collect();
         // SAFETY: pointers refer to live vectors of the stated length.

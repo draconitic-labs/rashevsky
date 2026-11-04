@@ -32,7 +32,6 @@ jobs:
             rashevsky-cli-linux-x86_64.tar.gz
             desktop/src-tauri/target/release/bundle/rpm/*.rpm
             desktop/src-tauri/target/release/bundle/deb/*.deb
-            desktop/src-tauri/target/release/bundle/appimage/*.AppImage
 
   wheels:
     runs-on: ubuntu-latest

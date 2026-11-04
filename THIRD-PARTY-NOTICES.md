@@ -2,7 +2,7 @@
 
 Rashevsky links the HiGHS solver, built from source by the `highs-sys` crate, and the Rust crates below.
 Fonts and data are listed in `docs/DATA.md`. `scripts/make_third_party_notices.py` writes this file from `cargo metadata` and the texts the crates publish.
-Where a crate offers a choice of licenses, this project takes the first of MIT and Apache-2.0 that it offers.
+Where a crate offers a choice of licenses, this project takes MIT if offered, and otherwise Apache-2.0 if offered. Texts of other choices that a crate publishes are kept below as published.
 
 | Crate | Version | License |
 | --- | --- | --- |
@@ -461,7 +461,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <http://unlicense.org/>
 ````
 
-### alloc-no-stdlib 3.0.0, brotli 9.1.1, brotli-decompressor 6.2.0
+### alloc-no-stdlib 3.0.0, alloc-stdlib 0.3.0, brotli 9.1.1, brotli-decompressor 6.2.0
 
 ````text
 Copyright (c) 2016 Dropbox, Inc.
@@ -476,12 +476,6 @@ Redistribution and use in source and binary forms, with or without modification,
 3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-````
-
-### alloc-stdlib 0.3.0
-
-````text
-Licensed under BSD-3-Clause, by Daniel Reiter Horn <danielrh@dropbox.com>. The published crate carries no license file; the text is at https://spdx.org/licenses/BSD-3-Clause.html and the source at https://github.com/dropbox/rust-alloc-no-stdlib
 ````
 
 ### anstream 1.0.0, anstyle 1.0.14, anstyle-parse 1.0.0, anstyle-query 1.1.5, clap 4.6.7, clap_builder 4.6.7, clap_derive 4.6.7, clap_lex 1.1.1, colorchoice 1.0.5, is_terminal_polyfill 1.70.2, serde_spanned 0.6.9, serde_spanned 1.1.2, toml 1.2.0+spec-1.1.0, toml_datetime 1.1.2+spec-1.1.0, toml_edit 0.19.15, toml_edit 0.20.2, toml_parser 1.1.5+spec-1.1.0, toml_writer 1.2.0+spec-1.1.0
@@ -8921,4 +8915,200 @@ freely, subject to the following restrictions:
    misrepresented as being the original software.
 
 3. This notice may not be removed or altered from any source distribution.
+````
+
+## Compiled in with HiGHS
+
+Parts of the HiGHS source tree that `highs-sys` builds, which carry no license file there.
+
+### IPX
+
+IPX, Copyright (c) 2018-2020  ERGO-Code  
+Used in Rashevsky under the MIT license.
+
+Source: https://github.com/ERGO-Code/IPX
+
+````text
+IPX, Copyright (c) 2018-2020  ERGO-Code
+
+IPX License: At the user's option, you may use IPX under either the GPL
+version 3 license, or the MIT license. You may not use both licenses, nor may
+you mix-and-match clauses from each license. To use a license, in the
+documentation for your application simply state either of the following,
+replacing <YOUR APPLICATION> with the name of your application:
+
+    IPX, Copyright (c) 2018-2020  ERGO-Code
+    Used in <YOUR APPLICATION> under the MIT license.
+
+or
+
+    IPX, Copyright (c) 2018-2020  ERGO-Code
+    Used in <YOUR APPLICATION> under the GPL v3 license.
+
+In the event that your package <A> includes another package <B> by another
+author, and <A> and <B> use IPX under different licenses, you may select one
+license to apply to both uses of IPX in the combined application.
+
+Availability:
+
+    https://github.com/ERGO-Code/ipx
+
+--------------------------------------------------------------------------------
+MIT License:
+--------------------------------------------------------------------------------
+
+    Copyright (c) 2018-2020 ERGO-Code
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to
+    deal in the Software without restriction, including without limitation the
+    rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+    sell copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+    IN THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+GPL version 3:
+--------------------------------------------------------------------------------
+
+    Copyright (c) 2018-2020  ERGO-Code
+
+    This library is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+--------------------------------------------------------------------------------
+````
+
+### BASICLU
+
+BASICLU Copyright (c) 2016-2020  ERGO-Code  
+Used in Rashevsky under the MIT license.
+
+Source: https://github.com/ERGO-Code/basiclu
+
+````text
+BASICLU, Copyright (c) 2016-2020  ERGO-Code
+
+BASICLU License: At the user's option, you may use BASICLU under either the GPL
+version 3 license, or the MIT license. You may not use both licenses, nor may
+you mix-and-match clauses from each license. To use a license, in the
+documentation for your application simply state either of the following,
+replacing <YOUR APPLICATION> with the name of your application:
+
+    BASICLU Copyright (c) 2016-2020  ERGO-Code
+    Used in <YOUR APPLICATION> under the MIT license.
+
+or
+
+    BASICLU Copyright (c) 2016-2020  ERGO-Code
+    Used in <YOUR APPLICATION> under the GPL v3 license.
+
+In the event that your package <A> includes another package <B> by another
+author, and <A> and <B> use BASICLU under different licenses, you may select one
+license to apply to both uses of BASICLU in the combined application.
+
+The following files in the BASICLU package come from external sources and have
+their own licenses:
+
+example/mmio.c   [from http://math.nist.gov/MatrixMarket/mmio-c.html]
+example/mmio.h   [from http://math.nist.gov/MatrixMarket/mmio-c.html]
+
+Availability:
+
+    https://github.com/ERGO-Code/basiclu
+
+--------------------------------------------------------------------------------
+MIT License:
+--------------------------------------------------------------------------------
+
+    Copyright (c) 2016-2020 ERGO-Code
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to
+    deal in the Software without restriction, including without limitation the
+    rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+    sell copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+    IN THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+GPL version 3:
+--------------------------------------------------------------------------------
+
+    Copyright (c) 2016-2020  ERGO-Code
+
+    This library is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+--------------------------------------------------------------------------------
+````
+
+### cuPDLP
+
+Source: https://github.com/COPT-Public/cuPDLP-C
+
+````text
+MIT License
+
+Copyright (c) 2026 Dongdong Ge
+
+Copyright (c) 2023 COPT-Public
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ````

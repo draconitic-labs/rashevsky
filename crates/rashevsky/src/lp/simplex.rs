@@ -79,6 +79,9 @@ pub struct SimplexSession {
     since_refactor: usize,
     /// The next run starts from the logical basis, with nothing carried over.
     cold: bool,
+    /// A coefficient at or under the pivot tolerance exists. The ratio test skips it, so a step can
+    /// overshoot its row with no way back in phase 1, and a dead end there proves nothing.
+    tiny: bool,
 }
 
 impl SimplexSession {
@@ -99,6 +102,7 @@ impl SimplexSession {
         lb.extend_from_slice(&p.row_lb);
         ub.extend_from_slice(&p.row_ub);
         let negate = p.sense == Some(Sense::Maximize);
+        let tiny = p.rows.iter().any(|row| row.iter().any(|&(_, v)| under_pivot_tolerance(v, &opts)));
         let mut cost: Vec<f64> = p.obj.iter().map(|&c| if negate { -c } else { c }).collect();
         cost.resize(n + m, 0.0);
         let mut session = Self {
@@ -118,6 +122,7 @@ impl SimplexSession {
             moved_bounds: false,
             since_refactor: 0,
             cold: true,
+            tiny,
         };
         session.reset_basis();
         session
@@ -219,7 +224,6 @@ impl SimplexSession {
 
     /// Runs the simplex. The status is that of the final phase.
     fn run(&mut self) -> Status {
-        self.cold = false;
         if self.dirty_basis || self.moved_bounds {
             for j in 0..self.n + self.m {
                 if self.stat[j] != VarStat::Basic {
@@ -297,7 +301,11 @@ impl SimplexSession {
                 }
             }
             let Some((enter, dir)) = entering else {
-                return if phase1 { Status::Infeasible } else { Status::Optimal };
+                return match (phase1, self.tiny) {
+                    (false, _) => Status::Optimal,
+                    (true, false) => Status::Infeasible,
+                    (true, true) => Status::Unknown,
+                };
             };
             let alpha = self.column_ftran(enter);
             // Two-pass ratio test: the largest pivot among the blocking steps within tolerance.
@@ -523,6 +531,7 @@ impl Session for SimplexSession {
     }
 
     fn add_row(&mut self, lb: f64, ub: f64, coefs: &[(usize, f64)]) -> Result<usize> {
+        self.tiny |= coefs.iter().any(|&(_, v)| under_pivot_tolerance(v, &self.opts));
         // Logical variables sit behind the structural ones, so insert at the end of the logicals.
         let row = self.m;
         self.m += 1;
@@ -551,11 +560,39 @@ impl Session for SimplexSession {
         let kept_basis = !self.cold;
         let mut status = self.run();
         // Rounding carried in a kept basis can end phase 1 a hair above its tolerance with nothing left
-        // to enter, which looks like infeasibility. Only a start from nothing may declare failure.
+        // to enter, which looks like infeasibility. Failure from a kept basis is checked from a cold start.
         if status != Status::Optimal && kept_basis {
             self.reset_basis();
             status = self.run();
         }
+        // Set after the runs, since a singular basis found during one also resets.
+        self.cold = false;
         Ok(self.extract(status))
+    }
+}
+
+fn under_pivot_tolerance(value: f64, opts: &Simplex) -> bool {
+    value != 0.0 && value.abs() <= opts.pivot_tolerance
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_singular_basis_during_a_run_leaves_the_next_solve_able_to_retry() {
+        let mut problem = Problem { sense: Some(Sense::Maximize), ..Problem::default() };
+        problem.add_col(1.0, 0.0, 10.0, false);
+        // In no row, so a basis holding it is singular.
+        let empty = problem.add_col(0.0, 0.0, 10.0, false);
+        problem.add_row(f64::NEG_INFINITY, 5.0, vec![(0, 1.0)]);
+        let mut session = SimplexSession::new(&problem, Simplex::default());
+        session.solve().unwrap();
+        session.basis[0] = empty;
+        session.since_refactor = REFACTOR_EVERY;
+        let again = session.solve().unwrap();
+        assert_eq!(again.status, Status::Optimal);
+        assert!((again.objective - 5.0).abs() < 1e-9);
+        assert!(!session.cold);
     }
 }

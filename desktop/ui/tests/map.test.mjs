@@ -15,17 +15,19 @@ class Element {
     this.width = 1;
     this.height = 1;
     this.classList = { toggle() {}, add() {}, remove() {}, contains: () => false };
+    this.attributes = {};
+    this.listeners = {};
   }
 
   append(...items) { this.children.push(...items); }
 
   replaceChildren(...items) { this.children = items; }
 
-  setAttribute() {}
+  setAttribute(key, value) { this.attributes[key] = value; }
 
   removeAttribute() {}
 
-  addEventListener() {}
+  addEventListener(name, fn) { this.listeners[name] = fn; }
 
   querySelector() { return new Element(); }
 
@@ -41,12 +43,17 @@ class Element {
 
   getContext() {
     return new Proxy({}, {
-      get: (target, key) => (key === 'createRadialGradient' || key === 'createLinearGradient' ? () => ({ addColorStop() {} }) : key in target ? target[key] : () => {}),
+      get: (target, key) => {
+        if (key === 'createRadialGradient' || key === 'createLinearGradient') return () => ({ addColorStop() {} });
+        if (key === 'fillText') return (text) => drawn.push(text);
+        return key in target ? target[key] : () => {};
+      },
       set: (target, key, value) => { target[key] = value; return true; },
     });
   }
 }
 
+const drawn = [];
 const bundled = JSON.parse(readFileSync(new URL('../../../models/ich360/layout.json', import.meta.url)));
 const reaction = (id) => ({ id, name: id, lb: 0, ub: 10, equation: 'a → b', rule: '', genes: [], boundary: false });
 const view = (id, ids, curated = false) => ({
@@ -57,8 +64,14 @@ const models = {
   iCH360: view('iCH360', Object.keys(bundled.reactions), true),
   a: view('a', ['PGI', 'PFK', 'FBA']),
   b: view('b', ['ZZZ1', 'PFK', 'PGI', 'ZZZ2']),
+  unsolvable: { ...view('unsolvable', ['V1', 'V2']), objective: [] },
+  parts: { ...view('parts', ['PGI', 'PFK']), subsystems: ['Glycolysis'] },
 };
 let open = null;
+// The layout of this model waits for this promise, as it does on a large model.
+let gatedModel = null;
+let layoutGate = null;
+const calls = [];
 function automaticLayout(model) {
   const nodes = {};
   const reactions = {};
@@ -73,14 +86,25 @@ globalThis.window = {
   __TAURI__: {
     core: {
       invoke: async (command, args) => {
-        if (command === 'layout') return args.curated ? bundled : automaticLayout(open);
-        if (command === 'solve') {
-          return { status: 'Optimal', growth: 0.5, fluxes: open.reactions.map((_, i) => i + 1), disabled: [], milliseconds: 1, total_flux: 1 };
+        calls.push({ command, args });
+        if (command === 'layout') {
+          const model = open;
+          if (model === gatedModel) await layoutGate;
+          return args.curated ? bundled : automaticLayout(model);
         }
+        if (command === 'solve') {
+          if (open === models.unsolvable) throw new Error('the model has no objective');
+          const shift = 100 * args.request.reactions.length;
+          return { status: open.status ?? 'Optimal', growth: 0.5, fluxes: open.reactions.map((_, i) => shift + i + 1), disabled: [], milliseconds: 1, total_flux: 1 };
+        }
+        if (command === 'bundled_terms') return [];
+        if (command === 'open_file') return models.a;
+        if (command === 'download_model') return `/data/${args.name}.xml`;
         if (command === 'reaction_range') return [0, 1];
         return null;
       },
     },
+    dialog: { open: async () => '/models/picked.xml', save: async () => '/out/map.json' },
   },
   matchMedia: () => ({ matches: true }),
   addEventListener() {},
@@ -105,13 +129,36 @@ FluxMap.prototype.setLayout = function capture(...args) {
   return setLayout.apply(this, args);
 };
 const workspace = (await import('../js/views/map.js')).default;
-workspace.mount(new Element());
+const page = new Element();
+workspace.mount(page);
+const modelsPage = new Element();
+(await import('../js/views/models.js')).default.mount(modelsPage);
+const atlasPage = new Element();
+(await import('../js/views/atlas.js')).default.mount(atlasPage);
+
+function words(el) {
+  return (el.children ?? []).map((c) => (c.nodeType === 3 ? c.text : words(c))).join(' ');
+}
+
+function find(root, wanted) {
+  if (wanted(root)) return root;
+  for (const child of root.children ?? []) {
+    if (child.nodeType !== 1) continue;
+    const hit = find(child, wanted);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+const withClass = (name) => find(page, (el) => el.attributes.class === name);
+const button = (root, text) => find(root, (el) => el.listeners.click && words(el).includes(text));
+const settle = () => new Promise((resolve) => { setTimeout(resolve, 20); });
 
 async function openModel(name, path) {
   open = models[name];
   core.setModel(open, path);
   await core.solve();
-  await new Promise((resolve) => { setTimeout(resolve, 20); });
+  await settle();
 }
 
 test('each automatic model gets its own map, with its own fluxes on it', async () => {
@@ -157,4 +204,130 @@ test('rounding noise around zero shows no sign', () => {
   assert.equal(core.fixed(-9.99e-16, 4), '0.0000');
   assert.equal(core.fixed(-0.25, 2), '-0.25');
   assert.equal(core.fixed(0.8656, 4), '0.8656');
+  assert.equal(core.fmt.percent(-6.3e-13), '0.0 %');
+  assert.equal(core.fmt.percent(-1.24), '−1.2 %');
+  assert.equal(core.fmt.percent(2.5), '+2.5 %');
+});
+
+test('a model that cannot be solved takes the last map off view and draws its own', async () => {
+  await openModel('iCH360');
+  map.select({ kind: 'reaction', id: 'PGI' });
+  await openModel('unsolvable');
+  assert.equal(map.biomass, null);
+  assert.equal(map.selected, null);
+  assert.deepEqual(map.reactions.map((r) => r.id).sort(), ['V1', 'V2']);
+  assert.equal(core.state.solution, null);
+  assert.equal(withClass('growth-value').textContent, 'None');
+  assert.equal(withClass('growth-delta').textContent, 'Not solved');
+  // The animation runs on what it was given.
+  map.last = 0;
+  map.frame(16);
+  assert.deepEqual(map.shown, [0, 0]);
+});
+
+test('a reply that is not optimal says what happened', async () => {
+  const expected = { Infeasible: 'No steady state', Unbounded: 'No limit on the objective', Unknown: 'Solver stopped: Unknown' };
+  for (const [status, text] of Object.entries(expected)) {
+    models.a.status = status;
+    await openModel('a');
+    assert.equal(withClass('growth-delta').textContent, text);
+  }
+  delete models.a.status;
+});
+
+test('a slow layout does not put an older reply on the map', async () => {
+  let release;
+  layoutGate = new Promise((resolve) => { release = resolve; });
+  gatedModel = models.a;
+  open = models.a;
+  core.setModel(open);
+  const first = core.solve();
+  await settle();
+  core.state.reactions = ['FBA'];
+  const second = core.solve();
+  await Promise.all([first, second]);
+  await settle();
+  gatedModel = null;
+  release();
+  await settle();
+  assert.equal(core.state.solution.fluxes[0], 101);
+  assert.equal(map.target[0], 101);
+  core.state.reactions = [];
+});
+
+test('another model opened during a layout keeps the map to itself', async () => {
+  let release;
+  layoutGate = new Promise((resolve) => { release = resolve; });
+  gatedModel = models.a;
+  open = models.a;
+  core.setModel(open);
+  await core.solve();
+  await settle();
+  // The second model's layout comes back first, and the first model's after it.
+  open = models.b;
+  core.setModel(open);
+  await core.solve();
+  await settle();
+  gatedModel = null;
+  release();
+  await settle();
+  assert.deepEqual(map.reactions.map((r) => r.id).sort(), ['PFK', 'PGI', 'ZZZ1', 'ZZZ2']);
+  assert.deepEqual(map.target, [1, 2, 3, 4]);
+});
+
+test('a reply to the last model is dropped when another has opened', async () => {
+  await openModel('a');
+  const late = core.solve();
+  open = models.b;
+  core.setModel(open);
+  await late;
+  assert.equal(core.state.solution, null);
+  await core.solve();
+  await settle();
+  assert.equal(core.state.solution.fluxes.length, 4);
+});
+
+test('an export asks for no part of the last model', async () => {
+  await openModel('parts');
+  find(page, (el) => el.listeners.change).value = 'Glycolysis';
+  await openModel('iCH360');
+  calls.length = 0;
+  await button(page, 'Escher map with data').listeners.click();
+  assert.equal(calls.find((c) => c.command === 'export_escher').args.subsystem, null);
+});
+
+test('a frame draws both signs of flux, the ring, and no sign on noise', async () => {
+  await openModel('iCH360');
+  drawn.length = 0;
+  map.view = { x: 0, y: 0, k: 2 };
+  const fluxes = map.target.map((_, i) => (i % 2 ? -3 : 3));
+  fluxes[map.reactions[0].modelIndex] = -0.00116;
+  map.setFluxes(fluxes, [], 0.5);
+  map.shown = fluxes.slice();
+  map.transition = 1;
+  map.layerDirty = true;
+  map.last = 0;
+  map.frame(16);
+  assert.ok(drawn.includes(`${map.reactions[0].id}  0.00`), drawn.slice(0, 3).join());
+  assert.ok(!drawn.some((text) => String(text).includes('-0.00')));
+  assert.ok(drawn.includes('biomass'));
+});
+
+test('the Models workspace passes on the file a model came from', async () => {
+  await openModel('iCH360');
+  open = models.a;
+  await button(modelsPage, 'Open SBML file').listeners.click();
+  await settle();
+  assert.equal(core.state.modelPath, '/models/picked.xml');
+  await button(modelsPage, 'E. coli core').listeners.click();
+  await settle();
+  assert.equal(core.state.modelPath, '/data/e_coli_core.xml');
+});
+
+test('the Atlas workspace passes on the file a model came from', async () => {
+  await openModel('iCH360');
+  open = models.a;
+  await button(atlasPage, 'Open Hu').listeners.click();
+  await settle();
+  assert.equal(core.state.modelPath, '/data/Human-GEM.xml');
 });

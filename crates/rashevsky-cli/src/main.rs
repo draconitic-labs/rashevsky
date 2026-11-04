@@ -718,6 +718,12 @@ fn run(cli: Cli) -> Result<()> {
                 .filter(|&j| !m.reactions[j].is_biomass())
                 .filter(|&j| subsystem.as_ref().is_none_or(|sub| m.reactions[j].subsystem.as_ref() == Some(sub)))
                 .collect();
+            if reactions.is_empty() {
+                return Err(rashevsky::Error::Invalid(format!(
+                    "no reactions to draw in {}",
+                    subsystem.as_deref().unwrap_or(&m.id)
+                )));
+            }
             let layout = rashevsky::io::layout::force_layout(&m, &reactions, seed, 400);
             let name = subsystem.clone().unwrap_or_else(|| m.id.clone());
             let map_doc = rashevsky::io::escher::map_json(&m, &layout, &name);

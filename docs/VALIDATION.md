@@ -218,9 +218,9 @@ The other cases of the stochastic folder test the `distrib` package, which this 
 | OptGP against COBRApy OptGP | 0.074 | NADTRHD |
 | CHRR against OptGP | 0.048 | ACALD |
 
-iCH360, the same way, a polytope of dimension 45, 309 reactions compared: CHRR against COBRApy 0.098, OptGP against COBRApy 0.095, CHRR against OptGP 0.043. COBRApy's OptGP is run here with all its warmup points: by default it discards those it finds redundant, and on iCH360 that holds `ASNS1` at 0 in all 1,500 samples, against a mean of 0.091 with CHRR, and puts `ASNS2` 128 flux standard deviations from CHRR. `e_coli_core` runs stock COBRApy.
+iCH360, the same way, a polytope of dimension 45, 309 reactions compared: CHRR against COBRApy 0.098, OptGP against COBRApy 0.095, CHRR against OptGP 0.043. COBRApy's OptGP is run here with all its warmup points: by default it discards those it finds redundant, and on iCH360 that holds `ASNS1` at 0 in all 1,500 samples, against a mean of 0.091 with CHRR, narrows `ASNS2` to a standard deviation of 0.0007 against 0.054 with CHRR, and moves its mean by 1.7 of CHRR's standard deviations. `e_coli_core` runs stock COBRApy.
 
-Diagnostics: CHRR split R-hat 1.002, smallest effective sample size 1410, largest Geweke z 3.8, in 0.42 s. OptGP R-hat 1.001, effective size 2852, Geweke z 3.4, in 1.63 s. A Rust test checks uniformity on a simplex against its exact mean and variance, and convergence on iCH360 for several seeds.
+Diagnostics on `e_coli_core`: CHRR split R-hat 1.002, smallest effective sample size 1410, largest Geweke z 3.8, in 0.43 s. OptGP R-hat 1.001, effective size 2852, Geweke z 3.4, in 1.49 s. On iCH360: CHRR R-hat 1.001, effective size 3985, Geweke z 3.0, in 5.3 s. OptGP R-hat 1.001, effective size 4637, Geweke z 3.1, in 94 s. A Rust test checks uniformity on a simplex against its exact mean and variance, and convergence on iCH360 for several seeds.
 
 ## Outputs
 

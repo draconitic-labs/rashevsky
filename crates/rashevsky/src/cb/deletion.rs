@@ -27,7 +27,9 @@ fn solve_with_disabled(model: &Model, session: &mut dyn Session, disabled: &[usi
     let result = match s.status {
         Status::Optimal => (s.status, s.objective),
         Status::Unbounded => (s.status, f64::INFINITY),
-        other => (other, 0.0),
+        Status::Infeasible => (s.status, 0.0),
+        // No verdict, so neither lethal nor viable.
+        other => (other, f64::NAN),
     };
     for &j in disabled {
         session.set_col_bounds(j, model.reactions[j].lb, model.reactions[j].ub)?;

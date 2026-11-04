@@ -53,13 +53,16 @@ function changed() {
   solve();
 }
 
+const NOT_OPTIMAL = { Infeasible: 'No steady state', Unbounded: 'No limit on the objective' };
+
 function growthReadout(reply) {
   const value = reply?.growth;
   const box = refs.growth;
   box.value.textContent = value === null || value === undefined ? 'None' : fixed(value, 4);
   box.value.classList.toggle('is-dead', !(value > 1e-9));
   let delta = '';
-  if (reply?.status !== 'Optimal') delta = 'No steady state';
+  if (!reply) delta = 'Not solved';
+  else if (reply.status !== 'Optimal') delta = NOT_OPTIMAL[reply.status] ?? `Solver stopped: ${reply.status}`;
   else if ((state.genes.length || state.reactions.length) && state.reference > 1e-9) {
     delta = `${fmt.percent((100 * (value - state.reference)) / state.reference)} from unperturbed`;
   } else delta = reply ? `${(reply.total_flux ?? 0).toFixed(0)} total flux` : '';
@@ -117,8 +120,8 @@ async function renderInspector() {
     h('div', { class: 'block' },
       h('h3', {}, 'Bounds'),
       h('div', { class: 'bounds-row' },
-        h('label', {}, 'Lower', numberBox(lb, (v) => setBounds(r.id, v, null))),
-        h('label', {}, 'Upper', numberBox(ub, (v) => setBounds(r.id, null, v))),
+        h('label', {}, 'Lower', numberBox(lb, -Infinity, (v) => setBounds(r.id, v, undefined))),
+        h('label', {}, 'Upper', numberBox(ub, Infinity, (v) => setBounds(r.id, undefined, v))),
         manual && h('button', { class: 'link', type: 'button', onclick: () => { state.bounds.delete(r.id); refreshReference().then(changed); } }, 'Reset'))),
     r.genes.length > 0 && h('div', { class: 'block' },
       h('h3', {}, 'Genes'),
@@ -172,15 +175,16 @@ function renderMetabolite(pane, id, close) {
   );
 }
 
-function numberBox(value, apply) {
+/** A bound, where an empty box leaves that side open. An open side arrives from the engine as null. */
+function numberBox(value, open, apply) {
   return h('input', {
     type: 'number',
     step: 'any',
     value: Number.isFinite(value) ? value : '',
-    placeholder: value > 0 ? '∞' : '−∞',
+    placeholder: open > 0 ? '∞' : '−∞',
     onchange: (e) => {
       const text = e.target.value.trim();
-      apply(text === '' ? (value > 0 ? Infinity : -Infinity) : Number(text));
+      apply(text === '' ? open : Number(text));
     },
   });
 }
@@ -188,7 +192,7 @@ function numberBox(value, apply) {
 async function setBounds(id, lb, ub) {
   const r = reactionOf(id);
   const current = state.bounds.get(id) ?? [r.lb, r.ub];
-  state.bounds.set(id, [lb ?? current[0], ub ?? current[1]]);
+  state.bounds.set(id, [lb === undefined ? current[0] : lb, ub === undefined ? current[1] : ub]);
   await refreshReference();
   changed();
 }
@@ -299,14 +303,19 @@ function renderFind(query) {
 
 // The open model has no drawn map yet: an automatic layout waits for the fluxes it ranks reactions by.
 let layoutDue = false;
+let layoutReady = Promise.resolve();
 
 async function loadLayout() {
   const model = state.model;
   if (!model) return;
   const curated = !!state.curated;
   refs.viewSelect.hidden = curated;
+  // What the last model had on offer goes, or an export would ask for it by name.
+  refs.viewSelect.replaceChildren();
+  refs.viewSelect.value = '';
   if (curated) {
     const layout = await invoke('layout', { curated: true });
+    if (state.model !== model) return;
     map.setLayout(layout, model.reactions.map((r) => r.id));
   } else {
     refs.viewSelect.replaceChildren(
@@ -314,11 +323,25 @@ async function loadLayout() {
       ...model.subsystems.map((s) => h('option', { value: s }, s)),
     );
     const layout = await invoke('layout', { curated: false, fluxes: state.solution?.fluxes ?? null, count: 110 });
+    if (state.model !== model) return;
     map.setLayout(layout, model.reactions.map((r) => r.id));
   }
-  if (state.solution) {
-    map.setFluxes(state.solution.fluxes, state.solution.disabled, state.solution.growth);
+}
+
+/** A solve has ended, with a reply or, when `reply` is null, without one. */
+async function solved(reply, tooltip) {
+  if (layoutDue) {
+    layoutDue = false;
+    layoutReady = loadLayout();
   }
+  await layoutReady;
+  // A newer reply, or another model, has taken over in the meantime.
+  if (state.solution !== reply) return;
+  map.setFluxes(reply?.fluxes ?? state.model.reactions.map(() => 0), reply?.disabled ?? [], reply?.growth ?? null);
+  growthReadout(reply);
+  tooltip.hidden = true;
+  renderTray();
+  if (state.selected) renderInspector();
 }
 
 export default {
@@ -339,8 +362,10 @@ export default {
       class: 'select', 'aria-label': 'Part of the model to draw', hidden: true,
       onchange: async (e) => {
         const subsystem = e.target.value || null;
+        const model = state.model;
         const layout = await invoke('layout', { curated: false, subsystem, fluxes: state.solution?.fluxes ?? null, count: 110 });
-        map.setLayout(layout, state.model.reactions.map((r) => r.id));
+        if (state.model !== model) return;
+        map.setLayout(layout, model.reactions.map((r) => r.id));
         if (state.solution) map.setFluxes(state.solution.fluxes, state.solution.disabled, state.solution.growth);
       },
     });
@@ -428,20 +453,17 @@ export default {
       renderMedium();
       renderTray();
       renderInspector();
-      layoutDue = !state.curated;
-      if (state.curated) await loadLayout();
-    });
-    on('solution', async (reply) => {
-      if (layoutDue) {
-        layoutDue = false;
-        await loadLayout();
-      }
-      map.setFluxes(reply.fluxes, reply.disabled, reply.growth);
-      growthReadout(reply);
+      // Nothing of the last model stays on view while this one is solved.
+      map.clear();
       tooltip.hidden = true;
-      renderTray();
-      if (state.selected) renderInspector();
+      refs.growth.value.textContent = '';
+      refs.growth.delta.textContent = '';
+      refs.growth.time.textContent = '';
+      layoutDue = !state.curated;
+      layoutReady = state.curated ? loadLayout() : Promise.resolve();
     });
+    on('solution', (reply) => solved(reply, tooltip));
+    on('solve-failed', () => solved(null, tooltip));
     on('fonts', () => map.redraw());
     on('apply-design', ({ genes, reactions }) => {
       state.genes = [...genes];

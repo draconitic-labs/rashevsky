@@ -2,7 +2,7 @@
 // the size of a flux, and particles travel in its direction at a speed that grows with it. A static
 // layer holds lines and nodes, and only the particles draw every frame.
 
-import { ramp, REDUCED_MOTION } from './core.js';
+import { fixed, ramp, REDUCED_MOTION } from './core.js';
 
 const SPRITE_STEPS = 12;
 const BACKGROUND = '#14171a';
@@ -163,6 +163,15 @@ export class FluxMap {
     this.layerDirty = true;
     this.computeReveal();
     if (!keepView) this.fit();
+  }
+
+  /** Leaves nothing on view until the next layout. */
+  clear() {
+    this.setLayout({ world: [1, 1], nodes: {}, reactions: {}, regions: [] }, []);
+    this.hover = null;
+    this.selected = null;
+    this.disabled = new Set();
+    this.growth = null;
   }
 
   /** Distance from the carbon source, in reactions, for the opening reveal. */
@@ -539,7 +548,7 @@ export class FluxMap {
       const isOn = this.selected?.id === r.id || this.hover?.id === r.id;
       if (!(k > 1.05 || isOn)) continue;
       const v = this.shown[r.modelIndex] ?? 0;
-      const text = `${r.id}  ${Math.abs(v) < 1e-7 ? '0' : v.toFixed(Math.abs(v) >= 100 ? 0 : 2)}`;
+      const text = `${r.id}  ${Math.abs(v) < 1e-7 ? '0' : fixed(v, Math.abs(v) >= 100 ? 0 : 2)}`;
       g.lineWidth = labelSize * 0.42;
       g.strokeStyle = BACKGROUND;
       g.strokeText(text, r.mx, r.my + 16 / Math.max(0.65, k));

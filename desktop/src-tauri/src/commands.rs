@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
@@ -121,14 +121,20 @@ fn network(model: &Model) -> BTreeMap<&str, BTreeMap<&str, u64>> {
         .collect()
 }
 
-/// The drawn map fits only the network it was drawn for, so an edited copy gets an automatic layout.
+/// What a model maximizes or minimizes, by reaction.
+fn objective_terms(model: &Model) -> (Option<Sense>, BTreeMap<&str, u64>) {
+    (model.sense, model.objective.iter().map(|&(j, c)| (model.reactions[j].id.as_str(), c.to_bits())).collect())
+}
+
+/// The drawn map fits only the network it was drawn for, and its ring reads the objective as growth, so
+/// a copy with either one edited gets an automatic layout.
 fn fits_the_drawn_map(model: &Model) -> Reply<bool> {
     if model.id != MAPPED_MODEL {
         return Ok(false);
     }
     let doc = rashevsky::sbml::read::read_bytes(ICH360_XML).map_err(text)?;
     let bundled = Model::from_document(&doc).map_err(text)?;
-    Ok(network(model) == network(&bundled))
+    Ok(network(model) == network(&bundled) && objective_terms(model) == objective_terms(&bundled))
 }
 
 /// Opens an SBML file as a constraint-based model.
@@ -188,6 +194,37 @@ fn file_digest(path: &Path) -> Result<String, String> {
     Ok(hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect())
 }
 
+/// Numbers the temporary files, so that two downloads of one model never share one.
+static DOWNLOADS: AtomicU64 = AtomicU64::new(0);
+
+/// Keeps a file only if it has the pinned digest. Anything else in its place, such as a broken transfer
+/// or a file from another release, is fetched again.
+fn pinned_file<R: std::io::Read>(
+    path: &Path,
+    pinned: &str,
+    fetch: impl FnOnce() -> Result<R, String>,
+) -> Result<(), String> {
+    if path.exists() && file_digest(path)? == pinned {
+        return Ok(());
+    }
+    let mut reply = fetch()?;
+    let temporary =
+        path.with_extension(format!("{}.{}.part", std::process::id(), DOWNLOADS.fetch_add(1, Ordering::Relaxed)));
+    let kept = (|| {
+        let mut out = std::fs::File::create(&temporary).map_err(text)?;
+        std::io::copy(&mut reply, &mut out).map_err(text)?;
+        out.sync_all().map_err(text)?;
+        if file_digest(&temporary)? != pinned {
+            return Err("is not the file this release was checked against".to_string());
+        }
+        std::fs::rename(&temporary, path).map_err(text)
+    })();
+    if kept.is_err() {
+        let _ = std::fs::remove_file(&temporary);
+    }
+    kept
+}
+
 /// Downloads a published model once into the user's data folder and returns its path.
 #[tauri::command]
 pub async fn download_model(name: String) -> Reply<String> {
@@ -197,18 +234,11 @@ pub async fn download_model(name: String) -> Reply<String> {
         let dir = data_dir();
         std::fs::create_dir_all(&dir).map_err(text)?;
         let path = dir.join(file);
-        if path.exists() {
-            return Ok(path.display().to_string());
-        }
-        let mut reply = ureq::get(*url).call().map_err(|e| format!("could not download {name}: {e}"))?;
-        let temporary = dir.join(format!("{file}.part"));
-        let mut out = std::fs::File::create(&temporary).map_err(text)?;
-        std::io::copy(&mut reply.body_mut().as_reader(), &mut out).map_err(text)?;
-        if file_digest(&temporary)? != *pinned {
-            std::fs::remove_file(&temporary).map_err(text)?;
-            return Err(format!("{url} is not the file this release was checked against"));
-        }
-        std::fs::rename(&temporary, &path).map_err(text)?;
+        pinned_file(&path, pinned, || {
+            let reply = ureq::get(*url).call().map_err(|e| format!("could not download {name}: {e}"))?;
+            Ok(reply.into_body().into_reader())
+        })
+        .map_err(|e| format!("{url}: {e}"))?;
         Ok(path.display().to_string())
     })
     .await
@@ -222,8 +252,9 @@ pub struct Perturbation {
     pub genes: Vec<String>,
     #[serde(default)]
     pub reactions: Vec<String>,
+    /// Reaction, lower and upper bound. JSON has no infinity, so an open side arrives as null.
     #[serde(default)]
-    pub bounds: Vec<(String, f64, f64)>,
+    pub bounds: Vec<(String, Option<f64>, Option<f64>)>,
     #[serde(default)]
     pub objective: Option<String>,
 }
@@ -231,7 +262,7 @@ pub struct Perturbation {
 fn apply_medium_and_objective(model: &Model, p: &Perturbation) -> Reply<Model> {
     let mut m = model.clone();
     for (id, lb, ub) in &p.bounds {
-        m.set_bounds(id, *lb, *ub).map_err(text)?;
+        m.set_bounds(id, lb.unwrap_or(f64::NEG_INFINITY), ub.unwrap_or(f64::INFINITY)).map_err(text)?;
     }
     if let Some(obj) = &p.objective {
         m.set_objective(obj, Sense::Maximize).map_err(text)?;
@@ -870,6 +901,9 @@ pub async fn export_escher(
             .filter(|&j| !m.reactions[j].is_biomass())
             .filter(|&j| subsystem.as_ref().is_none_or(|s| m.reactions[j].subsystem.as_ref() == Some(s)))
             .collect();
+        if chosen.is_empty() {
+            return Err(format!("no reactions to draw in {}", subsystem.as_deref().unwrap_or(&m.id)));
+        }
         let layout = rashevsky::io::layout::force_layout(&m, &chosen, 1, 400);
         let doc = rashevsky::io::escher::map_json(&m, &layout, subsystem.as_deref().unwrap_or(&m.id));
         std::fs::write(&path, serde_json::to_string(&doc).map_err(text)?).map_err(text)?;
@@ -967,12 +1001,54 @@ mod tests {
         assert!(fits_the_drawn_map(&model).unwrap());
         // The order of a file does not matter, the chemistry does.
         model.reactions.reverse();
+        let last = model.reactions.len() - 1;
+        for term in &mut model.objective {
+            term.0 = last - term.0;
+        }
         assert!(fits_the_drawn_map(&model).unwrap());
+        let objective = model.objective.clone();
+        model.objective = vec![(model.reaction_index("PGI").unwrap(), 1.0)];
+        assert!(!fits_the_drawn_map(&model).unwrap());
+        model.objective = objective;
         let pgi = model.reaction_index("PGI").unwrap();
         for term in &mut model.reactions[pgi].stoichiometry {
             term.1 = -term.1;
         }
         assert!(!fits_the_drawn_map(&model).unwrap());
+    }
+
+    #[test]
+    fn a_kept_download_counts_only_with_the_pinned_digest() {
+        let dir = std::env::temp_dir().join(format!("rashevsky-pin-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("model.xml");
+        let good: &[u8] = b"the right file";
+        std::fs::write(&path, good).unwrap();
+        let pinned = file_digest(&path).unwrap();
+        pinned_file(&path, &pinned, || -> Result<&[u8], String> { panic!("fetched a good file again") }).unwrap();
+        // A broken transfer in its place is replaced.
+        std::fs::write(&path, b"half a fi").unwrap();
+        pinned_file(&path, &pinned, || Ok(good)).unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), good);
+        // A wrong download is refused and leaves nothing of itself behind.
+        std::fs::remove_file(&path).unwrap();
+        assert!(pinned_file(&path, &pinned, || Ok(&b"another file"[..])).is_err());
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
+        std::fs::remove_dir(&dir).unwrap();
+    }
+
+    #[test]
+    fn an_open_bound_arrives_as_null_and_means_infinity() {
+        let doc = rashevsky::sbml::read::read_bytes(ICH360_XML).unwrap();
+        let model = Model::from_document(&doc).unwrap();
+        let p: Perturbation = serde_json::from_str(r#"{"bounds":[["PGI",null,null],["PFK",0,null]]}"#).unwrap();
+        let out = apply_medium_and_objective(&model, &p).unwrap();
+        let bounds = |id: &str| {
+            let r = &out.reactions[out.reaction_index(id).unwrap()];
+            (r.lb, r.ub)
+        };
+        assert_eq!(bounds("PGI"), (f64::NEG_INFINITY, f64::INFINITY));
+        assert_eq!(bounds("PFK"), (0.0, f64::INFINITY));
     }
 
     #[test]

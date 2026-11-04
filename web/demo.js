@@ -1,7 +1,7 @@
 // The flux map of iCH360, solved in the page.
 import init, { Core } from './rashevsky_wasm.js';
 import { FluxMap } from './fluxmap.js';
-import { fixed } from './core.js';
+import { fixed, fmt } from './core.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('map');
@@ -51,7 +51,7 @@ function compute() {
     : reply.growth === null
     ? 'No steady state'
     : cut.length && reference > 1e-9
-      ? `${reply.growth >= reference ? '+' : '−'}${Math.abs((100 * (reply.growth - reference)) / reference).toFixed(1)} % from unperturbed`
+      ? `${fmt.percent((100 * (reply.growth - reference)) / reference)} from unperturbed`
       : '';
   renderTray();
 }
@@ -124,4 +124,8 @@ async function main() {
   document.fonts?.ready.then(() => map.redraw());
 }
 
-main();
+main().catch((error) => {
+  $('delta').textContent = `The solver did not start: ${error.message ?? error}`;
+  $('glc').disabled = true;
+  $('o2').disabled = true;
+});

@@ -123,6 +123,7 @@ Keys: `1` to `8` change workspace, `/` finds a reaction, `k` deletes the selecte
 | `crates/rashevsky-wasm`, `web/` | The WebAssembly demo |
 | `desktop/` | The Tauri workbench |
 | `models/` | Bundled models |
+| `licenses/`, `THIRD-PARTY-NOTICES.md` | License texts of what is linked into a release |
 | `validation/` | Scripts that compare the engine with its references, and their results |
 | `docs/MODEL.md` | Every equation and method, with references |
 | `docs/VALIDATION.md` | Every validation number, with its command |
