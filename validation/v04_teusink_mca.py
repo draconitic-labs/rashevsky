@@ -49,7 +49,7 @@ THEOREM_MODELS = {
     "BIOMD0000000064": "Teusink 2000 yeast glycolysis",
     "BIOMD0000000176": "Conant and Wolfe 2007 yeast glycolysis",
     "BIOMD0000000172": "Pritchard and Kell 2002 yeast glycolysis",
-    "BIOMD0000000071": "Bakker 2001 Trypanosoma glycolysis",
+    "BIOMD0000000071": "Bakker2001_Glycolysis as named in the file",
     "BIOMD0000000061": "Hynne 2001 yeast glycolysis",
 }
 THEOREM_TOL = 1e-8

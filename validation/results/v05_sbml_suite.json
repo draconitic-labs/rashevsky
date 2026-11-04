@@ -1,0 +1,521 @@
+{
+  "bdf": {
+    "applicable": 1700,
+    "failed": [],
+    "failed_tags": {},
+    "fast_reaction_cases_passed": 35,
+    "fbc_cases_passed": 34,
+    "method": "bdf",
+    "passed": 1700,
+    "percent": 100.0,
+    "seconds": 25.611106634140015,
+    "total_cases": 1823
+  },
+  "pass": false,
+  "rodas4": {
+    "applicable": 1700,
+    "failed": [],
+    "failed_tags": {},
+    "fast_reaction_cases_passed": 35,
+    "fbc_cases_passed": 34,
+    "method": "rodas4",
+    "passed": 1700,
+    "percent": 100.0,
+    "seconds": 127.9670000076294,
+    "total_cases": 1823
+  },
+  "stochastic": {
+    "00001": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00002": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00003": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 10,
+          "z_failures": 0
+        },
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 77,
+          "y_failures": 4,
+          "z_failures": 0
+        }
+      ],
+      "pass": false
+    },
+    "00004": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00005": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00006": {
+      "attempts": [
+        {
+          "points": 102,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00007": {
+      "attempts": [
+        {
+          "points": 102,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00008": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00009": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00010": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00011": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00012": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00013": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00014": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00015": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00016": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00017": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00018": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00019": {
+      "attempts": [
+        {
+          "points": 102,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00020": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00021": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00022": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00023": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00024": {
+      "attempts": [
+        {
+          "points": 153,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00025": {
+      "attempts": [
+        {
+          "points": 153,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00026": {
+      "attempts": [
+        {
+          "points": 153,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00027": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00028": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00029": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00030": {
+      "attempts": [
+        {
+          "points": 102,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00031": {
+      "attempts": [
+        {
+          "points": 102,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00032": {
+      "attempts": [
+        {
+          "points": 102,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 4
+        },
+        {
+          "points": 102,
+          "runs": 40000,
+          "seed": 77,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00033": {
+      "attempts": [
+        {
+          "points": 102,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00034": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00035": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00036": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00037": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 2
+        }
+      ],
+      "pass": true
+    },
+    "00038": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    },
+    "00039": {
+      "attempts": [
+        {
+          "points": 51,
+          "runs": 40000,
+          "seed": 20261104,
+          "y_failures": 0,
+          "z_failures": 0
+        }
+      ],
+      "pass": true
+    }
+  },
+  "stochastic_cases": 39,
+  "stochastic_cases_failed": [
+    "00003"
+  ],
+  "stochastic_cases_flagged_on_first_seed": [
+    "00003",
+    "00032"
+  ],
+  "stochastic_runs_per_case": 40000,
+  "suite": "SBML Test Suite 3.5.0"
+}

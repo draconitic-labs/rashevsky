@@ -98,6 +98,11 @@ fn strip(id: &str, prefix: &str) -> String {
 }
 
 impl Model {
+    /// An empty model with the given identifier.
+    pub fn new(id: &str) -> Self {
+        Model { id: id.to_string(), ..Model::default() }
+    }
+
     /// Reads an SBML file into a constraint-based model.
     pub fn read_sbml(path: impl AsRef<Path>) -> Result<Self> {
         Self::from_document(&sbml::read::read_file(path)?)
