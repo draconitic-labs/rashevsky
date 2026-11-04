@@ -52,6 +52,7 @@ struct HighsSession {
     hessian: Vec<(usize, usize, f64)>,
     obj: Vec<f64>,
     sense: Sense,
+    strategy: c_int,
 }
 
 // A HiGHS instance is used by one thread at a time; the pointer moves with the session.
@@ -65,6 +66,8 @@ impl Drop for HighsSession {
 }
 
 const HESSIAN_FORMAT_TRIANGULAR: c_int = 1;
+const SIMPLEX_DUAL: c_int = 1;
+const SIMPLEX_PRIMAL: c_int = 4;
 
 fn check(code: c_int, what: &str) -> Result<()> {
     if code == ffi::STATUS_ERROR {
@@ -94,6 +97,7 @@ impl HighsSession {
             hessian: p.hessian.clone(),
             obj: p.obj.clone(),
             sense,
+            strategy: SIMPLEX_DUAL,
         };
         session.set_bool("output_flag", false)?;
         session.set_int("threads", 1)?;
@@ -107,6 +111,14 @@ impl HighsSession {
         }
         session.pass(p)?;
         Ok(session)
+    }
+
+    fn set_simplex_strategy(&mut self, strategy: c_int) -> Result<()> {
+        if self.strategy != strategy {
+            self.set_int("simplex_strategy", strategy)?;
+            self.strategy = strategy;
+        }
+        Ok(())
     }
 
     fn set_bool(&mut self, name: &str, value: bool) -> Result<()> {
@@ -215,6 +227,9 @@ impl HighsSession {
 
 impl Session for HighsSession {
     fn set_col_bounds(&mut self, col: usize, lb: f64, ub: f64) -> Result<()> {
+        if !self.is_mip && !self.is_qp {
+            self.set_simplex_strategy(SIMPLEX_DUAL)?;
+        }
         // SAFETY: valid instance; the column index is checked by HiGHS.
         let code = unsafe { ffi::Highs_changeColBounds(self.ptr, col as c_int, lb, ub) };
         check(code, "changeColBounds")
@@ -229,6 +244,11 @@ impl Session for HighsSession {
     fn set_objective(&mut self, sense: Sense, obj: &[f64]) -> Result<()> {
         if obj.len() != self.n_cols {
             return Err(Error::Solver("objective length differs from column count".into()));
+        }
+        // A change of objective keeps the last basis primal feasible, so primal simplex restarts from
+        // it directly. A change of bounds keeps it dual feasible instead, as `set_col_bounds` notes.
+        if !self.is_mip && !self.is_qp {
+            self.set_simplex_strategy(SIMPLEX_PRIMAL)?;
         }
         if sense != self.sense {
             let s = match sense {
@@ -264,7 +284,26 @@ impl Session for HighsSession {
         let run = unsafe { ffi::Highs_run(self.ptr) };
         check(run, "run")?;
         // SAFETY: valid instance.
-        let model_status = unsafe { ffi::Highs_getModelStatus(self.ptr) };
+        let mut model_status = unsafe { ffi::Highs_getModelStatus(self.ptr) };
+        // HiGHS's primal simplex can stop without an answer. A cold start with the dual simplex then
+        // decides, and an inconclusive solve is never taken as a result.
+        let inconclusive = !matches!(
+            model_status,
+            ffi::MODEL_STATUS_OPTIMAL
+                | ffi::MODEL_STATUS_MODEL_EMPTY
+                | ffi::MODEL_STATUS_INFEASIBLE
+                | ffi::MODEL_STATUS_UNBOUNDED
+                | ffi::MODEL_STATUS_UNBOUNDED_OR_INFEASIBLE
+        );
+        if inconclusive && !self.is_mip && !self.is_qp {
+            self.set_simplex_strategy(SIMPLEX_DUAL)?;
+            // SAFETY: valid instance.
+            check(unsafe { ffi::Highs_clearSolver(self.ptr) }, "clearSolver")?;
+            // SAFETY: valid instance.
+            check(unsafe { ffi::Highs_run(self.ptr) }, "run")?;
+            // SAFETY: valid instance.
+            model_status = unsafe { ffi::Highs_getModelStatus(self.ptr) };
+        }
         let status = match model_status {
             ffi::MODEL_STATUS_OPTIMAL | ffi::MODEL_STATUS_MODEL_EMPTY => Status::Optimal,
             ffi::MODEL_STATUS_INFEASIBLE => Status::Infeasible,

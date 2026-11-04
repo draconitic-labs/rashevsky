@@ -1,0 +1,4 @@
+e_coli_core.json holds standard transformed reaction energies computed by scripts/export_thermo.py from
+eQuilibrator's component contribution data: Beber et al., Nucleic Acids Res. 50 (2022) D603, and
+Noor et al., PLoS Comput. Biol. 9 (2013) e1003098. Compound database: doi:10.5281/zenodo.4128543,
+licensed CC BY 4.0. The same license applies to these derived values.

@@ -43,12 +43,24 @@ pub fn write_string(doc: &Document) -> String {
     let m = &doc.model;
     let mut s = String::with_capacity(1 << 16);
     s.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    s.push_str(
-        "<sbml xmlns=\"http://www.sbml.org/sbml/level3/version1/core\" level=\"3\" version=\"1\" \
-         xmlns:fbc=\"http://www.sbml.org/sbml/level3/version1/fbc/version2\" fbc:required=\"false\" \
-         xmlns:groups=\"http://www.sbml.org/sbml/level3/version1/groups/version1\" groups:required=\"false\">\n",
-    );
-    let _ = write!(s, "<model id=\"{}\" fbc:strict=\"false\"", escape(&m.id));
+    // Only the packages a model uses are declared; some readers stop at an unused package.
+    let uses_fbc = !m.objectives.is_empty()
+        || !m.gene_products.is_empty()
+        || m.reactions.iter().any(|r| r.lower_bound.is_some() || r.upper_bound.is_some() || r.gene_rule.is_some())
+        || m.species.iter().any(|sp| sp.formula.is_some() || sp.charge.is_some());
+    let uses_groups = !m.groups.is_empty();
+    s.push_str("<sbml xmlns=\"http://www.sbml.org/sbml/level3/version1/core\" level=\"3\" version=\"1\"");
+    if uses_fbc {
+        s.push_str(" xmlns:fbc=\"http://www.sbml.org/sbml/level3/version1/fbc/version2\" fbc:required=\"false\"");
+    }
+    if uses_groups {
+        s.push_str(" xmlns:groups=\"http://www.sbml.org/sbml/level3/version1/groups/version1\" groups:required=\"false\"");
+    }
+    s.push_str(">\n");
+    let _ = write!(s, "<model id=\"{}\"", escape(&m.id));
+    if uses_fbc {
+        s.push_str(" fbc:strict=\"false\"");
+    }
     if !m.name.is_empty() {
         let _ = write!(s, " name=\"{}\"", escape(&m.name));
     }

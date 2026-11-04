@@ -43,6 +43,20 @@ fn analytic_decay_at_both_integrators() {
 }
 
 #[test]
+fn many_close_output_times_do_not_stop_either_integrator() {
+    // A step clipped to an output time can end within rounding of it, which once made BDF fail.
+    let m = teusink();
+    let times: Vec<f64> = (0..=1000).map(|k| 100.0 * k as f64 / 1000.0).collect();
+    let mut ends = Vec::new();
+    for method in [Method::Rodas4, Method::Bdf] {
+        let options = SimOptions { method, ..SimOptions::default() };
+        let run = simulate(&m, &times, &options).unwrap();
+        ends.push(run.series(&m, "G6P").unwrap()[1000]);
+    }
+    assert!((ends[0] - ends[1]).abs() < 1e-5 * ends[0], "{ends:?}");
+}
+
+#[test]
 fn analytic_jacobian_matches_finite_differences() {
     let m = teusink();
     let run = simulate(&m, &[0.0, 5.0], &SimOptions::default()).unwrap();

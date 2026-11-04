@@ -7,7 +7,8 @@ __pycache__/
 /python/*.so
 /web/pkg/
 /results/
-/data/thermo/*.tmp
+
 /web/dist/
 /web/preview-shell/gen/
 /desktop/src-tauri/gen/
+/.data/

@@ -9,7 +9,7 @@ import tempfile
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 RESULTS = REPO / "validation" / "results"
-DATA = pathlib.Path(os.environ.get("RASHEVSKY_DATA", pathlib.Path.home() / ".cache/rashevsky-work/data"))
+DATA = pathlib.Path(os.environ.get("RASHEVSKY_DATA", REPO / ".data"))
 CORE = REPO / "models" / "e_coli_core" / "e_coli_core.xml.gz"
 BIN = os.environ.get(
     "RASHEVSKY_BIN",
@@ -19,7 +19,7 @@ BIN = os.environ.get(
 
 def engine(*args: str):
     """Runs the engine's CLI and returns its parsed JSON output."""
-    with tempfile.NamedTemporaryFile(suffix=".json", dir=os.environ.get("RASHEVSKY_TMP")) as handle:
+    with tempfile.NamedTemporaryFile(suffix=".json") as handle:
         subprocess.run([BIN, "--out", handle.name, *map(str, args)], check=True)
         return json.load(open(handle.name))
 
@@ -34,7 +34,7 @@ def write_result(name: str, payload: dict) -> None:
 def monk_table(name: str = "Table 1"):
     """Rows of Supplementary Data 11 of Monk et al. 2017, cached as JSON next to the workbook."""
     import openpyxl
-    book = pathlib.Path(os.environ.get("RASHEVSKY_MONK", DATA.parent / "papers/monk/M40.xlsx"))
+    book = DATA / "monk_2017_data11.xlsx"
     cache = book.with_suffix("." + name.replace(" ", "_") + ".json")
     if cache.exists():
         return json.load(open(cache))

@@ -574,7 +574,9 @@ impl Integrator for Bdf {
                 return Err(Error::Integrator(format!("step size underflow at t = {}", self.t)));
             }
             let mut t_new = self.t + self.h;
-            if t_new >= t_limit {
+            // A step that ends within rounding of the limit lands on it, or the next step would be
+            // of the order of the rounding error and destroy the difference table.
+            if t_new >= t_limit - 1e-12 * (t_limit.abs() + self.h.abs()) {
                 t_new = t_limit;
                 let factor = (t_new - self.t) / self.h;
                 self.change_d(factor);

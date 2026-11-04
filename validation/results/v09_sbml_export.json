@@ -1,0 +1,65 @@
+{
+  "checks": {
+    "Human-GEM": {
+      "genes": [
+        2870,
+        2870
+      ],
+      "libsbml_errors": 0,
+      "metabolites": [
+        8374,
+        8374
+      ],
+      "objective_original": 138.5326986441912,
+      "objective_rewritten": 138.5326986441912,
+      "pass": true,
+      "reactions": [
+        12748,
+        12748
+      ]
+    },
+    "e_coli_core": {
+      "genes": [
+        137,
+        137
+      ],
+      "libsbml_errors": 0,
+      "metabolites": [
+        72,
+        72
+      ],
+      "objective_original": 0.8739215069684295,
+      "objective_rewritten": 0.8739215069684295,
+      "pass": true,
+      "reactions": [
+        95,
+        95
+      ]
+    },
+    "iML1515": {
+      "genes": [
+        1516,
+        1516
+      ],
+      "libsbml_errors": 0,
+      "metabolites": [
+        1877,
+        1877
+      ],
+      "objective_original": 0.87699721425716,
+      "objective_rewritten": 0.87699721425716,
+      "pass": true,
+      "reactions": [
+        2712,
+        2712
+      ]
+    },
+    "teusink_kinetic": {
+      "max_rel_difference_roadrunner": 0.0,
+      "pass": true,
+      "species": 17
+    }
+  },
+  "libsbml_version": "5.21.2",
+  "pass": true
+}
