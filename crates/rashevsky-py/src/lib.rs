@@ -1,11 +1,11 @@
 //! Python bindings. Results cross as plain dictionaries and lists, which pandas and NumPy take directly.
 
-use pyo3::exceptions::{PyRuntimeError, PyValueError};
-use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
 use engine::cb;
 use engine::kinetic::{self, KineticModel, Method, SimOptions, SteadyOptions};
 use engine::lp::Sense;
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
+use pyo3::prelude::*;
+use pyo3::types::{PyDict, PyList};
 use serde::Serialize;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -197,7 +197,9 @@ impl PyModel {
         let m = self.with_knockouts(&knockout_genes, &knockout_reactions)?;
         let targets = match reactions {
             None => None,
-            Some(list) => Some(list.iter().map(|r| m.reaction_index(r)).collect::<engine::Result<Vec<_>>>().map_err(err)?),
+            Some(list) => {
+                Some(list.iter().map(|r| m.reaction_index(r)).collect::<engine::Result<Vec<_>>>().map_err(err)?)
+            }
         };
         let options = cb::FvaOptions { fraction_of_optimum: fraction, reactions: targets };
         let ranges = py.detach(|| cb::fva(&m, &options)).map_err(err)?;
@@ -304,7 +306,12 @@ impl PyModel {
 
     /// Minimal medium for a growth rate.
     #[pyo3(signature = (growth, minimize_components=false))]
-    fn minimal_medium<'py>(&self, py: Python<'py>, growth: f64, minimize_components: bool) -> PyResult<Bound<'py, PyAny>> {
+    fn minimal_medium<'py>(
+        &self,
+        py: Python<'py>,
+        growth: f64,
+        minimize_components: bool,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let m = &self.inner;
         let r = py.detach(|| cb::minimal_medium(m, growth, minimize_components)).map_err(err)?;
         result(py, &r)
@@ -333,7 +340,14 @@ impl PyModel {
         fraction: Option<f64>,
         full: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
-        let options = cb::SamplerOptions { chains, samples_per_chain: samples, thinning, burn_in, seed, fraction_of_optimum: fraction };
+        let options = cb::SamplerOptions {
+            chains,
+            samples_per_chain: samples,
+            thinning,
+            burn_in,
+            seed,
+            fraction_of_optimum: fraction,
+        };
         let m = &self.inner;
         let run = py
             .detach(|| match method {
@@ -351,12 +365,22 @@ impl PyModel {
 
     /// Thermodynamics-based flux analysis; `energies` has the fields of `ThermoData`.
     #[pyo3(signature = (energies, c_min=1e-6, c_max=0.02, sigmas=2.0))]
-    fn tfa<'py>(&self, py: Python<'py>, energies: &Bound<'py, PyAny>, c_min: f64, c_max: f64, sigmas: f64) -> PyResult<Bound<'py, PyAny>> {
+    fn tfa<'py>(
+        &self,
+        py: Python<'py>,
+        energies: &Bound<'py, PyAny>,
+        c_min: f64,
+        c_max: f64,
+        sigmas: f64,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let data: cb::ThermoData = from_python(energies)?;
         let options = cb::TfaOptions { c_min, c_max, sigmas, ..cb::TfaOptions::default() };
         let m = &self.inner;
         let s = py.detach(|| cb::tfa(m, &data, &options)).map_err(err)?;
-        to_python(py, &json!({"solution": fluxes_json(m, &s.flux), "concentrations": s.concentrations, "gibbs": s.gibbs}))
+        to_python(
+            py,
+            &json!({"solution": fluxes_json(m, &s.flux), "concentrations": s.concentrations, "gibbs": s.gibbs}),
+        )
     }
 
     /// Enzyme-constrained FBA; `data` has the fields of `EnzymeData`.
@@ -463,7 +487,9 @@ impl PyKinetic {
     fn steady_state<'py>(&self, py: Python<'py>, integrate: f64) -> PyResult<Bound<'py, PyAny>> {
         let m = &self.inner;
         let s = py
-            .detach(|| kinetic::steady_state(m, &SteadyOptions { integrate_first: integrate, ..SteadyOptions::default() }))
+            .detach(|| {
+                kinetic::steady_state(m, &SteadyOptions { integrate_first: integrate, ..SteadyOptions::default() })
+            })
             .map_err(err)?;
         let species: BTreeMap<&str, f64> = m.species.iter().map(|x| (x.id.as_str(), s.values[x.view])).collect();
         let fluxes: BTreeMap<&str, f64> = m.reactions.iter().zip(&s.fluxes).map(|(r, v)| (r.id.as_str(), *v)).collect();
@@ -476,22 +502,28 @@ impl PyKinetic {
         let m = &self.inner;
         let c = py
             .detach(|| {
-                let state = kinetic::steady_state(m, &SteadyOptions { integrate_first: integrate, ..SteadyOptions::default() })?;
+                let state = kinetic::steady_state(
+                    m,
+                    &SteadyOptions { integrate_first: integrate, ..SteadyOptions::default() },
+                )?;
                 kinetic::control_analysis(m, &state)
             })
             .map_err(err)?;
         let rows = |a: &rashevsky_matrix::DMatrix<f64>| -> Vec<Vec<f64>> {
             (0..a.nrows()).map(|i| (0..a.ncols()).map(|j| a[(i, j)]).collect()).collect()
         };
-        result(py, &json!({
-            "reactions": c.reactions,
-            "states": c.states,
-            "fluxes": c.fluxes,
-            "flux_control": rows(&c.scaled_flux_control),
-            "concentration_control": rows(&c.scaled_concentration_control),
-            "elasticities": rows(&c.scaled_elasticities),
-            "theorems": c.theorems,
-        }))
+        result(
+            py,
+            &json!({
+                "reactions": c.reactions,
+                "states": c.states,
+                "fluxes": c.fluxes,
+                "flux_control": rows(&c.scaled_flux_control),
+                "concentration_control": rows(&c.scaled_concentration_control),
+                "elasticities": rows(&c.scaled_elasticities),
+                "theorems": c.theorems,
+            }),
+        )
     }
 
     /// Ensemble of stochastic simulations. `tau_epsilon` selects tau-leaping.
@@ -526,7 +558,12 @@ impl PyKinetic {
     }
 
     /// Fits parameters. `parameters` lists `{name, start}`, `data` lists `{time, symbol, value, sigma}`.
-    fn fit<'py>(&self, py: Python<'py>, parameters: &Bound<'py, PyAny>, data: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn fit<'py>(
+        &self,
+        py: Python<'py>,
+        parameters: &Bound<'py, PyAny>,
+        data: &Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let parameters: Vec<kinetic::fit::FitParameter> = from_python(parameters)?;
         let data: Vec<kinetic::fit::Observation> = from_python(data)?;
         let m = &self.inner;
@@ -559,7 +596,12 @@ impl PyKinetic {
     }
 
     fn __repr__(&self) -> String {
-        format!("<KineticModel {}: {} species, {} reactions>", self.inner.id, self.inner.species.len(), self.inner.reactions.len())
+        format!(
+            "<KineticModel {}: {} species, {} reactions>",
+            self.inner.id,
+            self.inner.species.len(),
+            self.inner.reactions.len()
+        )
     }
 }
 

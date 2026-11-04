@@ -86,11 +86,14 @@ mod tests {
 
     #[test]
     fn nullspace_annihilates_and_has_expected_dimension() {
-        let a = DMatrix::from_row_slice(3, 5, &[
-            1.0, -1.0, 0.0, 0.0, 2.0,
-            0.0, 1.0, -1.0, 0.0, -1.0,
-            1.0, 0.0, -1.0, 0.0, 1.0, // sum of the first two rows
-        ]);
+        let a = DMatrix::from_row_slice(
+            3,
+            5,
+            &[
+                1.0, -1.0, 0.0, 0.0, 2.0, 0.0, 1.0, -1.0, 0.0, -1.0, 1.0, 0.0, -1.0, 0.0,
+                1.0, // sum of the first two rows
+            ],
+        );
         let e = rref(&a, 1e-10);
         assert_eq!(e.rank, 2);
         let n = nullspace(&a, 1e-10);

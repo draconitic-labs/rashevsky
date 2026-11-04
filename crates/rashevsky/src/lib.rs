@@ -4,6 +4,8 @@
 //! and the commands that reproduce them are in `docs/VALIDATION.md`.
 
 #![warn(missing_docs)]
+// Numerical kernels index several arrays in step, which iterators would obscure.
+#![allow(clippy::needless_range_loop)]
 
 pub mod cb;
 pub mod error;
@@ -19,5 +21,5 @@ pub mod suite;
 pub mod tasks;
 
 pub use error::{Error, Result};
-pub use nalgebra;
 pub use model::Model;
+pub use nalgebra;

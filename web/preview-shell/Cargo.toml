@@ -1,0 +1,15 @@
+[package]
+name = "rashevsky-web-preview"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "Shows the Labs demo in the real WebKitGTK webview, for testing"
+
+[workspace]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }

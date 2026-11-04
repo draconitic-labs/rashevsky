@@ -7,10 +7,7 @@ use std::fmt::Write as _;
 
 /// Escapes text for use in XML attribute values and content.
 pub fn escape(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
+    text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
 }
 
 fn num(v: f64) -> String {
@@ -182,12 +179,8 @@ pub fn write_string(doc: &Document) -> String {
                 }
                 let _ = writeln!(s, "<{tag}>");
                 for sr in refs {
-                    let _ = write!(
-                        s,
-                        "<speciesReference species=\"{}\" constant=\"{}\"",
-                        escape(&sr.species),
-                        sr.constant
-                    );
+                    let _ =
+                        write!(s, "<speciesReference species=\"{}\" constant=\"{}\"", escape(&sr.species), sr.constant);
                     if let Some(id) = &sr.id {
                         let _ = write!(s, " id=\"{}\"", escape(id));
                     }

@@ -39,11 +39,7 @@ pub struct FvaRange {
 
 /// Extends the steady-state LP of `model` with the objective-retention row.
 /// Returns the problem with its objective cleared, ready for per-reaction objectives.
-pub(crate) fn retained_problem(
-    model: &Model,
-    backend: &dyn Backend,
-    fraction: f64,
-) -> Result<(lp::Problem, f64)> {
+pub(crate) fn retained_problem(model: &Model, backend: &dyn Backend, fraction: f64) -> Result<(lp::Problem, f64)> {
     if !(0.0..=1.0).contains(&fraction) {
         return Err(Error::Invalid("fraction_of_optimum must lie in [0, 1]".into()));
     }
@@ -56,13 +52,8 @@ pub(crate) fn retained_problem(
         }
         s.objective
     };
-    let coefs: Vec<(usize, f64)> = problem
-        .obj
-        .iter()
-        .enumerate()
-        .filter(|(_, c)| **c != 0.0)
-        .map(|(j, c)| (j, *c))
-        .collect();
+    let coefs: Vec<(usize, f64)> =
+        problem.obj.iter().enumerate().filter(|(_, c)| **c != 0.0).map(|(j, c)| (j, *c)).collect();
     // No slack is added: some fluxes respond to the objective ~1000-fold (ICDHyr in e_coli_core
     // moves 920 flux units per unit of growth), so even 1e-9 of slack is visible at 1e-6.
     let (lb, ub) = match model.sense.unwrap_or(Sense::Maximize) {
@@ -83,7 +74,11 @@ fn range_of(session: &mut dyn Session, j: usize, obj: &mut [f64]) -> Result<(f64
         out[k] = match s.status {
             lp::Status::Optimal => s.objective,
             lp::Status::Unbounded => {
-                if sense == Sense::Minimize { f64::NEG_INFINITY } else { f64::INFINITY }
+                if sense == Sense::Minimize {
+                    f64::NEG_INFINITY
+                } else {
+                    f64::INFINITY
+                }
             }
             other => return Err(Error::Solver(format!("FVA LP on column {j} ended with {other:?}"))),
         };
@@ -100,8 +95,7 @@ pub fn fva(model: &Model, options: &FvaOptions) -> Result<Vec<FvaRange>> {
 /// Flux variability analysis with a chosen backend.
 pub fn fva_with(model: &Model, options: &FvaOptions, backend: &dyn Backend) -> Result<Vec<FvaRange>> {
     let (problem, _) = retained_problem(model, backend, options.fraction_of_optimum)?;
-    let targets: Vec<usize> =
-        options.reactions.clone().unwrap_or_else(|| (0..model.reactions.len()).collect());
+    let targets: Vec<usize> = options.reactions.clone().unwrap_or_else(|| (0..model.reactions.len()).collect());
     let chunk = crate::parallel::chunk_size(targets.len());
     let parts: Vec<Result<Vec<FvaRange>>> = crate::parallel::map_chunks(&targets, chunk, |slice| {
         let mut session = backend.open(&problem)?;

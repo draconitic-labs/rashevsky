@@ -74,12 +74,10 @@ fn max_abs(m: &DMatrix<f64>) -> f64 {
 /// near equilibrium make `A` badly scaled, by many orders of magnitude between rows.
 fn solve_refined(a: &DMatrix<f64>, b: &DMatrix<f64>) -> Option<DMatrix<f64>> {
     let n = a.nrows();
-    let rows: Vec<f64> = (0..n)
-        .map(|i| 1.0 / a.row(i).iter().fold(0.0f64, |m, v| m.max(v.abs())).max(1e-300))
-        .collect();
-    let cols: Vec<f64> = (0..n)
-        .map(|j| 1.0 / (0..n).fold(0.0f64, |m, i| m.max((a[(i, j)] * rows[i]).abs())).max(1e-300))
-        .collect();
+    let rows: Vec<f64> =
+        (0..n).map(|i| 1.0 / a.row(i).iter().fold(0.0f64, |m, v| m.max(v.abs())).max(1e-300)).collect();
+    let cols: Vec<f64> =
+        (0..n).map(|j| 1.0 / (0..n).fold(0.0f64, |m, i| m.max((a[(i, j)] * rows[i]).abs())).max(1e-300)).collect();
     let scaled = DMatrix::from_fn(n, n, |i, j| rows[i] * a[(i, j)] * cols[j]);
     let lu = scaled.lu();
     let solve_one = |rhs: &DMatrix<f64>| -> Option<DMatrix<f64>> {

@@ -150,10 +150,7 @@ fn diff_apply(op: Op, a: &[Expr], x: Var<'_>) -> Expr {
             if is_zero(&db) {
                 div(da, a[1].clone())
             } else {
-                div(
-                    sub(mul(da, a[1].clone()), mul(a[0].clone(), db)),
-                    mul(a[1].clone(), a[1].clone()),
-                )
+                div(sub(mul(da, a[1].clone()), mul(a[0].clone(), db)), mul(a[1].clone(), a[1].clone()))
             }
         }
         Op::Pow => power_rule(&a[0], &a[1], x),
@@ -208,8 +205,22 @@ fn diff_apply(op: Op, a: &[Expr], x: Var<'_>) -> Expr {
             }
             derivative
         }
-        Op::Floor | Op::Ceil | Op::Factorial | Op::Eq | Op::Neq | Op::Gt | Op::Lt | Op::Geq | Op::Leq
-        | Op::And | Op::Or | Op::Xor | Op::Not | Op::Implies | Op::Quotient | Op::Rem => num(0.0),
+        Op::Floor
+        | Op::Ceil
+        | Op::Factorial
+        | Op::Eq
+        | Op::Neq
+        | Op::Gt
+        | Op::Lt
+        | Op::Geq
+        | Op::Leq
+        | Op::And
+        | Op::Or
+        | Op::Xor
+        | Op::Not
+        | Op::Implies
+        | Op::Quotient
+        | Op::Rem => num(0.0),
     }
 }
 
@@ -276,8 +287,24 @@ mod tests {
     fn check_all(x: f64) {
         let s = sym;
         let ops = [
-            Op::Sin, Op::Cos, Op::Tan, Op::Sec, Op::Csc, Op::Cot, Op::Sinh, Op::Cosh, Op::Tanh, Op::Sech,
-            Op::Csch, Op::Coth, Op::Atan, Op::Acot, Op::Asinh, Op::Exp, Op::Ln, Op::Abs,
+            Op::Sin,
+            Op::Cos,
+            Op::Tan,
+            Op::Sec,
+            Op::Csc,
+            Op::Cot,
+            Op::Sinh,
+            Op::Cosh,
+            Op::Tanh,
+            Op::Sech,
+            Op::Csch,
+            Op::Coth,
+            Op::Atan,
+            Op::Acot,
+            Op::Asinh,
+            Op::Exp,
+            Op::Ln,
+            Op::Abs,
         ];
         let mut cases: Vec<Expr> = ops.iter().map(|o| Expr::Apply(*o, vec![s()])).collect();
         cases.push(Expr::bin(Op::Pow, s(), Expr::Num(3.0)));

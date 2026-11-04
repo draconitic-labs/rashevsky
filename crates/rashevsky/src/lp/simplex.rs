@@ -30,12 +30,7 @@ pub struct Simplex {
 
 impl Default for Simplex {
     fn default() -> Self {
-        Self {
-            primal_tolerance: 1e-9,
-            dual_tolerance: 1e-9,
-            pivot_tolerance: 1e-8,
-            max_iterations: 500_000,
-        }
+        Self { primal_tolerance: 1e-9, dual_tolerance: 1e-9, pivot_tolerance: 1e-8, max_iterations: 500_000 }
     }
 }
 
@@ -355,11 +350,8 @@ impl SimplexSession {
             match leave {
                 None => {
                     // The entering variable moved to its opposite bound.
-                    let (stat, value) = if dir > 0.0 {
-                        (VarStat::AtUpper, self.ub[enter])
-                    } else {
-                        (VarStat::AtLower, self.lb[enter])
-                    };
+                    let (stat, value) =
+                        if dir > 0.0 { (VarStat::AtUpper, self.ub[enter]) } else { (VarStat::AtLower, self.lb[enter]) };
                     self.stat[enter] = stat;
                     self.x[enter] = value;
                 }
@@ -458,14 +450,7 @@ impl SimplexSession {
             }
         }
         let sign = if self.negate { -1.0 } else { 1.0 };
-        let objective: f64 = self
-            .x
-            .iter()
-            .take(self.n)
-            .zip(&self.cost)
-            .map(|(x, c)| x * c)
-            .sum::<f64>()
-            * sign;
+        let objective: f64 = self.x.iter().take(self.n).zip(&self.cost).map(|(x, c)| x * c).sum::<f64>() * sign;
         let mut y = vec![0.0; self.m];
         for k in 0..self.m {
             let c = self.cost[self.basis[k]];

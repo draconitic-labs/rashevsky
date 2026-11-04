@@ -1,0 +1,18 @@
+[package]
+name = "rashevsky-wasm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "WebAssembly demo of the Rashevsky metabolic modelling engine"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+engine = { package = "rashevsky", path = "../rashevsky", default-features = false }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+wasm-bindgen = "=0.2.130"

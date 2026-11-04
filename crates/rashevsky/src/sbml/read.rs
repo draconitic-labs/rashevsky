@@ -45,9 +45,9 @@ fn parse_num<T: std::str::FromStr>(v: Option<&str>, what: &str) -> Result<T> {
 fn opt_f64(node: &Node, key: &str) -> Result<Option<f64>> {
     match node.attr(key) {
         None => Ok(None),
-        Some(text) => parse_f64(text).map(Some).map_err(|_| {
-            Error::Sbml(format!("bad number `{text}` in attribute {key} of <{}>", node.name))
-        }),
+        Some(text) => parse_f64(text)
+            .map(Some)
+            .map_err(|_| Error::Sbml(format!("bad number `{text}` in attribute {key} of <{}>", node.name))),
     }
 }
 
@@ -120,10 +120,7 @@ fn read_model(node: &Node, level: u32) -> Result<SbmlModel> {
         model.compartments.push(Compartment {
             id: text_attr(c, "id"),
             name: text_attr(c, "name"),
-            size: match opt_f64(c, "size")? {
-                Some(v) => Some(v),
-                None => opt_f64(c, "volume")?,
-            },
+            size: opt_f64(c, "size")?.or(opt_f64(c, "volume")?),
             constant: flag(c, "constant", level < 3),
             spatial_dimensions: opt_f64(c, "spatialDimensions")?,
         });
@@ -315,10 +312,7 @@ fn read_fbc(node: &Node, model: &mut SbmlModel) -> Result<()> {
             };
             if let Some(fluxes) = o.child("fbc:listOfFluxObjectives") {
                 for f in fluxes.children_named("fbc:fluxObjective") {
-                    let coef = match opt_f64(f, "fbc:coefficient")? {
-                        Some(c) => c,
-                        None => 1.0,
-                    };
+                    let coef = opt_f64(f, "fbc:coefficient")?.unwrap_or(1.0);
                     objective.flux_objectives.push((text_attr(f, "fbc:reaction"), coef));
                 }
             }

@@ -6,11 +6,59 @@ use serde::{Deserialize, Serialize};
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum Op {
-    Add, Sub, Mul, Div, Neg, Pow, Root, Abs, Exp, Ln, Log, Floor, Ceil, Factorial,
-    Eq, Neq, Gt, Lt, Geq, Leq, And, Or, Xor, Not, Implies,
-    Sin, Cos, Tan, Sec, Csc, Cot, Sinh, Cosh, Tanh, Sech, Csch, Coth,
-    Asin, Acos, Atan, Asec, Acsc, Acot, Asinh, Acosh, Atanh, Asech, Acsch, Acoth,
-    Max, Min, Quotient, Rem,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Neg,
+    Pow,
+    Root,
+    Abs,
+    Exp,
+    Ln,
+    Log,
+    Floor,
+    Ceil,
+    Factorial,
+    Eq,
+    Neq,
+    Gt,
+    Lt,
+    Geq,
+    Leq,
+    And,
+    Or,
+    Xor,
+    Not,
+    Implies,
+    Sin,
+    Cos,
+    Tan,
+    Sec,
+    Csc,
+    Cot,
+    Sinh,
+    Cosh,
+    Tanh,
+    Sech,
+    Csch,
+    Coth,
+    Asin,
+    Acos,
+    Atan,
+    Asec,
+    Acsc,
+    Acot,
+    Asinh,
+    Acosh,
+    Atanh,
+    Asech,
+    Acsch,
+    Acoth,
+    Max,
+    Min,
+    Quotient,
+    Rem,
 }
 
 /// An expression tree. Booleans evaluate to 1 and 0.
@@ -85,8 +133,7 @@ impl Expr {
             Expr::Num(_) | Expr::Sym(_) | Expr::Time | Expr::Avogadro | Expr::RateOf(_) => false,
             Expr::Apply(_, a) | Expr::Call(_, a) => a.iter().any(Expr::has_delay),
             Expr::Piecewise(p, o) => {
-                p.iter().any(|(v, c)| v.has_delay() || c.has_delay())
-                    || o.as_ref().is_some_and(|e| e.has_delay())
+                p.iter().any(|(v, c)| v.has_delay() || c.has_delay()) || o.as_ref().is_some_and(|e| e.has_delay())
             }
         }
     }
@@ -115,7 +162,11 @@ pub fn apply_op(op: Op, a: &[f64]) -> f64 {
         Op::Add => a.iter().sum(),
         Op::Mul => a.iter().product(),
         Op::Sub => {
-            if a.len() == 1 { -a[0] } else { a[0] - a[1] }
+            if a.len() == 1 {
+                -a[0]
+            } else {
+                a[0] - a[1]
+            }
         }
         Op::Neg => -a[0],
         Op::Div => a[0] / a[1],

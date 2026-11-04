@@ -172,12 +172,8 @@ impl Trajectory<'_> {
         }
         for _ in 0..1000 {
             self.refresh();
-            let current: Vec<bool> = self
-                .model
-                .events
-                .iter()
-                .map(|e| eval(&e.trigger, &self.vals, self.t, &NoDelay) != 0.0)
-                .collect();
+            let current: Vec<bool> =
+                self.model.events.iter().map(|e| eval(&e.trigger, &self.vals, self.t, &NoDelay) != 0.0).collect();
             for (k, e) in self.model.events.iter().enumerate() {
                 if current[k] && !self.triggers[k] {
                     let delay = e.delay.as_ref().map_or(0.0, |d| eval(d, &self.vals, self.t, &NoDelay));
@@ -324,6 +320,9 @@ fn realize(
     }
 }
 
+/// Running mean, sum of squared deviations and count, as accumulated by one worker.
+type Accumulated = (Vec<Vec<f64>>, Vec<Vec<f64>>, f64);
+
 /// Runs `runs` realizations in parallel and returns per-slot mean and standard deviation.
 pub fn ensemble(model: &KineticModel, times: &[f64], runs: usize, algorithm: Algorithm, seed: u64) -> Result<Ensemble> {
     if times.is_empty() || runs == 0 {
@@ -334,13 +333,20 @@ pub fn ensemble(model: &KineticModel, times: &[f64], runs: usize, algorithm: Alg
     let ids: Vec<u64> = (0..runs as u64).collect();
     let chunk = crate::parallel::chunk_size(runs).max(1);
     // Welford accumulation per chunk, merged at the end.
-    let parts: Vec<Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, f64)>> = crate::parallel::map_chunks(&ids, chunk, |slice| {
+    let parts: Vec<Result<Accumulated>> = crate::parallel::map_chunks(&ids, chunk, |slice| {
         let mut mean = vec![vec![0.0; slots]; times.len()];
         let mut m2 = vec![vec![0.0; slots]; times.len()];
         let mut sample = vec![vec![0.0; slots]; times.len()];
         let mut count = 0.0;
         for &id in slice {
-            realize(model, &net, times, algorithm, seed.wrapping_add(id.wrapping_mul(0x9E37_79B9_7F4A_7C15)), &mut sample)?;
+            realize(
+                model,
+                &net,
+                times,
+                algorithm,
+                seed.wrapping_add(id.wrapping_mul(0x9E37_79B9_7F4A_7C15)),
+                &mut sample,
+            )?;
             count += 1.0;
             for k in 0..times.len() {
                 for s in 0..slots {
@@ -367,9 +373,6 @@ pub fn ensemble(model: &KineticModel, times: &[f64], runs: usize, algorithm: Alg
         }
         total += pc;
     }
-    let sd = m2
-        .iter()
-        .map(|row| row.iter().map(|v| (v / (total - 1.0).max(1.0)).sqrt()).collect())
-        .collect();
+    let sd = m2.iter().map(|row| row.iter().map(|v| (v / (total - 1.0).max(1.0)).sqrt()).collect()).collect();
     Ok(Ensemble { time: times.to_vec(), mean, sd, runs })
 }

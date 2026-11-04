@@ -8,3 +8,6 @@ __pycache__/
 /web/pkg/
 /results/
 /data/thermo/*.tmp
+/web/dist/
+/web/preview-shell/gen/
+/desktop/src-tauri/gen/

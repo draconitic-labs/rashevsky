@@ -142,11 +142,8 @@ impl HighsSession {
             Sense::Minimize => ffi::OBJECTIVE_SENSE_MINIMIZE,
             Sense::Maximize => ffi::OBJECTIVE_SENSE_MAXIMIZE,
         };
-        let integrality: Vec<c_int> = if p.is_mip() {
-            p.integer.iter().map(|&b| if b { 1 } else { 0 }).collect()
-        } else {
-            Vec::new()
-        };
+        let integrality: Vec<c_int> =
+            if p.is_mip() { p.integer.iter().map(|&b| if b { 1 } else { 0 }).collect() } else { Vec::new() };
         // SAFETY: every pointer refers to a live vector of the length HiGHS is told; an empty
         // integrality array is passed as null, which HiGHS reads as all continuous.
         let code = unsafe {
@@ -171,11 +168,7 @@ impl HighsSession {
                 std::ptr::null(),
                 std::ptr::null(),
                 std::ptr::null(),
-                if integrality.is_empty() {
-                    std::ptr::null()
-                } else {
-                    integrality.as_ptr()
-                },
+                if integrality.is_empty() { std::ptr::null() } else { integrality.as_ptr() },
             )
         };
         check(code, "passModel")?;
@@ -260,9 +253,7 @@ impl Session for HighsSession {
         let index: Vec<c_int> = coefs.iter().map(|&(j, _)| j as c_int).collect();
         let value: Vec<f64> = coefs.iter().map(|&(_, v)| v).collect();
         // SAFETY: pointers refer to live vectors of the stated length.
-        let code = unsafe {
-            ffi::Highs_addRow(self.ptr, lb, ub, index.len() as c_int, index.as_ptr(), value.as_ptr())
-        };
+        let code = unsafe { ffi::Highs_addRow(self.ptr, lb, ub, index.len() as c_int, index.as_ptr(), value.as_ptr()) };
         check(code, "addRow")?;
         self.n_rows += 1;
         Ok(self.n_rows - 1)
@@ -298,11 +289,7 @@ impl Session for HighsSession {
         check(code, "getSolution")?;
         // SAFETY: valid instance.
         let objective = unsafe { ffi::Highs_getObjectiveValue(self.ptr) };
-        let (row_dual, col_dual) = if self.is_mip {
-            (Vec::new(), Vec::new())
-        } else {
-            (row_dual, col_dual)
-        };
+        let (row_dual, col_dual) = if self.is_mip { (Vec::new(), Vec::new()) } else { (row_dual, col_dual) };
         let _ = (&self.hessian, self.is_qp);
         Ok(Solution {
             status,

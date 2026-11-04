@@ -127,7 +127,13 @@ mod tests {
     fn model() -> Model {
         let mut m = Model::new("routes");
         m.metabolites.push(Metabolite { id: "A".into(), compartment: "c".into(), ..Metabolite::default() });
-        let reaction = |id: &str, c: f64| Reaction { id: id.into(), lb: 0.0, ub: 1000.0, stoichiometry: vec![(0, c)], ..Reaction::default() };
+        let reaction = |id: &str, c: f64| Reaction {
+            id: id.into(),
+            lb: 0.0,
+            ub: 1000.0,
+            stoichiometry: vec![(0, c)],
+            ..Reaction::default()
+        };
         m.reactions.push(reaction("in", 1.0));
         m.reactions.push(reaction("route", -1.0));
         m.objective = vec![(1, 1.0)];
@@ -139,7 +145,12 @@ mod tests {
     fn data(pool: f64) -> EnzymeData {
         EnzymeData {
             enzymes: vec![Enzyme { id: "E".into(), molecular_weight: 50.0, abundance: None }],
-            catalysis: vec![Catalysis { reaction: "route".into(), enzyme: "E".into(), kcat_forward: 3600.0, kcat_reverse: 0.0 }],
+            catalysis: vec![Catalysis {
+                reaction: "route".into(),
+                enzyme: "E".into(),
+                kcat_forward: 3600.0,
+                kcat_reverse: 0.0,
+            }],
             protein_pool: pool,
         }
     }
@@ -164,7 +175,12 @@ mod tests {
     fn isozymes_add_capacity() {
         let mut d = data(0.1);
         d.enzymes.push(Enzyme { id: "E2".into(), molecular_weight: 25.0, abundance: None });
-        d.catalysis.push(Catalysis { reaction: "route".into(), enzyme: "E2".into(), kcat_forward: 3600.0, kcat_reverse: 0.0 });
+        d.catalysis.push(Catalysis {
+            reaction: "route".into(),
+            enzyme: "E2".into(),
+            kcat_forward: 3600.0,
+            kcat_reverse: 0.0,
+        });
         let s = enzyme_constrained_fba(&model(), &d).unwrap();
         // The cheaper isozyme takes all of the pool.
         assert!((s.flux.objective - 3600.0 * 0.1 / 25.0).abs() < 1e-8);

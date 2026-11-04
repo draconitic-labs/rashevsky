@@ -73,7 +73,11 @@ pub fn model_view(model: &Model, curated_layout: bool) -> ModelView {
                 name: r.name.clone(),
                 lb: r.lb,
                 ub: r.ub,
-                equation: format!("{} {arrow} {}", side(model, &r.stoichiometry, -1.0), side(model, &r.stoichiometry, 1.0)),
+                equation: format!(
+                    "{} {arrow} {}",
+                    side(model, &r.stoichiometry, -1.0),
+                    side(model, &r.stoichiometry, 1.0)
+                ),
                 rule: r.gpr.to_rule(&|g| model.genes[g].id.clone()),
                 genes: gene_ids.iter().map(|&g| model.genes[g].id.clone()).collect(),
                 subsystem: r.subsystem.clone(),
@@ -141,7 +145,10 @@ pub fn computed_layout(model: &Model, reactions: &[usize]) -> Value {
                 .map(|&(i, _)| model.metabolites[i].id.as_str())
                 .collect()
         };
-        entries.insert(r.id.clone(), json!({"s": list(-1.0), "p": list(1.0), "m": [p.x, p.y], "boundary": r.is_boundary()}));
+        entries.insert(
+            r.id.clone(),
+            json!({"s": list(-1.0), "p": list(1.0), "m": [p.x, p.y], "boundary": r.is_boundary()}),
+        );
     }
     json!({"world": [layout.width, layout.height], "nodes": nodes, "regions": [], "reactions": entries, "source": "force-directed"})
 }

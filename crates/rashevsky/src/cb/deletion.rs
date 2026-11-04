@@ -19,11 +19,7 @@ pub struct Deletion {
     pub growth: f64,
 }
 
-fn solve_with_disabled(
-    model: &Model,
-    session: &mut dyn Session,
-    disabled: &[usize],
-) -> Result<(Status, f64)> {
+fn solve_with_disabled(model: &Model, session: &mut dyn Session, disabled: &[usize]) -> Result<(Status, f64)> {
     for &j in disabled {
         session.set_col_bounds(j, 0.0, 0.0)?;
     }
@@ -38,11 +34,7 @@ fn solve_with_disabled(
     Ok(result)
 }
 
-fn run_sets(
-    model: &Model,
-    sets: &[(Vec<String>, Vec<usize>)],
-    backend: &dyn Backend,
-) -> Result<Vec<Deletion>> {
+fn run_sets(model: &Model, sets: &[(Vec<String>, Vec<usize>)], backend: &dyn Backend) -> Result<Vec<Deletion>> {
     let problem = model.to_lp();
     let chunk = crate::parallel::chunk_size(sets.len());
     let parts: Vec<Result<Vec<Deletion>>> = crate::parallel::map_chunks(sets, chunk, |slice| {
@@ -132,12 +124,7 @@ pub fn double_reaction_deletion(model: &Model, reactions: Option<&[usize]>) -> R
 /// Synthetic lethal gene pairs: each single deletion leaves growth above `threshold`, the pair does not.
 pub fn synthetic_lethal_genes(model: &Model, threshold: f64) -> Result<Vec<Deletion>> {
     let singles = single_gene_deletion(model, None)?;
-    let viable: Vec<usize> = singles
-        .iter()
-        .enumerate()
-        .filter(|(_, d)| d.growth > threshold)
-        .map(|(g, _)| g)
-        .collect();
+    let viable: Vec<usize> = singles.iter().enumerate().filter(|(_, d)| d.growth > threshold).map(|(g, _)| g).collect();
     let doubles = double_gene_deletion(model, Some(&viable))?;
     Ok(doubles.into_iter().filter(|d| d.growth <= threshold).collect())
 }

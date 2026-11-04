@@ -1,7 +1,5 @@
 //! `rashevsky`: batch command line over the metabolic modelling engine. Results are JSON.
 
-mod cases;
-
 use clap::{Args, Parser, Subcommand};
 use nalgebra as nalgebra_matrix;
 use rashevsky::cb;
@@ -325,8 +323,6 @@ enum Command {
         #[arg(long, default_value = "rodas4")]
         method: String,
     },
-    /// Run a study described by a case file (see docs/CASES.md).
-    Run { case: PathBuf },
 }
 
 fn load_kinetic(path: &PathBuf, set: &[String]) -> Result<KineticModel> {
@@ -432,12 +428,7 @@ fn fluxes(model: &Model, s: cb::FluxSolution) -> Fluxes {
     let by_rxn = |values: &[f64]| -> BTreeMap<String, f64> {
         values.iter().zip(&model.reactions).map(|(v, r)| (r.id.clone(), *v)).collect()
     };
-    let shadow_prices = s
-        .shadow_prices
-        .iter()
-        .zip(&model.metabolites)
-        .map(|(v, m)| (m.id.clone(), *v))
-        .collect();
+    let shadow_prices = s.shadow_prices.iter().zip(&model.metabolites).map(|(v, m)| (m.id.clone(), *v)).collect();
     Fluxes {
         status: s.status,
         objective: s.objective,
@@ -509,11 +500,7 @@ fn run(cli: Cli) -> Result<()> {
             let m = load(&model, &edits)?;
             let targets = match reactions {
                 None => None,
-                Some(list) => Some(
-                    list.split(',')
-                        .map(|id| m.reaction_index(id.trim()))
-                        .collect::<Result<Vec<_>>>()?,
-                ),
+                Some(list) => Some(list.split(',').map(|id| m.reaction_index(id.trim())).collect::<Result<Vec<_>>>()?),
             };
             let ranges = cb::fva(&m, &cb::FvaOptions { fraction_of_optimum: fraction, reactions: targets })?;
             emit(&out, &ranges)
@@ -533,11 +520,7 @@ fn run(cli: Cli) -> Result<()> {
         Command::Moma { model, edits, linear } => {
             let (reference, perturbed) = load_reference_and_perturbed(&model, &edits)?;
             let wt = cb::pfba(&reference, 1.0)?;
-            let s = if linear {
-                cb::linear_moma(&perturbed, &wt.fluxes)?
-            } else {
-                cb::moma(&perturbed, &wt.fluxes)?
-            };
+            let s = if linear { cb::linear_moma(&perturbed, &wt.fluxes)? } else { cb::moma(&perturbed, &wt.fluxes)? };
             emit(&out, &fluxes(&perturbed, s))
         }
         Command::Room { model, edits, delta, epsilon, relax } => {
@@ -606,7 +589,10 @@ fn run(cli: Cli) -> Result<()> {
             std::fs::write(map, serde_json::to_string(&map_doc)?)?;
             let s = cb::pfba(&m, 1.0)?;
             std::fs::write(data, serde_json::to_string_pretty(&rashevsky::io::escher::reaction_data(&m, &s.fluxes))?)?;
-            emit(&out, &serde_json::json!({"nodes": layout.metabolites.len() + layout.reactions.len(), "reactions": layout.reactions.len(), "objective": s.objective}))
+            emit(
+                &out,
+                &serde_json::json!({"nodes": layout.metabolites.len() + layout.reactions.len(), "reactions": layout.reactions.len(), "objective": s.objective}),
+            )
         }
         Command::Sample { model, edits, method, chains, samples, thinning, burn_in, seed, fraction, full } => {
             let m = load(&model, &edits)?;
@@ -628,12 +614,15 @@ fn run(cli: Cli) -> Result<()> {
             if full {
                 emit(&out, &result)
             } else {
-                emit(&out, &serde_json::json!({
-                    "reactions": result.reactions,
-                    "dimension": result.dimension,
-                    "diagnostics": result.diagnostics,
-                    "seconds": seconds,
-                }))
+                emit(
+                    &out,
+                    &serde_json::json!({
+                        "reactions": result.reactions,
+                        "dimension": result.dimension,
+                        "diagnostics": result.diagnostics,
+                        "seconds": seconds,
+                    }),
+                )
             }
         }
         Command::Tfa { model, energies, edits, c_min, c_max, sigmas } => {
@@ -641,11 +630,14 @@ fn run(cli: Cli) -> Result<()> {
             let data: cb::ThermoData = serde_json::from_str(&std::fs::read_to_string(energies)?)?;
             let options = cb::TfaOptions { c_min, c_max, sigmas, ..cb::TfaOptions::default() };
             let s = cb::tfa(&m, &data, &options)?;
-            emit(&out, &serde_json::json!({
-                "fluxes": fluxes(&m, s.flux),
-                "concentrations": s.concentrations,
-                "gibbs": s.gibbs,
-            }))
+            emit(
+                &out,
+                &serde_json::json!({
+                    "fluxes": fluxes(&m, s.flux),
+                    "concentrations": s.concentrations,
+                    "gibbs": s.gibbs,
+                }),
+            )
         }
         Command::Ecfba { model, enzymes, edits, pool } => {
             let m = load(&model, &edits)?;
@@ -654,11 +646,14 @@ fn run(cli: Cli) -> Result<()> {
                 data.protein_pool = p;
             }
             let s = cb::enzyme_constrained_fba(&m, &data)?;
-            emit(&out, &serde_json::json!({
-                "fluxes": fluxes(&m, s.flux),
-                "usage": s.usage,
-                "pool_used": s.pool_used,
-            }))
+            emit(
+                &out,
+                &serde_json::json!({
+                    "fluxes": fluxes(&m, s.flux),
+                    "usage": s.usage,
+                    "pool_used": s.pool_used,
+                }),
+            )
         }
         Command::Simulate { model, end, steps, method, rtol, atol, symbols, set } => {
             let km = load_kinetic(&model, &set)?;
@@ -670,11 +665,14 @@ fn run(cli: Cli) -> Result<()> {
             for name in &chosen {
                 series.insert(name.clone(), course.series(&km, name)?);
             }
-            emit(&out, &serde_json::json!({
-                "time": course.time,
-                "series": series,
-                "stats": {"steps": course.stats.steps, "rejected": course.stats.rejected, "rhs_evals": course.stats.rhs_evals, "jacobians": course.stats.jacobians},
-            }))
+            emit(
+                &out,
+                &serde_json::json!({
+                    "time": course.time,
+                    "series": series,
+                    "stats": {"steps": course.stats.steps, "rejected": course.stats.rejected, "rhs_evals": course.stats.rhs_evals, "jacobians": course.stats.jacobians},
+                }),
+            )
         }
         Command::SteadyState { model, integrate, set } => {
             let km = load_kinetic(&model, &set)?;
@@ -688,16 +686,19 @@ fn run(cli: Cli) -> Result<()> {
             let rows = |m: &nalgebra_matrix::DMatrix<f64>| -> Vec<Vec<f64>> {
                 (0..m.nrows()).map(|i| (0..m.ncols()).map(|j| m[(i, j)]).collect()).collect()
             };
-            emit(&out, &serde_json::json!({
-                "steady_state": steady_json(&km, &state),
-                "reactions": c.reactions,
-                "states": c.states,
-                "flux_control": rows(&c.scaled_flux_control),
-                "concentration_control": rows(&c.scaled_concentration_control),
-                "elasticities": rows(&c.scaled_elasticities),
-                "theorems": c.theorems,
-                "conserved_moieties": c.states.len() - c.moieties.independent.len(),
-            }))
+            emit(
+                &out,
+                &serde_json::json!({
+                    "steady_state": steady_json(&km, &state),
+                    "reactions": c.reactions,
+                    "states": c.states,
+                    "flux_control": rows(&c.scaled_flux_control),
+                    "concentration_control": rows(&c.scaled_concentration_control),
+                    "elasticities": rows(&c.scaled_elasticities),
+                    "theorems": c.theorems,
+                    "conserved_moieties": c.states.len() - c.moieties.independent.len(),
+                }),
+            )
         }
         Command::Ssa { model, end, steps, runs, seed, tau_epsilon, symbols } => {
             let km = KineticModel::read_sbml(&model)?;
@@ -722,7 +723,6 @@ fn run(cli: Cli) -> Result<()> {
             let chosen = parse_method(&method)?;
             emit(&out, &rashevsky::suite::run_suite(&root, chosen, filter.as_deref())?)
         }
-        Command::Run { case } => cases::run(&case, &out),
     }
 }
 

@@ -108,11 +108,7 @@ pub fn dfba(model: &Model, options: &DfbaOptions) -> Result<DfbaResult> {
             break;
         }
         if let Some(v) = fluxes {
-            let integral = if mu > 1e-12 {
-                x * ((mu * options.dt).exp() - 1.0) / mu
-            } else {
-                x * options.dt
-            };
+            let integral = if mu > 1e-12 { x * ((mu * options.dt).exp() - 1.0) / mu } else { x * options.dt };
             for (i, &j) in cols.iter().enumerate() {
                 conc[i] = (conc[i] + v[j] * integral).max(0.0);
             }

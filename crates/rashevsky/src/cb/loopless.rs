@@ -43,10 +43,8 @@ fn add_loopless_constraints(model: &Model, p: &mut Problem, big_m: f64) {
         p.add_row(1.0, f64::INFINITY, vec![(g, 1.0), (a, big_m + 1.0)]);
     }
     for k in 0..null.ncols() {
-        let coefs: Vec<(usize, f64)> = (0..internal.len())
-            .filter(|&i| null[(i, k)].abs() > 1e-12)
-            .map(|i| (g_cols[i], null[(i, k)]))
-            .collect();
+        let coefs: Vec<(usize, f64)> =
+            (0..internal.len()).filter(|&i| null[(i, k)].abs() > 1e-12).map(|i| (g_cols[i], null[(i, k)])).collect();
         if !coefs.is_empty() {
             p.add_row(0.0, 0.0, coefs);
         }

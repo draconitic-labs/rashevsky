@@ -67,13 +67,11 @@ fn draw(ranges: &[Range], u: &[f64]) -> Vec<f64> {
     ranges
         .iter()
         .zip(u)
-        .map(|(r, &v)| {
-            if r.log {
-                (r.low.ln() + v * (r.high.ln() - r.low.ln())).exp()
-            } else {
-                r.low + v * (r.high - r.low)
-            }
-        })
+        .map(
+            |(r, &v)| {
+                if r.log { (r.low.ln() + v * (r.high.ln() - r.low.ln())).exp() } else { r.low + v * (r.high - r.low) }
+            },
+        )
         .collect()
 }
 
@@ -122,7 +120,8 @@ pub fn sobol(
         return Err(Error::Kinetic("too few Sobol samples evaluated".into()));
     }
     let mean: f64 = rows.iter().map(|r| 0.5 * (r.0 + r.1)).sum::<f64>() / n as f64;
-    let variance: f64 = rows.iter().map(|r| 0.5 * ((r.0 - mean).powi(2) + (r.1 - mean).powi(2))).sum::<f64>() / n as f64;
+    let variance: f64 =
+        rows.iter().map(|r| 0.5 * ((r.0 - mean).powi(2) + (r.1 - mean).powi(2))).sum::<f64>() / n as f64;
     let mut first = vec![0.0; d];
     let mut total = vec![0.0; d];
     for i in 0..d {
@@ -152,9 +151,8 @@ mod tests {
     #[test]
     fn ishigami_indices_match_their_closed_form() {
         let pi = std::f64::consts::PI;
-        let ranges: Vec<Range> = (0..3)
-            .map(|i| Range { name: format!("x{i}"), low: -pi, high: pi, log: false })
-            .collect();
+        let ranges: Vec<Range> =
+            (0..3).map(|i| Range { name: format!("x{i}"), low: -pi, high: pi, log: false }).collect();
         let (a, b) = (7.0f64, 0.1f64);
         let result = sobol(&ranges, 60_000, 42, &|x: &[f64]| {
             Some(x[0].sin() + a * x[1].sin().powi(2) + b * x[2].powi(4) * x[0].sin())

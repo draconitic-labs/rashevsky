@@ -109,7 +109,11 @@ const SOURCES: &[(&str, &str, &str)] = &[
     ("iML1515", "http://bigg.ucsd.edu/static/models/iML1515.xml.gz", "iML1515.xml.gz"),
     ("iJO1366", "http://bigg.ucsd.edu/static/models/iJO1366.xml.gz", "iJO1366.xml.gz"),
     ("Recon3D", "http://bigg.ucsd.edu/static/models/Recon3D.xml.gz", "Recon3D.xml.gz"),
-    ("Human-GEM", "https://raw.githubusercontent.com/SysBioChalmers/Human-GEM/main/model/Human-GEM.xml", "Human-GEM.xml"),
+    (
+        "Human-GEM",
+        "https://raw.githubusercontent.com/SysBioChalmers/Human-GEM/main/model/Human-GEM.xml",
+        "Human-GEM.xml",
+    ),
 ];
 
 /// Downloads a published model once into the user's data folder and returns its path.
@@ -209,17 +213,16 @@ pub async fn solve(state: State<'_, AppState>, request: SolveRequest) -> Reply<S
             "pfba" => cb::pfba(&perturbed, 1.0),
             "moma" => cb::pfba(&reference, 1.0).and_then(|w| cb::moma(&perturbed, &w.fluxes)),
             "lmoma" => cb::pfba(&reference, 1.0).and_then(|w| cb::linear_moma(&perturbed, &w.fluxes)),
-            "room" => cb::pfba(&reference, 1.0).and_then(|w| cb::room(&perturbed, &w.fluxes, cb::RoomOptions::default())),
+            "room" => {
+                cb::pfba(&reference, 1.0).and_then(|w| cb::room(&perturbed, &w.fluxes, cb::RoomOptions::default()))
+            }
             "loopless" => cb::loopless_fba(&perturbed, 1000.0),
             other => return Err(format!("unknown method {other}")),
         }
         .map_err(text)?;
         let optimal = s.status == Status::Optimal;
-        let growth = if optimal {
-            Some(perturbed.objective.iter().map(|&(j, c)| c * s.fluxes[j]).sum::<f64>())
-        } else {
-            None
-        };
+        let growth =
+            if optimal { Some(perturbed.objective.iter().map(|&(j, c)| c * s.fluxes[j]).sum::<f64>()) } else { None };
         let mut disabled = Vec::new();
         for (r, b) in perturbed.reactions.iter().zip(&reference.reactions) {
             if r.lb == 0.0 && r.ub == 0.0 && (b.lb != 0.0 || b.ub != 0.0) {
@@ -243,13 +246,19 @@ pub async fn solve(state: State<'_, AppState>, request: SolveRequest) -> Reply<S
 
 /// Flux range of one reaction at the given share of the optimum.
 #[tauri::command]
-pub async fn reaction_range(state: State<'_, AppState>, id: String, fraction: f64, perturbation: Perturbation) -> Reply<(f64, f64)> {
+pub async fn reaction_range(
+    state: State<'_, AppState>,
+    id: String,
+    fraction: f64,
+    perturbation: Perturbation,
+) -> Reply<(f64, f64)> {
     let base = current(&state)?;
     tauri::async_runtime::spawn_blocking(move || {
         let mut m = apply_medium_and_objective(&base, &perturbation)?;
         apply_knockouts(&mut m, &perturbation)?;
         let j = m.reaction_index(&id).map_err(text)?;
-        let r = cb::fva(&m, &cb::FvaOptions { fraction_of_optimum: fraction, reactions: Some(vec![j]) }).map_err(text)?;
+        let r =
+            cb::fva(&m, &cb::FvaOptions { fraction_of_optimum: fraction, reactions: Some(vec![j]) }).map_err(text)?;
         Ok((r[0].minimum, r[0].maximum))
     })
     .await
@@ -258,7 +267,13 @@ pub async fn reaction_range(state: State<'_, AppState>, id: String, fraction: f6
 
 /// Map of the open model: the hand-placed one, one subsystem, or the reactions with most flux.
 #[tauri::command]
-pub async fn layout(state: State<'_, AppState>, curated: bool, subsystem: Option<String>, fluxes: Option<Vec<f64>>, count: Option<usize>) -> Reply<Value> {
+pub async fn layout(
+    state: State<'_, AppState>,
+    curated: bool,
+    subsystem: Option<String>,
+    fluxes: Option<Vec<f64>>,
+    count: Option<usize>,
+) -> Reply<Value> {
     if curated {
         return serde_json::from_str(CORE_LAYOUT).map_err(text);
     }
@@ -268,7 +283,8 @@ pub async fn layout(state: State<'_, AppState>, curated: bool, subsystem: Option
             (0..m.reactions.len()).filter(|&j| m.reactions[j].subsystem.as_deref() == Some(sub.as_str())).collect()
         } else {
             let values = fluxes.unwrap_or_default();
-            let mut order: Vec<usize> = (0..m.reactions.len()).filter(|&j| !m.reactions[j].id.starts_with("BIOMASS")).collect();
+            let mut order: Vec<usize> =
+                (0..m.reactions.len()).filter(|&j| !m.reactions[j].id.starts_with("BIOMASS")).collect();
             order.sort_by(|&a, &b| {
                 let (x, y) = (values.get(a).copied().unwrap_or(0.0).abs(), values.get(b).copied().unwrap_or(0.0).abs());
                 y.partial_cmp(&x).unwrap_or(std::cmp::Ordering::Equal)
@@ -519,7 +535,13 @@ pub fn cancel_job(state: State<'_, AppState>, id: u64) {
 
 /// Production envelope.
 #[tauri::command]
-pub async fn envelope(state: State<'_, AppState>, control: String, target: String, points: usize, perturbation: Perturbation) -> Reply<Vec<cb::EnvelopePoint>> {
+pub async fn envelope(
+    state: State<'_, AppState>,
+    control: String,
+    target: String,
+    points: usize,
+    perturbation: Perturbation,
+) -> Reply<Vec<cb::EnvelopePoint>> {
     let base = current(&state)?;
     tauri::async_runtime::spawn_blocking(move || {
         let mut m = apply_medium_and_objective(&base, &perturbation)?;
@@ -532,7 +554,11 @@ pub async fn envelope(state: State<'_, AppState>, control: String, target: Strin
 
 /// Flux variability of all reactions.
 #[tauri::command]
-pub async fn variability(state: State<'_, AppState>, fraction: f64, perturbation: Perturbation) -> Reply<Vec<cb::FvaRange>> {
+pub async fn variability(
+    state: State<'_, AppState>,
+    fraction: f64,
+    perturbation: Perturbation,
+) -> Reply<Vec<cb::FvaRange>> {
     let base = current(&state)?;
     tauri::async_runtime::spawn_blocking(move || {
         let mut m = apply_medium_and_objective(&base, &perturbation)?;
@@ -593,7 +619,13 @@ fn with_overrides(model: &KineticModel, overrides: &[(String, f64)]) -> Reply<Ki
 
 /// Time course of the kinetic model.
 #[tauri::command]
-pub async fn kinetic_simulate(state: State<'_, AppState>, end: f64, steps: usize, method: String, overrides: Vec<(String, f64)>) -> Reply<Value> {
+pub async fn kinetic_simulate(
+    state: State<'_, AppState>,
+    end: f64,
+    steps: usize,
+    method: String,
+    overrides: Vec<(String, f64)>,
+) -> Reply<Value> {
     let base = current_kinetic(&state)?;
     tauri::async_runtime::spawn_blocking(move || {
         let m = with_overrides(&base, &overrides)?;
@@ -624,9 +656,7 @@ pub async fn kinetic_simulate(state: State<'_, AppState>, end: f64, steps: usize
 }
 
 fn rows(m: &nalgebra::DMatrix<f64>) -> Vec<Vec<Option<f64>>> {
-    (0..m.nrows())
-        .map(|i| (0..m.ncols()).map(|j| m[(i, j)].is_finite().then_some(m[(i, j)])).collect())
-        .collect()
+    (0..m.nrows()).map(|i| (0..m.ncols()).map(|j| m[(i, j)].is_finite().then_some(m[(i, j)])).collect()).collect()
 }
 
 /// Steady state and control coefficients of the kinetic model.
@@ -635,11 +665,15 @@ pub async fn kinetic_control(state: State<'_, AppState>, overrides: Vec<(String,
     let base = current_kinetic(&state)?;
     tauri::async_runtime::spawn_blocking(move || {
         let m = with_overrides(&base, &overrides)?;
-        let steady = kinetic::steady_state(&m, &SteadyOptions { integrate_first: 200.0, ..SteadyOptions::default() }).map_err(text)?;
+        let steady = kinetic::steady_state(&m, &SteadyOptions { integrate_first: 200.0, ..SteadyOptions::default() })
+            .map_err(text)?;
         let c = kinetic::control_analysis(&m, &steady).map_err(text)?;
         let species: BTreeMap<&str, f64> = m.species.iter().map(|s| (s.id.as_str(), steady.values[s.view])).collect();
-        let dynamic: Vec<usize> = (0..c.states.len()).filter(|&i| (0..c.reactions.len()).any(|j| c.moieties.n[(i, j)] != 0.0)).collect();
-        let concentration = nalgebra::DMatrix::from_fn(dynamic.len(), c.reactions.len(), |a, b| c.scaled_concentration_control[(dynamic[a], b)]);
+        let dynamic: Vec<usize> =
+            (0..c.states.len()).filter(|&i| (0..c.reactions.len()).any(|j| c.moieties.n[(i, j)] != 0.0)).collect();
+        let concentration = nalgebra::DMatrix::from_fn(dynamic.len(), c.reactions.len(), |a, b| {
+            c.scaled_concentration_control[(dynamic[a], b)]
+        });
         Ok(json!({
             "reactions": c.reactions,
             "states": dynamic.iter().map(|&i| c.states[i].trim_end_matches("#a").to_string()).collect::<Vec<_>>(),
@@ -658,7 +692,15 @@ pub async fn kinetic_control(state: State<'_, AppState>, overrides: Vec<(String,
 
 /// Stochastic ensemble of the kinetic model.
 #[tauri::command]
-pub async fn kinetic_stochastic(state: State<'_, AppState>, end: f64, steps: usize, runs: usize, seed: u64, epsilon: Option<f64>, overrides: Vec<(String, f64)>) -> Reply<Value> {
+pub async fn kinetic_stochastic(
+    state: State<'_, AppState>,
+    end: f64,
+    steps: usize,
+    runs: usize,
+    seed: u64,
+    epsilon: Option<f64>,
+    overrides: Vec<(String, f64)>,
+) -> Reply<Value> {
     let base = current_kinetic(&state)?;
     tauri::async_runtime::spawn_blocking(move || {
         let m = with_overrides(&base, &overrides)?;
@@ -666,7 +708,8 @@ pub async fn kinetic_stochastic(state: State<'_, AppState>, end: f64, steps: usi
         let algorithm = epsilon.map_or(ssa::Algorithm::Direct, |e| ssa::Algorithm::TauLeap { epsilon: e });
         let e = ssa::ensemble(&m, &times, runs, algorithm, seed).map_err(text)?;
         let pick = |table: &Vec<Vec<f64>>, slot: usize| -> Vec<f64> { table.iter().map(|v| v[slot]).collect() };
-        let mean: BTreeMap<&str, Vec<f64>> = m.species.iter().map(|s| (s.id.as_str(), pick(&e.mean, s.amount))).collect();
+        let mean: BTreeMap<&str, Vec<f64>> =
+            m.species.iter().map(|s| (s.id.as_str(), pick(&e.mean, s.amount))).collect();
         let sd: BTreeMap<&str, Vec<f64>> = m.species.iter().map(|s| (s.id.as_str(), pick(&e.sd, s.amount))).collect();
         Ok(json!({"time": e.time, "mean": mean, "sd": sd, "runs": e.runs}))
     })
@@ -688,7 +731,8 @@ pub async fn atlas(state: State<'_, AppState>, perturbation: Perturbation) -> Re
             return Err(format!("the model has no flux solution here ({:?})", s.status));
         }
         let objective = m.objective.iter().map(|&(j, c)| c * s.fluxes[j]).sum::<f64>();
-        let overlay = rashevsky::io::overlay::build_overlay(&m, &s.fluxes, Some(objective), &scene, &rhea).map_err(text)?;
+        let overlay =
+            rashevsky::io::overlay::build_overlay(&m, &s.fluxes, Some(objective), &scene, &rhea).map_err(text)?;
         let raw: Value = serde_json::from_str(SCENE).map_err(text)?;
         Ok(json!({
             "overlay": overlay,
@@ -726,7 +770,12 @@ pub async fn export_fluxes(state: State<'_, AppState>, path: String, fluxes: Vec
 
 /// Writes an Escher map of the open model with its flux data beside it.
 #[tauri::command]
-pub async fn export_escher(state: State<'_, AppState>, path: String, fluxes: Vec<f64>, subsystem: Option<String>) -> Reply<()> {
+pub async fn export_escher(
+    state: State<'_, AppState>,
+    path: String,
+    fluxes: Vec<f64>,
+    subsystem: Option<String>,
+) -> Reply<()> {
     let m = current(&state)?;
     tauri::async_runtime::spawn_blocking(move || {
         let chosen: Vec<usize> = (0..m.reactions.len())

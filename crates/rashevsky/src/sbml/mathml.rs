@@ -305,12 +305,10 @@ pub fn write_expr(e: &Expr, out: &mut String) {
             }
         }
         Expr::Sym(s) => out.push_str(&format!("<ci>{}</ci>", super::write::escape(s))),
-        Expr::Time => out.push_str(&format!(
-            "<csymbol encoding=\"text\" definitionURL=\"{CS}/time\">time</csymbol>"
-        )),
-        Expr::Avogadro => out.push_str(&format!(
-            "<csymbol encoding=\"text\" definitionURL=\"{CS}/avogadro\">avogadro</csymbol>"
-        )),
+        Expr::Time => out.push_str(&format!("<csymbol encoding=\"text\" definitionURL=\"{CS}/time\">time</csymbol>")),
+        Expr::Avogadro => {
+            out.push_str(&format!("<csymbol encoding=\"text\" definitionURL=\"{CS}/avogadro\">avogadro</csymbol>"))
+        }
         Expr::Apply(op, args) => {
             out.push_str(&format!("<apply><{}/>", op_tag(*op)));
             match op {
@@ -346,9 +344,7 @@ pub fn write_expr(e: &Expr, out: &mut String) {
             out.push_str("</apply>");
         }
         Expr::Delay(a, b) => {
-            out.push_str(&format!(
-                "<apply><csymbol encoding=\"text\" definitionURL=\"{CS}/delay\">delay</csymbol>"
-            ));
+            out.push_str(&format!("<apply><csymbol encoding=\"text\" definitionURL=\"{CS}/delay\">delay</csymbol>"));
             write_expr(a, out);
             write_expr(b, out);
             out.push_str("</apply>");

@@ -118,7 +118,12 @@ fn best_sbml(dir: &Path, case: &str) -> Option<std::path::PathBuf> {
     None
 }
 
-fn time_course(path: &Path, settings: &Settings, results: &(Vec<String>, Vec<Vec<f64>>), method: Method) -> Result<Option<String>> {
+fn time_course(
+    path: &Path,
+    settings: &Settings,
+    results: &(Vec<String>, Vec<Vec<f64>>),
+    method: Method,
+) -> Result<Option<String>> {
     let model = KineticModel::read_sbml(path)?;
     let times: Vec<f64> = results.1.iter().map(|r| r[0]).collect();
     let options = SimOptions { method, ..SimOptions::default() };
@@ -232,7 +237,9 @@ pub fn run_case(dir: &Path, method: Method) -> Result<CaseResult> {
 pub fn run_suite(root: &Path, method: Method, filter: Option<&[String]>) -> Result<Vec<CaseResult>> {
     let mut dirs: Vec<std::path::PathBuf> = std::fs::read_dir(root)?
         .filter_map(|e| e.ok().map(|e| e.path()))
-        .filter(|p| p.is_dir() && p.file_name().and_then(|s| s.to_str()).is_some_and(|s| s.chars().all(|c| c.is_ascii_digit())))
+        .filter(|p| {
+            p.is_dir() && p.file_name().and_then(|s| s.to_str()).is_some_and(|s| s.chars().all(|c| c.is_ascii_digit()))
+        })
         .filter(|p| {
             filter.is_none_or(|list| {
                 let name = p.file_name().and_then(|s| s.to_str()).unwrap_or_default();

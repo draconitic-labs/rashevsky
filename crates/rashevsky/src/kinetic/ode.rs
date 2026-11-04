@@ -98,9 +98,8 @@ fn initial_step(sys: &dyn OdeSystem, t: f64, y: &[f64], f0: &[f64], tol: &Tolera
     }
     let mass = sys.mass();
     let scale: Vec<f64> = y.iter().map(|v| tol.atol + tol.rtol * v.abs()).collect();
-    let norm = |v: &[f64]| -> f64 {
-        (v.iter().zip(&scale).map(|(a, s)| (a / s) * (a / s)).sum::<f64>() / n as f64).sqrt()
-    };
+    let norm =
+        |v: &[f64]| -> f64 { (v.iter().zip(&scale).map(|(a, s)| (a / s) * (a / s)).sum::<f64>() / n as f64).sqrt() };
     let d0 = norm(y);
     let diff: Vec<f64> = f0.iter().zip(mass).map(|(f, m)| f * m).collect();
     let d1 = norm(&diff);
@@ -110,47 +109,49 @@ fn initial_step(sys: &dyn OdeSystem, t: f64, y: &[f64], f0: &[f64], tol: &Tolera
     sys.rhs(t + h0, &y1, &mut f1);
     let d2: Vec<f64> = f1.iter().zip(f0).zip(mass).map(|((a, b), m)| (a - b) * m).collect();
     let d2 = norm(&d2) / h0;
-    let h1 = if d1 <= 1e-15 && d2 <= 1e-15 {
-        (h0 * 1e-3).max(1e-6)
-    } else {
-        (0.01 / d1.max(d2)).powf(1.0 / (order + 1.0))
-    };
+    let h1 =
+        if d1 <= 1e-15 && d2 <= 1e-15 { (h0 * 1e-3).max(1e-6) } else { (0.01 / d1.max(d2)).powf(1.0 / (order + 1.0)) };
     (100.0 * h0).min(h1).min(tol.h_max)
 }
 
-const GAMMA: f64 = 0.25;
-const C2: f64 = 0.386;
-const C3: f64 = 0.21;
-const C4: f64 = 0.63;
-const D1: f64 = 0.25;
-const D2: f64 = -0.1043;
-const D3: f64 = 0.1035;
-const D4: f64 = -0.3620000000000023e-1;
-const A21: f64 = 0.1544000000000000e1;
-const A31: f64 = 0.9466785280815826;
-const A32: f64 = 0.2557011698983284;
-const A41: f64 = 0.3314825187068521e1;
-const A42: f64 = 0.2896124015972201e1;
-const A43: f64 = 0.9986419139977817;
-const A51: f64 = 0.1221224509226641e1;
-const A52: f64 = 0.6019134481288629e1;
-const A53: f64 = 0.1253708332932087e2;
-const A54: f64 = -0.6878860361058950;
-const C21: f64 = -0.5668800000000000e1;
-const C31: f64 = -0.2430093356833875e1;
-const C32: f64 = -0.2063599157091915;
-const C41: f64 = -0.1073529058151375;
-const C42: f64 = -0.9594562251023355e1;
-const C43: f64 = -0.2047028614809616e2;
-const C51: f64 = 0.7496443313967647e1;
-const C52: f64 = -0.1024680431464352e2;
-const C53: f64 = -0.3399990352819905e2;
-const C54: f64 = 0.1170890893206160e2;
-const C61: f64 = 0.8083246795921522e1;
-const C62: f64 = -0.7981132988064893e1;
-const C63: f64 = -0.3152159432874371e2;
-const C64: f64 = 0.1631930543123136e2;
-const C65: f64 = -0.6058818238834054e1;
+// Coefficients as printed in Hairer's rodas.f, with all their digits.
+#[allow(clippy::excessive_precision)]
+mod coefficients {
+    pub const GAMMA: f64 = 0.25;
+    pub const C2: f64 = 0.386;
+    pub const C3: f64 = 0.21;
+    pub const C4: f64 = 0.63;
+    pub const D1: f64 = 0.25;
+    pub const D2: f64 = -0.1043;
+    pub const D3: f64 = 0.1035;
+    pub const D4: f64 = -0.3620000000000023e-1;
+    pub const A21: f64 = 0.1544000000000000e1;
+    pub const A31: f64 = 0.9466785280815826;
+    pub const A32: f64 = 0.2557011698983284;
+    pub const A41: f64 = 0.3314825187068521e1;
+    pub const A42: f64 = 0.2896124015972201e1;
+    pub const A43: f64 = 0.9986419139977817;
+    pub const A51: f64 = 0.1221224509226641e1;
+    pub const A52: f64 = 0.6019134481288629e1;
+    pub const A53: f64 = 0.1253708332932087e2;
+    pub const A54: f64 = -0.6878860361058950;
+    pub const C21: f64 = -0.5668800000000000e1;
+    pub const C31: f64 = -0.2430093356833875e1;
+    pub const C32: f64 = -0.2063599157091915;
+    pub const C41: f64 = -0.1073529058151375;
+    pub const C42: f64 = -0.9594562251023355e1;
+    pub const C43: f64 = -0.2047028614809616e2;
+    pub const C51: f64 = 0.7496443313967647e1;
+    pub const C52: f64 = -0.1024680431464352e2;
+    pub const C53: f64 = -0.3399990352819905e2;
+    pub const C54: f64 = 0.1170890893206160e2;
+    pub const C61: f64 = 0.8083246795921522e1;
+    pub const C62: f64 = -0.7981132988064893e1;
+    pub const C63: f64 = -0.3152159432874371e2;
+    pub const C64: f64 = 0.1631930543123136e2;
+    pub const C65: f64 = -0.6058818238834054e1;
+}
+use coefficients::*;
 
 /// Rosenbrock method RODAS of order 4(3).
 #[derive(Clone, Debug, Default)]
@@ -243,9 +244,8 @@ impl Rodas4 {
             ynew[i] = y[i] + A51 * k1[i] + A52 * k2[i] + A53 * k3[i] + A54 * k4[i];
         }
         sys.rhs(t + h, &ynew, &mut dy);
-        let rhs: Vec<f64> = (0..n)
-            .map(|k| dy[k] + mass[k] * ((C51 * k1[k] + C52 * k2[k] + C53 * k3[k] + C54 * k4[k]) / h))
-            .collect();
+        let rhs: Vec<f64> =
+            (0..n).map(|k| dy[k] + mass[k] * ((C51 * k1[k] + C52 * k2[k] + C53 * k3[k] + C54 * k4[k]) / h)).collect();
         let Some(k5) = solve(rhs) else { return Ok(None) };
         // Embedded solution, then the last stage, which is also the error estimate.
         for i in 0..n {
@@ -253,11 +253,7 @@ impl Rodas4 {
         }
         sys.rhs(t + h, &ynew, &mut dy);
         let rhs: Vec<f64> = (0..n)
-            .map(|k| {
-                dy[k]
-                    + mass[k]
-                        * ((C61 * k1[k] + C62 * k2[k] + C63 * k3[k] + C64 * k4[k] + C65 * k5[k]) / h)
-            })
+            .map(|k| dy[k] + mass[k] * ((C61 * k1[k] + C62 * k2[k] + C63 * k3[k] + C64 * k4[k] + C65 * k5[k]) / h))
             .collect();
         let Some(k6) = solve(rhs) else { return Ok(None) };
         for i in 0..n {
@@ -465,6 +461,7 @@ impl Bdf {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn newton(
         &mut self,
         sys: &dyn OdeSystem,
@@ -673,7 +670,8 @@ impl Integrator for Bdf {
                 return Ok(());
             }
             let err_m = if order > 1 { weighted(&self.d[order], self.err_const[order - 1]) } else { f64::INFINITY };
-            let err_p = if order < MAX_ORDER { weighted(&self.d[order + 2], self.err_const[order + 1]) } else { f64::INFINITY };
+            let err_p =
+                if order < MAX_ORDER { weighted(&self.d[order + 2], self.err_const[order + 1]) } else { f64::INFINITY };
             let factors = [
                 err_m.max(1e-300).powf(-1.0 / order as f64),
                 err_norm.max(1e-300).powf(-1.0 / (order as f64 + 1.0)),

@@ -167,11 +167,8 @@ pub fn build_overlay(
 ) -> Result<Overlay> {
     let mut known: HashMap<&str, ()> = HashMap::new();
     let mut by_ec: HashMap<&str, Vec<&str>> = HashMap::new();
-    for (events, ecs) in scene
-        .reactions
-        .iter()
-        .map(|r| (&r.e, &r.ec))
-        .chain(scene.processes.iter().map(|p| (&p.e, &p.ec)))
+    for (events, ecs) in
+        scene.reactions.iter().map(|r| (&r.e, &r.ec)).chain(scene.processes.iter().map(|p| (&p.e, &p.ec)))
     {
         for e in events {
             known.insert(e.as_str(), ());
@@ -244,11 +241,14 @@ pub fn build_overlay(
         };
         members.sort_unstable();
         members.dedup();
-        events.insert(event, OverlayEvent {
-            flux: members.iter().map(|&j| fluxes[j].abs()).sum(),
-            match_type: kind.to_string(),
-            reactions: members.iter().map(|&j| model.reactions[j].id.clone()).collect(),
-        });
+        events.insert(
+            event,
+            OverlayEvent {
+                flux: members.iter().map(|&j| fluxes[j].abs()).sum(),
+                match_type: kind.to_string(),
+                reactions: members.iter().map(|&j| model.reactions[j].id.clone()).collect(),
+            },
+        );
     }
     let coverage = Coverage {
         events_in_scene: known.len(),
@@ -270,7 +270,8 @@ pub fn build_overlay(
 
 /// Colour on a logarithmic flux scale, from teal through amber to rose.
 fn flux_color(t: f64) -> String {
-    let stops: [(f64, [f64; 3]); 3] = [(0.0, [46.0, 196.0, 182.0]), (0.5, [244.0, 185.0, 66.0]), (1.0, [240.0, 84.0, 110.0])];
+    let stops: [(f64, [f64; 3]); 3] =
+        [(0.0, [46.0, 196.0, 182.0]), (0.5, [244.0, 185.0, 66.0]), (1.0, [240.0, 84.0, 110.0])];
     let t = t.clamp(0.0, 1.0);
     let (a, b) = if t < 0.5 { (stops[0], stops[1]) } else { (stops[1], stops[2]) };
     let w = (t - a.0) / (b.0 - a.0);
@@ -281,7 +282,9 @@ fn flux_color(t: f64) -> String {
 /// Draws the overlay on the scene as a standalone SVG.
 pub fn render_svg(scene: &Scene, overlay: &Overlay) -> String {
     let max_flux = overlay.events.values().map(|e| e.flux).fold(0.0f64, f64::max).max(1e-9);
-    let scale = |flux: f64| -> f64 { ((flux.max(1e-3) / 1e-3).ln() / (max_flux.max(1e-3) / 1e-3).ln().max(1e-9)).clamp(0.0, 1.0) };
+    let scale = |flux: f64| -> f64 {
+        ((flux.max(1e-3) / 1e-3).ln() / (max_flux.max(1e-3) / 1e-3).ln().max(1e-9)).clamp(0.0, 1.0)
+    };
     let (w, h) = (scene.world.w, scene.world.h);
     let mut s = String::with_capacity(1 << 20);
     let _ = write!(
@@ -336,11 +339,18 @@ pub fn render_svg(scene: &Scene, overlay: &Overlay) -> String {
         }
     }
     for n in &scene.nodes {
-        let _ = write!(s, "<circle cx=\"{:.0}\" cy=\"{:.0}\" r=\"{}\" fill=\"#8a93a2\"/>", n.x, n.y, if n.h > 0.0 { 9 } else { 5 });
+        let _ = write!(
+            s,
+            "<circle cx=\"{:.0}\" cy=\"{:.0}\" r=\"{}\" fill=\"#8a93a2\"/>",
+            n.x,
+            n.y,
+            if n.h > 0.0 { 9 } else { 5 }
+        );
     }
     for p in &scene.processes {
         if let Some((f, _)) = event_flux(&p.e) {
-            let _ = write!(s, "<circle cx=\"{:.0}\" cy=\"{:.0}\" r=\"9\" fill=\"{}\"/>", p.x, p.y, flux_color(scale(f)));
+            let _ =
+                write!(s, "<circle cx=\"{:.0}\" cy=\"{:.0}\" r=\"9\" fill=\"{}\"/>", p.x, p.y, flux_color(scale(f)));
         }
     }
     s.push_str("</svg>\n");

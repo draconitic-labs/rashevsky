@@ -128,11 +128,8 @@ impl Model {
             let v = km.initial[*km.index.get(id)?];
             v.is_finite().then_some(v).or(if v.is_infinite() { Some(v) } else { None })
         };
-        let params: HashMap<&str, f64> = m
-            .parameters
-            .iter()
-            .filter_map(|p| initial_value(&p.id).or(p.value).map(|v| (p.id.as_str(), v)))
-            .collect();
+        let params: HashMap<&str, f64> =
+            m.parameters.iter().filter_map(|p| initial_value(&p.id).or(p.value).map(|v| (p.id.as_str(), v))).collect();
         let mut model = Model { id: m.id.clone(), name: m.name.clone(), ..Model::default() };
         for c in &m.compartments {
             model.compartments.insert(c.id.clone(), if c.name.is_empty() { c.id.clone() } else { c.name.clone() });
@@ -176,12 +173,7 @@ impl Model {
                 for (refs, sign) in [(&r.reactants, -1.0), (&r.products, 1.0)] {
                     for sr in refs {
                         let i = species_index[sr.species.as_str()];
-                        let value = sr
-                            .id
-                            .as_deref()
-                            .and_then(&initial_value)
-                            .or(sr.stoichiometry)
-                            .unwrap_or(1.0);
+                        let value = sr.id.as_deref().and_then(&initial_value).or(sr.stoichiometry).unwrap_or(1.0);
                         *merged.entry(i).or_insert(0.0) += sign * value;
                     }
                 }
@@ -189,11 +181,8 @@ impl Model {
             }
             model.reactions.push(parsed);
         }
-        let names: HashMap<&str, &str> = m
-            .gene_products
-            .iter()
-            .map(|g| (gene_labels[g.id.as_str()].as_str(), g.name.as_str()))
-            .collect();
+        let names: HashMap<&str, &str> =
+            m.gene_products.iter().map(|g| (gene_labels[g.id.as_str()].as_str(), g.name.as_str())).collect();
         model.genes = genes
             .ids
             .iter()
@@ -206,12 +195,9 @@ impl Model {
             .or_else(|| m.objectives.first());
         if let Some(obj) = active {
             model.sense = Some(if obj.maximize { Sense::Maximize } else { Sense::Minimize });
-            let by_id: HashMap<&str, usize> =
-                m.reactions.iter().enumerate().map(|(i, r)| (r.id.as_str(), i)).collect();
+            let by_id: HashMap<&str, usize> = m.reactions.iter().enumerate().map(|(i, r)| (r.id.as_str(), i)).collect();
             for (rid, coef) in &obj.flux_objectives {
-                let j = *by_id
-                    .get(rid.as_str())
-                    .ok_or_else(|| Error::Unknown { kind: "reaction", id: rid.clone() })?;
+                let j = *by_id.get(rid.as_str()).ok_or_else(|| Error::Unknown { kind: "reaction", id: rid.clone() })?;
                 model.objective.push((j, *coef));
             }
         }
@@ -316,11 +302,7 @@ impl Model {
             genes: self.genes.len(),
             compartments: self.compartments.len(),
             exchanges: self.exchanges().len(),
-            objective: self
-                .objective
-                .iter()
-                .map(|&(j, c)| (self.reactions[j].id.clone(), c))
-                .collect(),
+            objective: self.objective.iter().map(|&(j, c)| (self.reactions[j].id.clone(), c)).collect(),
         }
     }
 
@@ -445,10 +427,7 @@ mod tests {
 
     #[test]
     fn formula_parsing() {
-        assert_eq!(
-            parse_formula("C6H12O6").unwrap(),
-            vec![("C".into(), 6.0), ("H".into(), 12.0), ("O".into(), 6.0)]
-        );
+        assert_eq!(parse_formula("C6H12O6").unwrap(), vec![("C".into(), 6.0), ("H".into(), 12.0), ("O".into(), 6.0)]);
         assert_eq!(parse_formula("Fe").unwrap(), vec![("Fe".into(), 1.0)]);
         assert!(parse_formula("c6").is_none());
     }

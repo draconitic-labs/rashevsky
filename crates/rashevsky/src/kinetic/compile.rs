@@ -282,19 +282,14 @@ fn inline_functions(e: &Expr, funcs: &HashMap<&str, &sbml::FunctionDefinition>) 
                 None => None,
             },
         ),
-        Expr::Delay(a, b) => {
-            Expr::Delay(Box::new(inline_functions(a, funcs)?), Box::new(inline_functions(b, funcs)?))
-        }
+        Expr::Delay(a, b) => Expr::Delay(Box::new(inline_functions(a, funcs)?), Box::new(inline_functions(b, funcs)?)),
         Expr::Call(name, args) => {
-            let f = funcs
-                .get(name.as_str())
-                .ok_or_else(|| Error::Kinetic(format!("unknown function `{name}`")))?;
+            let f = funcs.get(name.as_str()).ok_or_else(|| Error::Kinetic(format!("unknown function `{name}`")))?;
             if f.args.len() != args.len() {
                 return Err(Error::Kinetic(format!("wrong argument count for `{name}`")));
             }
             let actual: Vec<Expr> = args.iter().map(|a| inline_functions(a, funcs)).collect::<Result<_>>()?;
-            let map: HashMap<&str, &Expr> =
-                f.args.iter().map(String::as_str).zip(actual.iter()).collect();
+            let map: HashMap<&str, &Expr> = f.args.iter().map(String::as_str).zip(actual.iter()).collect();
             let body = inline_functions(&f.body, funcs)?;
             body.substitute(&|s| map.get(s).map(|e| (*e).clone()))
         }
@@ -499,14 +494,14 @@ impl KineticModel {
         self.initial_items.retain(|(s, _)| *s != slot);
         self.initial[slot] = value;
         // When the math value of an amount species is overridden, the amount follows.
-        if let Some(sp) = self.species.iter().find(|s| s.view == slot) {
-            if sp.kind == SpeciesKind::Amount || sp.kind == SpeciesKind::Constant {
-                let size = self.initial[sp.compartment];
-                let amount = if sp.has_only_substance_units { value } else { value * size };
-                let amount_slot = sp.amount;
-                self.initial_items.retain(|(s, _)| *s != amount_slot);
-                self.initial[amount_slot] = amount;
-            }
+        if let Some(sp) = self.species.iter().find(|s| s.view == slot)
+            && matches!(sp.kind, SpeciesKind::Amount | SpeciesKind::Constant)
+        {
+            let size = self.initial[sp.compartment];
+            let amount = if sp.has_only_substance_units { value } else { value * size };
+            let amount_slot = sp.amount;
+            self.initial_items.retain(|(s, _)| *s != amount_slot);
+            self.initial[amount_slot] = amount;
         }
         for _ in 0..self.initial_items.len() + 3 {
             let mut changed = false;
@@ -601,11 +596,8 @@ struct SpeciesInit {
 fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
     let local_substituted = |r: &sbml::Reaction| -> Result<Expr> {
         let Some(law) = &r.kinetic_law else { return Ok(Expr::Num(0.0)) };
-        let locals: HashMap<&str, f64> = r
-            .local_parameters
-            .iter()
-            .map(|p| (p.id.as_str(), p.value.unwrap_or(f64::NAN)))
-            .collect();
+        let locals: HashMap<&str, f64> =
+            r.local_parameters.iter().map(|p| (p.id.as_str(), p.value.unwrap_or(f64::NAN))).collect();
         // A local parameter is constant, so `rateOf` of one is zero.
         let shadowed = zero_rate_of(law, &|s| locals.contains_key(s));
         let law = shadowed.substitute(&|s| locals.get(s).map(|v| Expr::Num(*v)));
@@ -633,12 +625,8 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
             event_targets.insert(&a.variable);
         }
     }
-    let in_reaction: HashSet<&str> = src
-        .reactions
-        .iter()
-        .flat_map(|r| r.reactants.iter().chain(&r.products))
-        .map(|s| s.species.as_str())
-        .collect();
+    let in_reaction: HashSet<&str> =
+        src.reactions.iter().flat_map(|r| r.reactants.iter().chain(&r.products)).map(|s| s.species.as_str()).collect();
 
     // Candidates for algebraic variables: non-constant symbols no other rule or reaction determines.
     let mut candidates: HashSet<String> = HashSet::new();
@@ -732,9 +720,8 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
     for e in &all_exprs {
         constant_lags(e, &mut lags);
     }
-    let min_constant_lag = lags.iter().copied().filter(|v| *v > 0.0).fold(None, |acc: Option<f64>, v| {
-        Some(acc.map_or(v, |a| a.min(v)))
-    });
+    let min_constant_lag =
+        lags.iter().copied().filter(|v| *v > 0.0).fold(None, |acc: Option<f64>, v| Some(acc.map_or(v, |a| a.min(v))));
 
     // Derived expressions and state variables.
     let mut derived_exprs: Vec<(String, Expr)> = Vec::new();
@@ -748,29 +735,23 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
     };
 
     // Non-species symbols.
-    let mut value_state = |id: &str, constant: bool, state_names: &mut Vec<String>, derived: &mut Vec<(String, Expr)>| {
+    let mut value_state = |id: &str, state_names: &mut Vec<String>, derived: &mut Vec<(String, Expr)>| {
         if let Some(rule) = assign_rule.get(id) {
             derived.push((id.to_string(), rule.clone()));
-        } else if !constant
-            || rate_rule.contains_key(id)
-            || algebraic_set.contains(id)
-            || event_targets.contains(id)
-        {
-            if rate_rule.contains_key(id) || algebraic_set.contains(id) || event_targets.contains(id) {
-                add_state(id.to_string(), state_names);
-            }
+        } else if rate_rule.contains_key(id) || algebraic_set.contains(id) || event_targets.contains(id) {
+            add_state(id.to_string(), state_names);
         }
     };
     for c in &src.compartments {
-        value_state(&c.id, c.constant, &mut state_names, &mut derived_exprs);
+        value_state(&c.id, &mut state_names, &mut derived_exprs);
     }
     for p in &src.parameters {
-        value_state(&p.id, p.constant, &mut state_names, &mut derived_exprs);
+        value_state(&p.id, &mut state_names, &mut derived_exprs);
     }
     for r in &src.reactions {
         for sr in r.reactants.iter().chain(&r.products) {
             if let Some(id) = &sr.id {
-                value_state(id, sr.constant, &mut state_names, &mut derived_exprs);
+                value_state(id, &mut state_names, &mut derived_exprs);
             }
         }
     }
@@ -801,11 +782,8 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
         } else {
             SpeciesKind::Amount
         };
-        let view_of_amount = if hosu {
-            Expr::Sym(amount_name.clone())
-        } else {
-            div(Expr::Sym(amount_name.clone()), size.clone())
-        };
+        let view_of_amount =
+            if hosu { Expr::Sym(amount_name.clone()) } else { div(Expr::Sym(amount_name.clone()), size.clone()) };
         let amount_of_view =
             if hosu { Expr::Sym(view_name.clone()) } else { mul(Expr::Sym(view_name.clone()), size.clone()) };
         match kind {
@@ -864,7 +842,10 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
                     derived_exprs.push((name.clone(), b.inline(math)?));
                     Expr::Sym(name)
                 } else if let Some(id) = &sr.id {
-                    sr_initial.push((id.clone(), Expr::Num(sr.stoichiometry.unwrap_or(if b.level < 3 { 1.0 } else { f64::NAN }))));
+                    sr_initial.push((
+                        id.clone(),
+                        Expr::Num(sr.stoichiometry.unwrap_or(if b.level < 3 { 1.0 } else { f64::NAN })),
+                    ));
                     Expr::Sym(id.clone())
                 } else {
                     Expr::Num(sr.stoichiometry.unwrap_or(1.0))
@@ -906,7 +887,9 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
             _ => return Err(Error::Kinetic("unexpected stoichiometry expression".into())),
         };
         let conversion = match conversion {
-            Some(c) => Some(*b.slots.get(c).ok_or_else(|| Error::Unknown { kind: "conversion factor", id: c.clone() })?),
+            Some(c) => {
+                Some(*b.slots.get(c).ok_or_else(|| Error::Unknown { kind: "conversion factor", id: c.clone() })?)
+            }
             None => None,
         };
         stoich.push(StoichEntry { state: *state, reaction: *reaction, sign: *sign, coef, conversion });
@@ -1032,10 +1015,10 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
             let slot = b.slots[id.as_str()];
             if let Some(ia) = ia_of.get(id.as_str()) {
                 init_items.push((slot, b.compile(ia)?));
-            } else if !assign_rule.contains_key(id.as_str()) {
-                if let Expr::Num(v) = e {
-                    plain[slot] = *v;
-                }
+            } else if !assign_rule.contains_key(id.as_str())
+                && let Expr::Num(v) = e
+            {
+                plain[slot] = *v;
             }
         }
         let mut species_overrides: HashSet<usize> = HashSet::new();
@@ -1112,7 +1095,16 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
         state_names: state_names.clone(),
     };
     solve_algebraic_initial(&mut model);
-    build_derivatives(&mut model, b, &derived_exprs, &stoich_exprs, &rate_rule, &algebraic_exprs, &algebraic_vars, &state_names)?;
+    build_derivatives(
+        &mut model,
+        b,
+        &derived_exprs,
+        &stoich_exprs,
+        &rate_rule,
+        &algebraic_exprs,
+        &algebraic_vars,
+        &state_names,
+    )?;
     Ok(model)
 }
 
@@ -1204,10 +1196,7 @@ fn rate_expression(
         pending.push(sp.compartment.clone());
         return sub(
             div(amount_rate, size.clone()),
-            mul(
-                div(Expr::Sym(name), mul(size.clone(), size)),
-                Expr::RateOf(sp.compartment.clone()),
-            ),
+            mul(div(Expr::Sym(name), mul(size.clone(), size)), Expr::RateOf(sp.compartment.clone())),
         );
     }
     Expr::Num(0.0)
@@ -1231,7 +1220,13 @@ fn topo_sort(items: Vec<(String, Expr)>) -> Result<Vec<(String, Expr)>> {
         .collect();
     let mut state = vec![0u8; items.len()];
     let mut order = Vec::with_capacity(items.len());
-    fn visit(i: usize, deps: &[Vec<usize>], state: &mut [u8], order: &mut Vec<usize>, names: &[(String, Expr)]) -> Result<()> {
+    fn visit(
+        i: usize,
+        deps: &[Vec<usize>],
+        state: &mut [u8],
+        order: &mut Vec<usize>,
+        names: &[(String, Expr)],
+    ) -> Result<()> {
         match state[i] {
             2 => return Ok(()),
             1 => return Err(Error::Kinetic(format!("circular definition through `{}`", names[i].0))),
@@ -1383,11 +1378,7 @@ fn build_derivatives(
         }
     }
     let _ = neg;
-    model.flat_rates = model
-        .reactions
-        .iter()
-        .map(|r| flat.get(&r.id).cloned().unwrap_or(Expr::Num(0.0)))
-        .collect();
+    model.flat_rates = model.reactions.iter().map(|r| flat.get(&r.id).cloned().unwrap_or(Expr::Num(0.0))).collect();
     model.flat_rhs = rhs;
     model.jacobian = Some(jacobian);
     model.time_derivative = time_derivative;

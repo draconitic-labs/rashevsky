@@ -133,9 +133,7 @@ impl<'a> KineticSystem<'a> {
         let s = (t - a.t) / step;
         let (h00, h10) = ((1.0 + 2.0 * s) * (1.0 - s) * (1.0 - s), s * (1.0 - s) * (1.0 - s));
         let (h01, h11) = (s * s * (3.0 - 2.0 * s), s * s * (s - 1.0));
-        (0..a.y.len())
-            .map(|k| h00 * a.y[k] + h10 * step * a.f[k] + h01 * b.y[k] + h11 * step * b.f[k])
-            .collect()
+        (0..a.y.len()).map(|k| h00 * a.y[k] + h10 * step * a.f[k] + h01 * b.y[k] + h11 * step * b.f[k]).collect()
     }
 
     fn pre_start(&self) -> PreStart<'_> {
@@ -316,7 +314,7 @@ impl Driver<'_> {
     }
 
     /// Fires transitions and executes everything due at time `t`. Returns the state after.
-    fn handle_events(&mut self, t: f64, y: &mut Vec<f64>) -> Result<bool> {
+    fn handle_events(&mut self, t: f64, y: &mut [f64]) -> Result<bool> {
         let mut changed = false;
         let tiny = 1e-12 * (1.0 + t.abs());
         for _guard in 0..100_000 {
@@ -439,7 +437,7 @@ impl Driver<'_> {
     }
 
     /// Brings fast reactions to equilibrium with the time frozen.
-    fn equilibrate(&mut self, t: f64, y: &mut Vec<f64>) -> Result<()> {
+    fn equilibrate(&mut self, t: f64, y: &mut [f64]) -> Result<()> {
         if !self.model.has_fast() {
             return Ok(());
         }
@@ -639,7 +637,11 @@ pub fn simulate(model: &KineticModel, times: &[f64], options: &SimOptions) -> Re
     driver.sys.vals0 = driver.sys.values(t0, &y);
     driver.push_history(t0, &y);
     driver.int.restart(&driver.sys, t0, &y);
-    let mut out = TimeCourse { time: Vec::with_capacity(times.len()), values: Vec::with_capacity(times.len()), stats: Stats::default() };
+    let mut out = TimeCourse {
+        time: Vec::with_capacity(times.len()),
+        values: Vec::with_capacity(times.len()),
+        stats: Stats::default(),
+    };
     for &t in times {
         driver.advance(t)?;
         out.time.push(t);

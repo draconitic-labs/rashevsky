@@ -26,11 +26,8 @@ pub fn moma_with(model: &Model, reference: &[f64], backend: &dyn Backend) -> Res
     p.hessian = (0..n).map(|j| (j, j, 2.0)).collect();
     let mut session = backend.open(&p)?;
     let s = session.solve()?;
-    let distance: f64 = if s.is_optimal() {
-        s.x.iter().zip(reference).map(|(v, w)| (v - w) * (v - w)).sum()
-    } else {
-        f64::NAN
-    };
+    let distance: f64 =
+        if s.is_optimal() { s.x.iter().zip(reference).map(|(v, w)| (v - w) * (v - w)).sum() } else { f64::NAN };
     Ok(FluxSolution {
         status: s.status,
         objective: distance,

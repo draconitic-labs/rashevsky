@@ -125,10 +125,7 @@ pub fn tfa(model: &Model, data: &ThermoData, options: &TfaOptions) -> Result<Tfa
     if !s.is_optimal() {
         return Err(Error::Solver(format!("TFA ended with {:?}", s.status)));
     }
-    let concentrations = log_col
-        .iter()
-        .map(|(&i, &c)| (model.metabolites[i].id.clone(), s.x[c].exp()))
-        .collect();
+    let concentrations = log_col.iter().map(|(&i, &c)| (model.metabolites[i].id.clone(), s.x[c].exp())).collect();
     let gibbs = gibbs_col.iter().map(|(&j, &g)| (model.reactions[j].id.clone(), s.x[g])).collect();
     Ok(TfaSolution {
         flux: FluxSolution {
@@ -154,7 +151,13 @@ mod tests {
         for id in ["A", "B"] {
             m.metabolites.push(Metabolite { id: id.into(), compartment: "c".into(), ..Metabolite::default() });
         }
-        let reaction = |id: &str, st: Vec<(usize, f64)>| Reaction { id: id.into(), lb: -10.0, ub: 10.0, stoichiometry: st, ..Reaction::default() };
+        let reaction = |id: &str, st: Vec<(usize, f64)>| Reaction {
+            id: id.into(),
+            lb: -10.0,
+            ub: 10.0,
+            stoichiometry: st,
+            ..Reaction::default()
+        };
         m.reactions.push(reaction("in", vec![(0, 1.0)]));
         m.reactions.push(reaction("step", vec![(0, -1.0), (1, 1.0)]));
         m.reactions.push(reaction("out", vec![(1, -1.0)]));

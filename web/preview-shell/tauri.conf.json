@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Rashevsky demo preview",
+  "mainBinaryName": "rashevsky-web-preview",
+  "version": "0.1.0",
+  "identifier": "com.flintglade.rashevsky.webpreview",
+  "build": { "frontendDist": "../dist" },
+  "app": {
+    "windows": [{ "label": "main", "title": "Rashevsky demo preview", "width": 1280, "height": 800, "backgroundColor": "#14171a" }],
+    "security": { "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost" }
+  },
+  "bundle": { "active": false, "icon": ["../../desktop/src-tauri/icons/icon.png"] }
+}

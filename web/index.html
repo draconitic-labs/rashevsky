@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rashevsky</title>
+  <link rel="stylesheet" href="demo.css">
+  <script type="module" src="demo.js"></script>
+</head>
+<body>
+  <canvas id="map" tabindex="0" aria-label="Flux map of E. coli central metabolism. Select a reaction to delete it."></canvas>
+  <header class="top">
+    <h1>Rashevsky</h1>
+    <small class="demo-mark">Demo</small>
+    <output id="growth" class="growth" aria-live="polite">0.8739</output>
+    <span class="growth-label">Growth, 1/h</span>
+    <span id="delta" class="delta"></span>
+  </header>
+  <div class="panel">
+    <label>Glucose uptake <output id="glcOut">10</output>
+      <input id="glc" type="range" min="0" max="30" step="0.5" value="10"></label>
+    <label>Oxygen uptake <output id="o2Out">Unlimited</output>
+      <input id="o2" type="range" min="0" max="60" step="1" value="60"></label>
+  </div>
+  <div id="tray" class="tray" hidden></div>
+  <div id="tip" class="tip" hidden></div>
+  <noscript>This demo needs JavaScript and WebAssembly.</noscript>
+</body>
+</html>

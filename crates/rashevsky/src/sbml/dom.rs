@@ -116,9 +116,8 @@ pub fn parse(xml: &str) -> Result<(Node, Vec<String>)> {
     let mut stack: Vec<Node> = Vec::new();
     let mut root: Option<Node> = None;
     loop {
-        let event = reader.read_event().map_err(|e| {
-            Error::Sbml(format!("xml at byte {}: {e}", reader.buffer_position()))
-        })?;
+        let event =
+            reader.read_event().map_err(|e| Error::Sbml(format!("xml at byte {}: {e}", reader.buffer_position())))?;
         match event {
             Event::Start(start) => stack.push(open_node(&start, &mut names, &mut packages)?),
             Event::Empty(start) => {
@@ -138,8 +137,7 @@ pub fn parse(xml: &str) -> Result<(Node, Vec<String>)> {
             Event::Text(text) => {
                 if let Some(parent) = stack.last_mut() {
                     let raw = text.decode().map_err(|e| Error::Sbml(format!("xml: {e}")))?;
-                    let value = quick_xml::escape::unescape(&raw)
-                        .map_err(|e| Error::Sbml(format!("xml: {e}")))?;
+                    let value = quick_xml::escape::unescape(&raw).map_err(|e| Error::Sbml(format!("xml: {e}")))?;
                     append_text(parent, &value);
                 }
             }

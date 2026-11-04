@@ -10,7 +10,9 @@ fn main() {
     // This machine's WebKitGTK crashes on Wayland with its DMA-BUF renderer ("Error 71"), and the
     // same flags keep software canvases smooth elsewhere. Anything set by the caller wins.
     #[cfg(target_os = "linux")]
-    for (key, value) in [("WEBKIT_DISABLE_DMABUF_RENDERER", "1"), ("GDK_BACKEND", "x11"), ("WEBKIT_DISABLE_COMPOSITING_MODE", "1")] {
+    for (key, value) in
+        [("WEBKIT_DISABLE_DMABUF_RENDERER", "1"), ("GDK_BACKEND", "x11"), ("WEBKIT_DISABLE_COMPOSITING_MODE", "1")]
+    {
         if std::env::var_os(key).is_none() {
             // SAFETY: nothing else runs yet, so no thread can read the environment concurrently.
             unsafe { std::env::set_var(key, value) };

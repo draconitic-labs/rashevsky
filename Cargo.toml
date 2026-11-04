@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
-members = ["crates/rashevsky", "crates/rashevsky-cli", "crates/rashevsky-py"]
-default-members = ["crates/rashevsky", "crates/rashevsky-cli", "crates/rashevsky-py"]
+members = ["crates/rashevsky", "crates/rashevsky-cli", "crates/rashevsky-py", "crates/rashevsky-wasm"]
+default-members = ["crates/rashevsky", "crates/rashevsky-cli", "crates/rashevsky-py", "crates/rashevsky-wasm"]
 
 [workspace.package]
 version = "0.1.0"

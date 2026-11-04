@@ -219,11 +219,8 @@ struct Polytope {
 }
 
 fn build_polytope(model: &Model, fraction: Option<f64>, backend: &dyn lp::Backend) -> Result<Polytope> {
-    let ranges = fva_with(
-        model,
-        &FvaOptions { fraction_of_optimum: fraction.unwrap_or(0.0), reactions: None },
-        backend,
-    )?;
+    let ranges =
+        fva_with(model, &FvaOptions { fraction_of_optimum: fraction.unwrap_or(0.0), reactions: None }, backend)?;
     let n = model.reactions.len();
     let mut fixed = vec![f64::NAN; n];
     let mut free = Vec::new();
@@ -367,10 +364,8 @@ pub fn chrr(model: &Model, options: &SamplerOptions) -> Result<FluxSamples> {
         (Some(_), Some(f)) => {
             let fba = super::fba::fba_with(model, backend.as_ref())?;
             let c = model.objective_vector();
-            let fixed_part: f64 = (0..model.reactions.len())
-                .filter(|&j| pt.fixed[j].is_finite())
-                .map(|j| c[j] * pt.fixed[j])
-                .sum();
+            let fixed_part: f64 =
+                (0..model.reactions.len()).filter(|&j| pt.fixed[j].is_finite()).map(|j| c[j] * pt.fixed[j]).sum();
             Some(f * fba.objective - fixed_part)
         }
         _ => None,
@@ -431,8 +426,10 @@ pub fn chrr(model: &Model, options: &SamplerOptions) -> Result<FluxSamples> {
     // samples gives `T` with `T T' = C`, and moves then run along the columns of `N T`, in which the
     // polytope is close to isotropic. Each round samples better than the last, so few are needed.
     let mut rng = ChaCha8Rng::seed_from_u64(options.seed);
-    let rounds = 4;
-    let round_samples = (8 * d).clamp(200, 4000);
+    // A covariance in `d` dimensions needs many more than `d` nearly independent points; with too few
+    // the transform is noisy and mixing depends on the seed.
+    let rounds = 5;
+    let round_samples = (60 * d).clamp(600, 12_000);
     for _ in 0..rounds {
         let mut cloud: Vec<DVector<f64>> = Vec::with_capacity(round_samples);
         let thin = (4 * d).max(10);
@@ -451,7 +448,8 @@ pub fn chrr(model: &Model, options: &SamplerOptions) -> Result<FluxSamples> {
         // Directions with vanishing sampled variance keep a small scale, so `T` stays invertible.
         let scales = eig.eigenvalues.map(|v| v.max(1e-12 * largest).sqrt());
         let transform = &eig.eigenvectors * DMatrix::from_diagonal(&scales);
-        let inverse = transform.clone().lu().try_inverse().ok_or_else(|| Error::Solver("singular rounding transform".into()))?;
+        let inverse =
+            transform.clone().lu().try_inverse().ok_or_else(|| Error::Solver("singular rounding transform".into()))?;
         basis = &orthonormal * &transform;
         z = &inverse * &mean;
     }
@@ -615,11 +613,22 @@ mod tests {
     /// Uniform on the 2-simplex: each coordinate has mean 1/3 and variance 1/18.
     #[test]
     fn chrr_is_uniform_on_a_simplex() {
-        let options = SamplerOptions { chains: 4, samples_per_chain: 4000, thinning: 10, burn_in: 1000, seed: 3, fraction_of_optimum: None };
+        let options = SamplerOptions {
+            chains: 4,
+            samples_per_chain: 4000,
+            thinning: 10,
+            burn_in: 1000,
+            seed: 3,
+            fraction_of_optimum: None,
+        };
         let s = chrr(&branch(), &options).unwrap();
         assert_eq!(s.dimension, 2);
         for r in 1..4 {
-            assert!((s.diagnostics.mean[r] - 1.0 / 3.0).abs() < 4.0 * s.diagnostics.mcse[r] + 1e-3, "{:?}", s.diagnostics.mean);
+            assert!(
+                (s.diagnostics.mean[r] - 1.0 / 3.0).abs() < 4.0 * s.diagnostics.mcse[r] + 1e-3,
+                "{:?}",
+                s.diagnostics.mean
+            );
             assert!((s.diagnostics.sd[r] - (1.0f64 / 18.0).sqrt()).abs() < 0.01, "{:?}", s.diagnostics.sd);
         }
         assert!(s.diagnostics.max_split_rhat < 1.02);
@@ -627,7 +636,14 @@ mod tests {
 
     #[test]
     fn optgp_keeps_samples_feasible() {
-        let options = SamplerOptions { chains: 2, samples_per_chain: 500, thinning: 10, burn_in: 200, seed: 3, fraction_of_optimum: None };
+        let options = SamplerOptions {
+            chains: 2,
+            samples_per_chain: 500,
+            thinning: 10,
+            burn_in: 200,
+            seed: 3,
+            fraction_of_optimum: None,
+        };
         let s = optgp(&branch(), &options).unwrap();
         for chain in &s.chains {
             for v in chain {
@@ -646,7 +662,8 @@ mod tests {
         assert!(ess > 6000.0, "{ess}");
         assert!((split_rhat(&chains) - 1.0).abs() < 0.01);
         // Chains that disagree are flagged.
-        let shifted: Vec<Vec<f64>> = chains.iter().enumerate().map(|(k, c)| c.iter().map(|v| v + k as f64).collect()).collect();
+        let shifted: Vec<Vec<f64>> =
+            chains.iter().enumerate().map(|(k, c)| c.iter().map(|v| v + k as f64).collect()).collect();
         assert!(split_rhat(&shifted) > 1.5);
     }
 }

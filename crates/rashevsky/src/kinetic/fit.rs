@@ -234,9 +234,8 @@ pub fn profile(
         .map(|(i, p)| FitParameter { name: p.name.clone(), start: fit_result.estimates[i] })
         .collect();
     let times = observation_times(data);
-    let grid: Vec<f64> = (0..points)
-        .map(|k| estimate * factor.powf(2.0 * k as f64 / (points - 1).max(1) as f64 - 1.0))
-        .collect();
+    let grid: Vec<f64> =
+        (0..points).map(|k| estimate * factor.powf(2.0 * k as f64 / (points - 1).max(1) as f64 - 1.0)).collect();
     let chi2: Vec<f64> = crate::parallel::map_chunks(&grid, 1, |slice| {
         let problem = Problem {
             base: model,

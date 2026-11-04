@@ -25,16 +25,19 @@ pub fn map_json(model: &Model, layout: &Layout, name: &str) -> Value {
     for p in &layout.metabolites {
         let met = &model.metabolites[p.index];
         let id = fresh();
-        nodes.insert(id.clone(), json!({
-            "node_type": "metabolite",
-            "x": p.x,
-            "y": p.y,
-            "label_x": p.x + 12.0,
-            "label_y": p.y - 12.0,
-            "bigg_id": met.id,
-            "name": met.name,
-            "node_is_primary": true,
-        }));
+        nodes.insert(
+            id.clone(),
+            json!({
+                "node_type": "metabolite",
+                "x": p.x,
+                "y": p.y,
+                "label_x": p.x + 12.0,
+                "label_y": p.y - 12.0,
+                "bigg_id": met.id,
+                "name": met.name,
+                "node_is_primary": true,
+            }),
+        );
         node_of_met.insert(p.index, id);
     }
     for p in &layout.reactions {
