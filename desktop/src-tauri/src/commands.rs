@@ -802,7 +802,7 @@ pub async fn export_escher(
 pub async fn export_sbml(input: String, output: String) -> Reply<()> {
     tauri::async_runtime::spawn_blocking(move || {
         let doc = rashevsky::sbml::read::read_file(&input).map_err(text)?;
-        std::fs::write(output, rashevsky::sbml::write::write_string(&doc)).map_err(text)
+        std::fs::write(output, rashevsky::sbml::write::write_string(&doc).map_err(text)?).map_err(text)
     })
     .await
     .map_err(text)?

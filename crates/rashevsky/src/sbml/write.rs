@@ -2,6 +2,7 @@
 
 use super::Document;
 use super::mathml::{write_condition, write_expr};
+use crate::error::{Error, Result};
 use crate::kinetic::expr::Expr;
 use std::fmt::Write as _;
 
@@ -56,9 +57,24 @@ fn lambda(args: &[String], body: &Expr, out: &mut String) {
     out.push_str("</lambda></math>");
 }
 
-/// Renders a document as SBML Level 3 Version 1 text, keeping every object the reader understands.
-pub fn write_string(doc: &Document) -> String {
+/// Renders a document as SBML Level 3, keeping every object the reader understands. Version 2 is declared
+/// when the math needs it. Content that cannot be written faithfully is an error, so that a conversion
+/// never turns a model into a different one.
+pub fn write_string(doc: &Document) -> Result<String> {
     let m = &doc.model;
+    if let Some(what) = &m.unsupported_fbc {
+        return Err(Error::Invalid(format!(
+            "this model uses {what} from FBC version 3, which the writer does not keep"
+        )));
+    }
+    for r in &m.reactions {
+        if let Some(rule) = &r.gene_rule
+            && !rule.trim().is_empty()
+        {
+            let mut idx = crate::gpr::GeneIndex::default();
+            crate::gpr::Gpr::parse(rule, &mut |g| idx.intern(g))?;
+        }
+    }
     let older_level = doc.level < 3;
     // A Level 2 stoichiometry expression becomes a rule on a named species reference.
     let mut stoichiometry_rules: Vec<(String, &Expr)> = Vec::new();
@@ -92,7 +108,10 @@ pub fn write_string(doc: &Document) -> String {
         );
     }
     s.push_str(">\n");
-    let _ = write!(s, "<model id=\"{}\"", escape(&m.id));
+    s.push_str("<model");
+    if !m.id.is_empty() {
+        let _ = write!(s, " id=\"{}\"", escape(&m.id));
+    }
     if uses_fbc {
         s.push_str(" fbc:strict=\"false\"");
     }
@@ -219,6 +238,15 @@ pub fn write_string(doc: &Document) -> String {
         }
         s.push_str("</listOfRules>\n");
     }
+    if !m.constraints.is_empty() {
+        s.push_str("<listOfConstraints>\n");
+        for c in &m.constraints {
+            s.push_str("<constraint>");
+            condition(c, &mut s);
+            s.push_str("</constraint>\n");
+        }
+        s.push_str("</listOfConstraints>\n");
+    }
     if !m.reactions.is_empty() {
         s.push_str("<listOfReactions>\n");
         for (j, r) in m.reactions.iter().enumerate() {
@@ -274,9 +302,12 @@ pub fn write_string(doc: &Document) -> String {
                 }
                 s.push_str("</listOfModifiers>\n");
             }
-            if let Some(law) = &r.kinetic_law {
+            // COBRA files before FBC keep bounds in a kinetic law without math.
+            if r.kinetic_law.is_some() || !r.local_parameters.is_empty() {
                 s.push_str("<kineticLaw>");
-                math(law, &mut s);
+                if let Some(law) = &r.kinetic_law {
+                    math(law, &mut s);
+                }
                 if !r.local_parameters.is_empty() {
                     s.push_str("<listOfLocalParameters>");
                     for p in &r.local_parameters {
@@ -302,12 +333,11 @@ pub fn write_string(doc: &Document) -> String {
     if !m.events.is_empty() {
         s.push_str("<listOfEvents>\n");
         for e in &m.events {
-            let _ = write!(
-                s,
-                "<event id=\"{}\" useValuesFromTriggerTime=\"{}\">",
-                escape(&e.id),
-                e.use_values_from_trigger_time
-            );
+            s.push_str("<event");
+            if !e.id.is_empty() {
+                let _ = write!(s, " id=\"{}\"", escape(&e.id));
+            }
+            let _ = write!(s, " useValuesFromTriggerTime=\"{}\">", e.use_values_from_trigger_time);
             let _ = write!(s, "<trigger initialValue=\"{}\" persistent=\"{}\">", e.initial_value, e.persistent);
             condition(&e.trigger, &mut s);
             s.push_str("</trigger>");
@@ -381,7 +411,19 @@ pub fn write_string(doc: &Document) -> String {
         s.push_str("</groups:listOfGroups>\n");
     }
     s.push_str("</model>\n</sbml>\n");
-    s
+    // `max`, `min`, `quotient`, `rem`, `implies` and `rateOf` belong to Version 2, which has no fast reactions.
+    let version_2_math =
+        ["<max/>", "<min/>", "<quotient/>", "<rem/>", "<implies/>", "/rateOf\""].iter().any(|tag| s.contains(tag));
+    if version_2_math && !m.reactions.iter().any(|r| r.fast) {
+        s = s
+            .replacen(
+                "level3/version1/core\" level=\"3\" version=\"1\"",
+                "level3/version2/core\" level=\"3\" version=\"2\"",
+                1,
+            )
+            .replace(" fast=\"false\"", "");
+    }
+    Ok(s)
 }
 
 fn write_gene_rule(rule: &str, s: &mut String) {

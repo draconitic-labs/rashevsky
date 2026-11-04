@@ -167,9 +167,9 @@ pub fn fit(
     if parameters.iter().any(|p| p.start <= 0.0 || !p.start.is_finite()) {
         return Err(Error::Invalid("starting values must be positive".into()));
     }
-    if let Some(bad) =
-        data.iter().find(|o| !o.time.is_finite() || !o.value.is_finite() || o.sigma.is_nan() || o.sigma <= 0.0 || o.sigma.is_infinite())
-    {
+    if let Some(bad) = data.iter().find(|o| {
+        !o.time.is_finite() || !o.value.is_finite() || o.sigma.is_nan() || o.sigma <= 0.0 || o.sigma.is_infinite()
+    }) {
         return Err(Error::Invalid(format!("the measurement of {} at t = {} is not usable", bad.symbol, bad.time)));
     }
     // An override that is refused should say why, rather than look like a failed simulation.
@@ -215,6 +215,11 @@ pub struct Profile {
     pub lower: Option<f64>,
     /// Upper limit of the 95 % interval, when the profile crosses the threshold on that side.
     pub upper: Option<f64>,
+    /// Lowest `chi2` on the profile. When it lies well below the fit's, the fit stopped at a local minimum:
+    /// the limits are then taken around this point.
+    pub lowest_chi2: f64,
+    /// Parameter value at the lowest `chi2`.
+    pub lowest_at: f64,
 }
 
 const CHI2_95_1DOF: f64 = 3.841_458_820_694_124;
@@ -251,13 +256,13 @@ pub fn profile(
     grid.sort_by(f64::total_cmp);
     grid.dedup_by(|a, b| (*a - *b).abs() <= 1e-12 * b.abs());
     let points = grid.len();
-    let chi2: Vec<f64> = crate::parallel::map_chunks(&grid, 1, |slice| {
+    let chi2_at = |value: f64| -> f64 {
         let problem = Problem {
             base: model,
             names: others.iter().map(|p| p.name.clone()).collect(),
             data,
             times: times.clone(),
-            fixed: vec![(name.to_string(), slice[0])],
+            fixed: vec![(name.to_string(), value)],
             options: *options,
         };
         let start: Vec<f64> = others.iter().map(|p| p.start.ln()).collect();
@@ -266,11 +271,20 @@ pub fn profile(
         } else {
             problem.solve(start, 50).map_or(f64::INFINITY, |r| r.1)
         }
-    });
-    let threshold = fit_result.chi2 + CHI2_95_1DOF;
-    let centre = grid.iter().position(|v| *v >= estimate).unwrap_or(points / 2);
-    // Walks out from the estimate. A failed simulation says nothing about the likelihood there, so a
-    // limit beyond one stays undetermined.
+    };
+    let chi2: Vec<f64> = crate::parallel::map_chunks(&grid, 1, |slice| chi2_at(slice[0]));
+    // The threshold belongs to the lowest point found, since the fit can stop at a local minimum.
+    let mut centre = grid.iter().position(|v| *v >= estimate).unwrap_or(points / 2).min(points - 1);
+    for (k, value) in chi2.iter().enumerate() {
+        if *value < chi2[centre] {
+            centre = k;
+        }
+    }
+    let lowest_chi2 = chi2[centre].min(fit_result.chi2);
+    let threshold = lowest_chi2 + CHI2_95_1DOF;
+    // Walks out from the lowest point. A failed simulation says nothing about the likelihood there, so a
+    // limit beyond one stays undetermined. The grid only brackets a limit: a sharp likelihood is far from
+    // linear across a cell, so the crossing is found by bisection on the re-optimized profile.
     let crossing = |range: Vec<usize>| -> Option<f64> {
         let mut prev: Option<usize> = None;
         for k in range {
@@ -278,16 +292,31 @@ pub fn profile(
                 return None;
             }
             if chi2[k] > threshold {
-                return prev.map(|p| {
-                    let w = (threshold - chi2[p]) / (chi2[k] - chi2[p]);
-                    (grid[p].ln() + w * (grid[k].ln() - grid[p].ln())).exp()
-                });
+                let p = prev?;
+                let (mut inside, mut outside) = (grid[p].ln(), grid[k].ln());
+                for _ in 0..60 {
+                    if (outside - inside).abs() <= 1e-7 {
+                        break;
+                    }
+                    let middle = 0.5 * (inside + outside);
+                    let value = chi2_at(middle.exp());
+                    if !value.is_finite() {
+                        return None;
+                    }
+                    if value > threshold {
+                        outside = middle;
+                    } else {
+                        inside = middle;
+                    }
+                }
+                return Some((0.5 * (inside + outside)).exp());
             }
             prev = Some(k);
         }
         None
     };
-    let lower = crossing((0..=centre.min(points - 1)).rev().collect());
-    let upper = crossing((centre.min(points - 1)..points).collect());
-    Ok(Profile { parameter: name.to_string(), values: grid, chi2, lower, upper })
+    let lower = crossing((0..=centre).rev().collect());
+    let upper = crossing((centre..points).collect());
+    let lowest_at = grid[centre];
+    Ok(Profile { parameter: name.to_string(), values: grid, chi2, lower, upper, lowest_chi2, lowest_at })
 }

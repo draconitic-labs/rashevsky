@@ -351,3 +351,227 @@ fn a_required_package_in_use_is_refused() {
         .replace(r#"<comp:listOfSubmodels><comp:submodel comp:id="a" comp:modelRef="b"/></comp:listOfSubmodels>"#, "");
     assert!(KineticModel::from_sbml_str(&unused).is_ok());
 }
+
+fn try_ensemble(name: &str, end: f64, runs: usize, algorithm: Algorithm) -> Result<f64, String> {
+    let m = model(name);
+    let e = ensemble(&m, &[0.0, end], runs, algorithm, 3).map_err(|e| e.to_string())?;
+    let symbol = if m.index.contains_key("X") { "X" } else { "S" };
+    Ok(e.mean[1][m.slot(symbol).unwrap()])
+}
+
+#[test]
+fn leaps_are_bounded_by_autocatalysts_and_catalysts() {
+    // X -> 2X with k = 1 from 1000: mean 1000 e^5. Explicit leaping is low by about 7 % at epsilon 0.03.
+    let exact = 1000.0 * 5f64.exp();
+    let m = model("yule");
+    for steps in [1, 10, 100] {
+        let (mean, _) = mean_at_end(&m, "X", 5.0, steps, 100, TAU);
+        assert!((mean - exact).abs() < 0.12 * exact, "{steps} stops: {mean} vs {exact}");
+    }
+    let (mean, _) = mean_at_end(&m, "X", 5.0, 1, 40, Algorithm::TauLeap { epsilon: 0.001 });
+    assert!((mean - exact).abs() < 0.03 * exact, "{mean}");
+    // A + B -> 2B is logistic: B(5) is 12993.
+    let (mean, _) = mean_at_end(&model("si"), "B", 5.0, 1, 100, TAU);
+    assert!((mean - 12993.0).abs() < 0.1 * 12993.0, "{mean}");
+    // A + E -> B + E, with E decaying: A(1) of about 27434 by the ODE.
+    let (mean, _) = mean_at_end(&model("cat"), "A", 1.0, 1, 40, TAU);
+    assert!((mean - 27434.0).abs() < 0.05 * 27434.0, "{mean}");
+}
+
+#[test]
+fn a_rate_that_turns_on_just_after_a_stop_is_read_there() {
+    for name in ["win_gtleq", "win_geqlt"] {
+        for algorithm in [Algorithm::Direct, TAU] {
+            let mean = try_ensemble(name, 1000.0, 200, algorithm).unwrap();
+            assert!((mean - 100.0).abs() < 5.0, "{name} {algorithm:?}: {mean}");
+        }
+    }
+}
+
+#[test]
+fn stochastic_pulses_from_rounding_are_counted_and_smooth_forcing_is_refused() {
+    // 100 per unit time for one unit in every ten.
+    let mean = try_ensemble("c_pul", 1000.0, 20, Algorithm::Direct).unwrap();
+    assert!((mean - 10_000.0).abs() < 300.0, "{mean}");
+    let error = try_ensemble("c_sin", 100.0, 2, Algorithm::Direct).unwrap_err();
+    assert!(error.contains("continuously"), "{error}");
+}
+
+#[test]
+fn stochastic_simulation_counts_whole_molecules() {
+    assert!(try_ensemble("frac", 1.0, 2, Algorithm::Direct).unwrap_err().contains("whole number"));
+    assert!(try_ensemble("frac2", 1.0, 2, Algorithm::Direct).unwrap_err().contains("whole number"));
+}
+
+#[test]
+fn an_explosive_model_stops_with_a_reason() {
+    let error = try_ensemble("ssa_expl", 1.0, 1, TAU).unwrap_err();
+    assert!(error.contains("without limit"), "{error}");
+}
+
+#[test]
+fn newton_does_not_accept_a_root_at_infinity() {
+    for name in ["ss_inf", "ss_inf2"] {
+        assert!(steady_state(&model(name), &SteadyOptions::default()).is_err(), "{name}");
+    }
+}
+
+#[test]
+fn steady_states_look_past_events_and_hidden_jumps() {
+    let value = |name: &str| {
+        let m = model(name);
+        let s = steady_state(&m, &SteadyOptions::default()).unwrap();
+        s.values[m.slot("S").unwrap()]
+    };
+    assert!((value("ss_ev") - 5.0).abs() < 1e-9, "event after the horizon");
+    assert!((value("o_hid") - 5.0).abs() < 1e-9, "time - 1000 > 0");
+    let relaxation = steady_state(&model("ss_relax"), &SteadyOptions::default()).unwrap_err().to_string();
+    assert!(relaxation.contains("fires"), "{relaxation}");
+    let periodic = steady_state(&model("o_per"), &SteadyOptions::default()).unwrap_err().to_string();
+    assert!(periodic.contains("depend on the time"), "{periodic}");
+}
+
+#[test]
+fn a_slow_instability_is_reported_and_an_empty_model_is_stable() {
+    assert!(!steady_state(&model("ss_slow_unst"), &SteadyOptions::default()).unwrap().stable);
+    for name in ["ss_empty", "ss_empty2"] {
+        let m = model(name);
+        let s = steady_state(&m, &SteadyOptions::default()).unwrap();
+        assert!(s.stable, "{name}");
+        control_analysis(&m, &s).unwrap();
+    }
+}
+
+#[test]
+fn a_delay_decides_its_own_stability() {
+    // y' = -y(t - tau) is stable up to tau = pi / 2.
+    let stable = steady_state(&model("f_dde_1.0"), &SteadyOptions::default()).unwrap();
+    assert!(stable.stable);
+    let unstable = steady_state(&model("f_dde_2.0"), &SteadyOptions::default()).unwrap();
+    assert!(!unstable.stable);
+    assert!(unstable.largest_eigenvalue.is_nan());
+}
+
+#[test]
+fn local_sensitivities_see_parameters_that_set_the_start() {
+    // C = Etot kon S / (kon S + koff + kcat), so dC/dEtot = 5/6.
+    let m = model("sens_moiety");
+    let state = steady_state(&m, &SteadyOptions::default()).unwrap();
+    let control = control_analysis(&m, &state).unwrap();
+    let local = local_steady(&m, &state, &control, &["Etot".to_string()]).unwrap();
+    let c = control.states.iter().position(|s| s == "C#a").unwrap();
+    assert!((local.state[(c, 0)] - 5.0 / 6.0).abs() < 1e-7, "{}", local.state[(c, 0)]);
+    let local = sensitivities("sens_bnd", &["p"]);
+    assert!((local.flux[(0, 0)] - 2.0).abs() < 1e-7, "{}", local.flux[(0, 0)]);
+    let local = sensitivities("sens_comp", &["c"]);
+    assert!((local.flux[(0, 0)] - 1.0).abs() < 1e-7, "{}", local.flux[(0, 0)]);
+}
+
+fn profile_of(
+    name: &str,
+    sigma: f64,
+    start: f64,
+    values: &[(f64, f64)],
+    symbol: &str,
+    factor: f64,
+    points: usize,
+) -> (rashevsky::kinetic::fit::Profile, f64) {
+    let m = model(name);
+    let data: Vec<Observation> =
+        values.iter().map(|&(time, value)| Observation { time, symbol: symbol.into(), value, sigma }).collect();
+    let parameters = [FitParameter { name: "k".into(), start }];
+    let options = SimOptions::default();
+    let fitted = fit(&m, &parameters, &data, &options).unwrap();
+    (profile(&m, &parameters, &data, &fitted, "k", factor, points, &options).unwrap(), fitted.estimates[0])
+}
+
+#[test]
+fn profile_limits_stay_right_when_the_likelihood_is_sharp() {
+    // A' = -k A from 2. chi2(k) has a closed form here, so the limits are checked against its roots.
+    let times = [0.5, 1.0, 2.0, 3.0];
+    let curve = |k: f64, t: f64| 2.0 * (-k * t).exp();
+    let observed: Vec<(f64, f64)> = times.iter().map(|&t| (t, curve(0.7, t))).collect();
+    for sigma in [0.02, 0.002, 0.0002] {
+        let (p, _) = profile_of("p_decay", sigma, 1.0, &observed, "A", 4.0, 15);
+        let chi2 = |k: f64| -> f64 { times.iter().map(|&t| ((curve(k, t) - curve(0.7, t)) / sigma).powi(2)).sum() };
+        for limit in [p.lower.unwrap(), p.upper.unwrap()] {
+            assert!((chi2(limit) - 3.841_458_820_694_124).abs() < 0.02, "sigma {sigma}: {limit} gives {}", chi2(limit));
+        }
+    }
+}
+
+#[test]
+fn a_profile_reports_a_fit_stuck_in_a_local_minimum() {
+    // S' = cos(k t) with data from k = 1, and a fit started beyond the first minimum.
+    let times: Vec<f64> = (1..=12).map(|i| f64::from(i) * 0.5).collect();
+    let observed: Vec<(f64, f64)> = times.iter().map(|&t| (t, t.sin())).collect();
+    let (p, estimate) = profile_of("p_osc", 0.05, 3.0, &observed, "S", 8.0, 31);
+    assert!((estimate - 1.0).abs() > 0.5, "this start should stick: {estimate}");
+    assert!((p.lowest_at - 1.0).abs() < 0.2, "{}", p.lowest_at);
+    assert!(p.lowest_chi2 < 1000.0, "{}", p.lowest_chi2);
+}
+
+#[test]
+fn every_way_of_writing_a_time_condition_is_found() {
+    for method in [Method::Rodas4, Method::Bdf] {
+        for name in ["th_narylt50time5001", "th_2time100", "th_abstimecw", "th_rule", "th_fn", "th_par"] {
+            let s = end_value(&model(name), "S", 100.0, 1, method);
+            assert!((s - 1.0).abs() < 1e-5, "{name} {method:?}: {s}");
+        }
+        let s = end_value(&model("th_per"), "S", 100.0, 1, method);
+        assert!((s - 10.0).abs() < 1e-5, "periodic {method:?}: {s}");
+        for name in ["tev_nary", "tev_geq"] {
+            let f = end_value(&model(name), "f", 100.0, 1, method);
+            assert_eq!(f, 1.0, "{name} {method:?}");
+        }
+    }
+}
+
+#[test]
+fn a_late_switch_does_not_stop_either_integrator() {
+    for method in [Method::Rodas4, Method::Bdf] {
+        let s = end_value(&model("o_th"), "S", 2e9, 1, method);
+        assert!((s / 1e9 - 1.0).abs() < 1e-6, "{method:?}: {s}");
+    }
+}
+
+#[test]
+fn overrides_refuse_what_rules_set_and_replace_their_alias() {
+    let mut m = model("set_assigned");
+    assert!(m.set_value("S#a", 100.0).is_err());
+    assert!(m.set_value("S", 100.0).is_err());
+    let mut m = model("set_alg");
+    assert!(m.set_value("S#a", 100.0).is_err());
+    let mut a = model("set_two");
+    a.set_value("A", 5.0).unwrap();
+    a.set_value("A#a", 7.0).unwrap();
+    assert_eq!(a.initial[a.slot("A#a").unwrap()], 7.0);
+    let mut b = model("set_two");
+    b.set_value("A#a", 7.0).unwrap();
+    b.set_value("A", 5.0).unwrap();
+    assert_eq!(b.initial[b.slot("A").unwrap()], 5.0);
+}
+
+#[test]
+fn a_fast_scale_follows_overrides() {
+    let mut m = model("fast_1");
+    m.set_value("kf", 1e-9).unwrap();
+    m.set_value("kr", 1e-9).unwrap();
+    let run = simulate(&m, &[0.0], &SimOptions::default()).unwrap();
+    assert!((run.series(&m, "A").unwrap()[0] - 5.0).abs() < 1e-3, "{:?}", run.series(&m, "A").unwrap());
+}
+
+#[test]
+fn sobol_of_an_unresponsive_output_is_zero_and_unstable_samples_do_not_count() {
+    use rashevsky::kinetic::sensitivity::{Output, Range, sobol_model};
+    let m = model("o_bruss");
+    let output = Output::Steady { symbol: "X".into(), integrate: 100.0 };
+    // Below b = 2 the fixed point attracts and X = a whatever b is.
+    let quiet = [Range { name: "b".into(), low: 1.0, high: 1.5, log: false }];
+    let r = sobol_model(&m, &quiet, 16, 1, &output).unwrap();
+    assert_eq!(r.first, vec![0.0]);
+    assert_eq!(r.total, vec![0.0]);
+    // Above it there is no attractor to read.
+    let wide = [Range { name: "b".into(), low: 1.0, high: 3.0, log: false }];
+    assert!(sobol_model(&m, &wide, 16, 1, &output).is_err());
+}

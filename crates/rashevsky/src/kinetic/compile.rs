@@ -280,42 +280,194 @@ fn is_fixed(c: &C, varying: &HashSet<usize>) -> bool {
     }
 }
 
-/// Collects the fixed values that the time is compared with.
-fn collect_thresholds(c: &C, varying: &HashSet<usize>, initial: &[f64], out: &mut Vec<f64>) {
+/// True when an expression reads the state, directly or through `state_like` slots, or a past value.
+fn depends_on_state(c: &C, state_like: &HashSet<usize>) -> bool {
     match c {
-        C::Num(_) | C::Slot(_) | C::Time => {}
-        C::Ap(op, args) => {
-            if matches!(op, Op::Gt | Op::Lt | Op::Geq | Op::Leq)
-                && let [a, b] = args.as_slice()
-            {
-                let other = match (a, b) {
-                    (C::Time, other) | (other, C::Time) => Some(other),
-                    _ => None,
-                };
-                if let Some(other) = other
-                    && is_fixed(other, varying)
-                {
-                    out.push(eval(other, initial, 0.0, &NoDelay));
-                }
-            }
-            for a in args {
-                collect_thresholds(a, varying, initial, out);
-            }
-        }
+        C::Num(_) | C::Time => false,
+        C::Slot(s) => state_like.contains(s),
+        C::Delay(..) => true,
+        C::Ap(_, args) => args.iter().any(|a| depends_on_state(a, state_like)),
         C::Piece(pieces, otherwise) => {
-            for (v, w) in pieces {
-                collect_thresholds(v, varying, initial, out);
-                collect_thresholds(w, varying, initial, out);
-            }
-            if let Some(o) = otherwise {
-                collect_thresholds(o, varying, initial, out);
-            }
-        }
-        C::Delay(x, lag) => {
-            collect_thresholds(x, varying, initial, out);
-            collect_thresholds(lag, varying, initial, out);
+            pieces.iter().any(|(v, w)| depends_on_state(v, state_like) || depends_on_state(w, state_like))
+                || otherwise.as_ref().is_some_and(|o| depends_on_state(o, state_like))
         }
     }
+}
+
+/// True when an expression reads the time, directly or through `timed` slots.
+fn reads_time_through(c: &C, timed: &HashSet<usize>) -> bool {
+    match c {
+        C::Num(_) => false,
+        C::Slot(s) => timed.contains(s),
+        C::Time => true,
+        C::Ap(_, args) => args.iter().any(|a| reads_time_through(a, timed)),
+        C::Piece(pieces, otherwise) => {
+            pieces.iter().any(|(v, w)| reads_time_through(v, timed) || reads_time_through(w, timed))
+                || otherwise.as_ref().is_some_and(|o| reads_time_through(o, timed))
+        }
+        C::Delay(x, lag) => reads_time_through(x, timed) || reads_time_through(lag, timed),
+    }
+}
+
+/// How the time enters a model: what depends on the state, what on the time alone.
+struct TimeUse {
+    /// Slots that depend on the state.
+    state_like: HashSet<usize>,
+    /// Derived slots that read the time and not the state, in evaluation order.
+    timed: Vec<(usize, C)>,
+    timed_set: HashSet<usize>,
+}
+
+impl TimeUse {
+    fn of(model: &KineticModel) -> Self {
+        let mut state_like: HashSet<usize> = model.state_slots.iter().copied().collect();
+        let mut timed = Vec::new();
+        let mut timed_set = HashSet::new();
+        for (slot, c) in &model.derived {
+            if depends_on_state(c, &state_like) {
+                state_like.insert(*slot);
+            } else if reads_time_through(c, &timed_set) {
+                timed.push((*slot, c.clone()));
+                timed_set.insert(*slot);
+            }
+        }
+        Self { state_like, timed, timed_set }
+    }
+
+    /// True for a step-like expression of the time alone: a comparison or a rounding. Its value is
+    /// constant between jumps, so a rate that reads the time only through these is piecewise constant.
+    fn is_step(&self, c: &C) -> bool {
+        match c {
+            C::Ap(
+                Op::Gt | Op::Lt | Op::Geq | Op::Leq | Op::Eq | Op::Neq | Op::Floor | Op::Ceil | Op::Quotient,
+                args,
+            ) => {
+                args.iter().all(|a| !depends_on_state(a, &self.state_like))
+                    && args.iter().any(|a| reads_time_through(a, &self.timed_set))
+            }
+            _ => false,
+        }
+    }
+
+    /// True when an expression of the time alone is affine in it by its form, not merely at sample points:
+    /// `time - 10 * floor(time / 10)` also passes through three points on a line.
+    fn is_affine(&self, c: &C) -> bool {
+        let fixed = |e: &C| !reads_time_through(e, &self.timed_set) && !depends_on_state(e, &self.state_like);
+        match c {
+            C::Num(_) | C::Time => true,
+            C::Slot(s) => match self.timed.iter().find(|(slot, _)| slot == s) {
+                Some((_, definition)) => self.is_affine(definition),
+                None => !self.state_like.contains(s),
+            },
+            C::Ap(Op::Add | Op::Sub | Op::Neg, args) => args.iter().all(|a| self.is_affine(a)),
+            C::Ap(Op::Mul, args) => {
+                args.iter().filter(|a| !fixed(a)).count() <= 1 && args.iter().all(|a| self.is_affine(a))
+            }
+            C::Ap(Op::Div, args) => args.len() == 2 && self.is_affine(&args[0]) && fixed(&args[1]),
+            _ => fixed(c),
+        }
+    }
+
+    fn collect_steps(&self, c: &C, out: &mut Vec<C>) {
+        if self.is_step(c) {
+            out.push(c.clone());
+            return;
+        }
+        match c {
+            C::Num(_) | C::Slot(_) | C::Time => {}
+            C::Ap(_, args) => args.iter().for_each(|a| self.collect_steps(a, out)),
+            C::Piece(pieces, otherwise) => {
+                for (v, w) in pieces {
+                    self.collect_steps(v, out);
+                    self.collect_steps(w, out);
+                }
+                if let Some(o) = otherwise {
+                    self.collect_steps(o, out);
+                }
+            }
+            C::Delay(x, lag) => {
+                self.collect_steps(x, out);
+                self.collect_steps(lag, out);
+            }
+        }
+    }
+
+    /// True when an expression varies with the time other than by jumps, given `smooth` slots that do.
+    fn varies_smoothly(&self, c: &C, smooth: &HashSet<usize>) -> bool {
+        if self.is_step(c) {
+            return false;
+        }
+        match c {
+            C::Num(_) => false,
+            C::Time => true,
+            C::Slot(s) => smooth.contains(s),
+            C::Ap(_, args) => args.iter().any(|a| self.varies_smoothly(a, smooth)),
+            C::Piece(pieces, otherwise) => {
+                pieces.iter().any(|(v, w)| self.varies_smoothly(v, smooth) || self.varies_smoothly(w, smooth))
+                    || otherwise.as_ref().is_some_and(|o| self.varies_smoothly(o, smooth))
+            }
+            C::Delay(x, lag) => self.varies_smoothly(x, smooth) || self.varies_smoothly(lag, smooth),
+        }
+    }
+}
+
+/// Grid over the run on which a step-like expression that is not linear in the time is examined.
+const SCAN_POINTS: usize = 20_000;
+
+/// Times at which step-like expressions of the time change value, up to `end`. A comparison linear in the
+/// time has its root solved, whatever the size of the run. Anything else, such as `abs` or `floor`, is
+/// examined on a grid and refined by bisection, so a window narrower than `end / 20000` can be missed.
+fn step_times(model: &KineticModel, time_use: &TimeUse, steps: &[C], end: f64) -> Vec<f64> {
+    let evaluate = |c: &C, t: f64, vals: &mut Vec<f64>| -> f64 {
+        vals.clone_from(&model.initial);
+        for (slot, definition) in &time_use.timed {
+            vals[*slot] = eval(definition, vals, t, &NoDelay);
+        }
+        eval(c, vals, t, &NoDelay)
+    };
+    let mut vals = Vec::new();
+    let mut found = Vec::new();
+    let mut scan: Vec<&C> = Vec::new();
+    for c in steps {
+        match c {
+            C::Ap(Op::Gt | Op::Lt | Op::Geq | Op::Leq, args) if args.iter().all(|a| time_use.is_affine(a)) => {
+                for pair in args.windows(2) {
+                    let d0 = evaluate(&pair[0], 0.0, &mut vals) - evaluate(&pair[1], 0.0, &mut vals);
+                    let d1 = evaluate(&pair[0], 1.0, &mut vals) - evaluate(&pair[1], 1.0, &mut vals);
+                    if d1 != d0 {
+                        found.push(-d0 / (d1 - d0));
+                    }
+                }
+            }
+            _ => scan.push(c),
+        }
+    }
+    if end > 0.0 {
+        for c in scan {
+            let mut before = evaluate(c, 0.0, &mut vals);
+            for k in 1..=SCAN_POINTS {
+                let t = end * k as f64 / SCAN_POINTS as f64;
+                let now = evaluate(c, t, &mut vals);
+                if now != before && !(now.is_nan() && before.is_nan()) {
+                    let (mut low, mut high) = (end * (k - 1) as f64 / SCAN_POINTS as f64, t);
+                    for _ in 0..70 {
+                        if high - low <= 1e-14 * (1.0 + high.abs()) {
+                            break;
+                        }
+                        let middle = 0.5 * (low + high);
+                        if evaluate(c, middle, &mut vals) == before {
+                            low = middle;
+                        } else {
+                            high = middle;
+                        }
+                    }
+                    found.push(high);
+                }
+                before = now;
+            }
+        }
+    }
+    found
 }
 
 fn tidy_thresholds(mut found: Vec<f64>) -> Vec<f64> {
@@ -357,26 +509,102 @@ impl KineticModel {
             || self.events.iter().any(|e| reads_time(&e.trigger))
     }
 
-    /// Positive times at which a comparison with the time inside a rate or rule changes value, in
-    /// increasing order. Rates can jump there, so integration does not step across them.
-    pub fn rate_thresholds(&self) -> Vec<f64> {
-        let varying = self.varying_slots();
-        let mut found = Vec::new();
+    /// Positive times up to `end` at which a rate or rule can jump, in increasing order, so that
+    /// integration does not step across them. Roots of comparisons linear in the time are found beyond
+    /// `end` as well.
+    pub fn rate_thresholds(&self, end: f64) -> Vec<f64> {
+        let time_use = TimeUse::of(self);
+        let mut steps = Vec::new();
         for (_, c) in self.derived.iter().chain(&self.rate_rules).chain(&self.algebraic) {
-            collect_thresholds(c, &varying, &self.initial, &mut found);
+            time_use.collect_steps(c, &mut steps);
         }
-        tidy_thresholds(found)
+        tidy_thresholds(step_times(self, &time_use, &steps, end))
     }
 
-    /// Positive times at which a comparison with the time inside a trigger changes value, in increasing
-    /// order. A step ends on each, so that a trigger window cannot fall between the points examined.
-    pub fn trigger_thresholds(&self) -> Vec<f64> {
-        let varying = self.varying_slots();
-        let mut found = Vec::new();
+    /// Positive times up to `end` at which a trigger's time dependence can change its value, in
+    /// increasing order. A step ends on each, so that a window cannot fall between the points examined.
+    pub fn trigger_thresholds(&self, end: f64) -> Vec<f64> {
+        let time_use = TimeUse::of(self);
+        let mut steps = Vec::new();
         for e in &self.events {
-            collect_thresholds(&e.trigger, &varying, &self.initial, &mut found);
+            time_use.collect_steps(&e.trigger, &mut steps);
         }
-        tidy_thresholds(found)
+        tidy_thresholds(step_times(self, &time_use, &steps, end))
+    }
+
+    /// Reactions whose rate changes with the time other than in jumps at fixed times.
+    pub fn reactions_varying_with_time(&self) -> Vec<&str> {
+        let time_use = TimeUse::of(self);
+        let mut smooth = HashSet::new();
+        for (slot, c) in &self.derived {
+            if time_use.varies_smoothly(c, &smooth) {
+                smooth.insert(*slot);
+            }
+        }
+        self.reactions.iter().filter(|r| smooth.contains(&r.rate)).map(|r| r.id.as_str()).collect()
+    }
+
+    /// Whether a trigger reads the time in a way that thresholds cannot place, mixed with the state.
+    pub fn triggers_mix_time_and_state(&self) -> bool {
+        let time_use = TimeUse::of(self);
+        let mut smooth = HashSet::new();
+        for (slot, c) in &self.derived {
+            if time_use.varies_smoothly(c, &smooth) {
+                smooth.insert(*slot);
+            }
+        }
+        self.events.iter().any(|e| time_use.varies_smoothly(&e.trigger, &smooth))
+    }
+
+    /// Writes an event's values into the state. A species assigned a concentration converts with the
+    /// compartment size before the event. A rate-rule or algebraic species keeps its amount when its
+    /// compartment's size moves, whether the event assigns the size or a rule derives it from what the
+    /// event assigns.
+    pub fn apply_event(&self, event: usize, values: &[f64], t: f64, y: &mut [f64], ctx: &dyn DelayContext) {
+        let e = &self.events[event];
+        let mut before = self.initial.clone();
+        self.eval_state(t, y, &mut before, ctx);
+        let mut assigned = Vec::with_capacity(e.assignments.len());
+        for ((target, _), &value) in e.assignments.iter().zip(values) {
+            assigned.push(match *target {
+                Target::State(i) => self.state_slots[i],
+                Target::Amount { state, .. } => self.state_slots[state],
+            });
+            match *target {
+                Target::State(i) => {
+                    let slot = self.state_slots[i];
+                    let old = y[i];
+                    y[i] = value;
+                    for s in &self.species {
+                        if s.compartment == slot
+                            && !s.has_only_substance_units
+                            && matches!(s.kind, SpeciesKind::RateRule | SpeciesKind::Algebraic)
+                            && let Some(k) = self.state_slots.iter().position(|&ss| ss == s.view)
+                            && value != 0.0
+                        {
+                            y[k] *= old / value;
+                        }
+                    }
+                }
+                Target::Amount { state, compartment, hosu } => {
+                    y[state] = if hosu { value } else { value * before[compartment] };
+                }
+            }
+        }
+        let mut after = self.initial.clone();
+        self.eval_state(t, y, &mut after, ctx);
+        for s in &self.species {
+            if !s.has_only_substance_units
+                && matches!(s.kind, SpeciesKind::RateRule | SpeciesKind::Algebraic)
+                && !assigned.contains(&s.compartment)
+                && !assigned.contains(&s.view)
+                && after[s.compartment] != before[s.compartment]
+                && after[s.compartment] != 0.0
+                && let Some(k) = self.state_slots.iter().position(|&ss| ss == s.view)
+            {
+                y[k] *= before[s.compartment] / after[s.compartment];
+            }
+        }
     }
 
     /// The same model with every `delay` reading the present, as it does at a steady state.
@@ -634,20 +862,13 @@ impl KineticModel {
     /// Compiles a parsed SBML document.
     pub fn compile(doc: &Document) -> Result<Self> {
         let src = &doc.model;
-        let builder = || Builder {
+        let mut b = Builder {
             level: doc.level,
             slots: HashMap::new(),
             names: Vec::new(),
             funcs: src.functions.iter().map(|f| (f.id.as_str(), f)).collect(),
         };
-        let model = build(&mut builder(), src, &HashMap::new())?;
-        // A fast reaction's law can be of any size, so its multiple is chosen to put the reaction's rate
-        // constant at the scale of the singular perturbation.
-        let factors = model.fast_law_factors();
-        if factors.is_empty() {
-            return Ok(model);
-        }
-        build(&mut builder(), src, &factors)
+        build(&mut b, src)
     }
 
     /// Overrides the value of a symbol at the start and re-evaluates everything that depends on it. The
@@ -655,20 +876,38 @@ impl KineticModel {
     /// written `S#a`, otherwise what math sees. A symbol that a rule determines cannot be overridden.
     pub fn set_value(&mut self, name: &str, value: f64) -> Result<()> {
         let slot = self.slot(name)?;
-        let species_view = self
-            .species
-            .iter()
-            .any(|s| s.view == slot && matches!(s.kind, SpeciesKind::Amount | SpeciesKind::Constant));
-        let species_amount = self.species.iter().any(|s| s.amount == slot);
-        if !species_view && !species_amount && self.derived.iter().any(|(d, _)| *d == slot) {
-            return Err(Error::Invalid(format!("`{name}` is determined by a rule, so it cannot be overridden")));
+        let species = self.species.iter().find(|s| s.view == slot || s.amount == slot);
+        match species {
+            Some(s) => match s.kind {
+                SpeciesKind::Assigned | SpeciesKind::Algebraic => {
+                    return Err(Error::Invalid(format!(
+                        "`{name}` is determined by a rule, so it cannot be overridden"
+                    )));
+                }
+                SpeciesKind::RateRule if slot == s.amount => {
+                    return Err(Error::Invalid(format!(
+                        "`{name}` follows from a rate rule on `{}`; override that",
+                        s.id
+                    )));
+                }
+                _ => {}
+            },
+            None => {
+                if self.derived.iter().any(|(d, _)| *d == slot) {
+                    return Err(Error::Invalid(format!(
+                        "`{name}` is determined by a rule, so it cannot be overridden"
+                    )));
+                }
+                if self.algebraic.iter().any(|(state, _)| self.state_slots[*state] == slot) {
+                    return Err(Error::Invalid(format!(
+                        "`{name}` is determined by an algebraic rule, so it cannot be overridden"
+                    )));
+                }
+            }
         }
-        if self.algebraic.iter().any(|(state, _)| self.state_slots[*state] == slot) {
-            return Err(Error::Invalid(format!(
-                "`{name}` is determined by an algebraic rule, so it cannot be overridden"
-            )));
-        }
-        self.overrides.retain(|(s, _)| *s != slot);
+        // A species' value and amount are one quantity, so the newest override of either replaces the other.
+        let aliases: Vec<usize> = species.map_or(vec![slot], |s| vec![s.view, s.amount]);
+        self.overrides.retain(|(s, _)| !aliases.contains(s));
         self.overrides.push((slot, value));
         self.apply_overrides();
         Ok(())
@@ -712,6 +951,7 @@ impl KineticModel {
             }
             solve_algebraic_initial(self);
         }
+        self.update_fast_scales();
     }
 
     /// Re-evaluates the initial definitions until stable, leaving out the slots in `keep`.
@@ -804,17 +1044,19 @@ impl KineticModel {
         }
     }
 
-    /// For fast reactions whose law is far from unit size, the factor that brings its largest partial
-    /// derivative at the initial state to [`FAST_SCALE`].
-    fn fast_law_factors(&self) -> HashMap<String, f64> {
-        let mut factors = HashMap::new();
-        if self.flat_rates.len() != self.reactions.len() {
-            return factors;
+    /// Sets the multiple of each fast reaction from its law at the current initial values: `FAST_SCALE`,
+    /// or, for a law whose largest partial derivative is more than 1000 times from one, the multiple that
+    /// brings that derivative to `FAST_SCALE`, so that the method does not depend on the size of the law.
+    fn update_fast_scales(&mut self) {
+        if !self.has_fast() || self.flat_rates.len() != self.reactions.len() {
+            return;
         }
-        for (j, law) in self.flat_rates.iter().enumerate() {
+        for j in 0..self.reactions.len() {
             if !self.fast[j] {
                 continue;
             }
+            let Some(&slot) = self.index.get(&fast_slot_name(&self.reactions[j].id)) else { continue };
+            let law = &self.flat_rates[j];
             let mut syms = Vec::new();
             law.symbols(&mut syms);
             let mut largest = 0.0f64;
@@ -829,14 +1071,10 @@ impl KineticModel {
                     }
                 }
             }
-            if largest > 0.0 {
-                let factor = FAST_SCALE / largest;
-                if !(1e-3..=1e3).contains(&factor) {
-                    factors.insert(self.reactions[j].id.clone(), factor);
-                }
-            }
+            let size = largest / self.initial[slot];
+            self.initial[slot] =
+                if size > 0.0 && !(1e-3..=1e3).contains(&size) { FAST_SCALE / size } else { FAST_SCALE };
         }
-        factors
     }
 
     /// True if any reaction is fast.
@@ -856,8 +1094,12 @@ fn local_slot_name(reaction: &str, parameter: &str) -> String {
     format!("{reaction}.{parameter}")
 }
 
-fn build(b: &mut Builder<'_>, src: &SbmlModel, fast_factors: &HashMap<String, f64>) -> Result<KineticModel> {
-    let fast_scale = FAST_SCALE;
+/// The slot name of a fast reaction's multiple.
+fn fast_slot_name(reaction: &str) -> String {
+    format!("fast#{reaction}")
+}
+
+fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
     let local_substituted = |r: &sbml::Reaction| -> Result<Expr> {
         let Some(law) = &r.kinetic_law else { return Ok(Expr::Num(0.0)) };
         // A local parameter gets its own slot, named `reaction.parameter`, so that it can be overridden,
@@ -866,8 +1108,7 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel, fast_factors: &HashMap<String, f6
         // A local parameter is constant, so `rateOf` of one is zero.
         let shadowed = zero_rate_of(law, &|s| locals.contains(s));
         let law = shadowed.substitute(&|s| locals.contains(s).then(|| Expr::Sym(local_slot_name(&r.id, s))));
-        let scale = fast_scale * fast_factors.get(r.id.as_str()).copied().unwrap_or(1.0);
-        Ok(if r.fast { mul(law, Expr::Num(scale)) } else { law })
+        Ok(if r.fast { mul(law, Expr::Sym(fast_slot_name(&r.id))) } else { law })
     };
 
     // Classify symbols.
@@ -933,6 +1174,9 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel, fast_factors: &HashMap<String, f6
     for r in &src.reactions {
         for p in &r.local_parameters {
             b.slot(&local_slot_name(&r.id, &p.id));
+        }
+        if r.fast {
+            b.slot(&fast_slot_name(&r.id));
         }
     }
     for p in &src.parameters {
@@ -1286,6 +1530,9 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel, fast_factors: &HashMap<String, f6
             for p in &r.local_parameters {
                 plain[b.slots[local_slot_name(&r.id, &p.id).as_str()]] = p.value.unwrap_or(f64::NAN);
             }
+            if r.fast {
+                plain[b.slots[fast_slot_name(&r.id).as_str()]] = FAST_SCALE;
+            }
         }
         for (id, e) in &sr_initial {
             let slot = b.slots[id.as_str()];
@@ -1382,7 +1629,6 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel, fast_factors: &HashMap<String, f6
             solve_algebraic_initial(&mut model);
         }
     }
-    model.compiled_initial.clone_from(&model.initial);
     build_derivatives(
         &mut model,
         b,
@@ -1393,6 +1639,8 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel, fast_factors: &HashMap<String, f6
         &algebraic_vars,
         &state_names,
     )?;
+    model.update_fast_scales();
+    model.compiled_initial.clone_from(&model.initial);
     Ok(model)
 }
 

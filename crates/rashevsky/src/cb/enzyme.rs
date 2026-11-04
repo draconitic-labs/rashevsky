@@ -4,8 +4,9 @@
 //! flux is bounded by what its isozymes can catalyse, `-sum kcat-_c a_c <= v <= sum kcat+_c a_c`. Each
 //! enzyme is shared among the catalyses that use it, `sum_c n_ck a_c <= e_k`, with `n_ck` the copies of
 //! enzyme `k` in the complex of `c`. The total mass used is bounded by the protein pool,
-//! `sum_k MW_k e_k <= P`, and measured abundances bound single enzymes. The turnover numbers and
-//! molecular weights are inputs; this module holds no biological data.
+//! `sum_k MW_k e_k <= P`, and measured abundances bound single enzymes. The pool is a limit, not a use, so
+//! a second program finds the least protein that reaches the optimum, and usage reports that. The turnover
+//! numbers and molecular weights are inputs; this module holds no biological data.
 
 use super::fba::FluxSolution;
 use crate::error::{Error, Result};
@@ -60,9 +61,9 @@ pub struct EnzymeData {
 pub struct EnzymeSolution {
     /// Fluxes and objective.
     pub flux: FluxSolution,
-    /// Usage (mmol/gDW) per enzyme.
+    /// Usage (mmol/gDW) per enzyme, at the least protein that reaches the optimum.
     pub usage: BTreeMap<String, f64>,
-    /// Mass of protein used, g/gDW.
+    /// Least mass of protein that reaches the optimum, g/gDW.
     pub pool_used: f64,
 }
 
@@ -77,8 +78,14 @@ pub fn enzyme_constrained_fba(model: &Model, data: &EnzymeData) -> Result<Enzyme
     let mut usage_col: BTreeMap<&str, usize> = BTreeMap::new();
     let mut pool_row = Vec::with_capacity(data.enzymes.len());
     for e in &data.enzymes {
-        if e.molecular_weight <= 0.0 {
+        if !(e.molecular_weight > 0.0 && e.molecular_weight.is_finite()) {
             return Err(Error::Invalid(format!("enzyme {} has no positive molecular weight", e.id)));
+        }
+        if e.abundance.is_some_and(|a| a.is_nan() || a < 0.0) {
+            return Err(Error::Invalid(format!("enzyme {} has a negative abundance", e.id)));
+        }
+        if usage_col.contains_key(e.id.as_str()) {
+            return Err(Error::Invalid(format!("enzyme {} is listed twice", e.id)));
         }
         let col = p.add_col(0.0, 0.0, e.abundance.unwrap_or(f64::INFINITY), false);
         usage_col.insert(e.id.as_str(), col);
@@ -89,14 +96,28 @@ pub fn enzyme_constrained_fba(model: &Model, data: &EnzymeData) -> Result<Enzyme
     let mut shares: BTreeMap<usize, Vec<(usize, f64)>> = BTreeMap::new();
     for c in &data.catalysis {
         let j = model.reaction_index(&c.reaction)?;
+        let usable = |k: f64| k >= 0.0 && k.is_finite();
+        if !usable(c.kcat_forward) || !usable(c.kcat_reverse) || c.kcat_forward + c.kcat_reverse == 0.0 {
+            return Err(Error::Invalid(format!(
+                "reaction {} has a catalysis without a positive turnover number",
+                c.reaction
+            )));
+        }
         let allocation = p.add_col(0.0, 0.0, f64::INFINITY, false);
         by_reaction.entry(j).or_default().push((allocation, c));
         let single = [(c.enzyme.clone(), 1.0)];
         let members: &[(String, f64)] = if c.subunits.is_empty() { &single } else { &c.subunits };
         for (enzyme, copies) in members {
+            if !(*copies > 0.0 && copies.is_finite()) {
+                return Err(Error::Invalid(format!("reaction {} takes {copies} copies of {enzyme}", c.reaction)));
+            }
             let col =
                 *usage_col.get(enzyme.as_str()).ok_or_else(|| Error::Unknown { kind: "enzyme", id: enzyme.clone() })?;
-            shares.entry(col).or_default().push((allocation, *copies));
+            let share = shares.entry(col).or_default();
+            match share.iter_mut().find(|(a, _)| *a == allocation) {
+                Some(entry) => entry.1 += *copies,
+                None => share.push((allocation, *copies)),
+            }
         }
     }
     for (&col, list) in &shares {
@@ -115,19 +136,35 @@ pub fn enzyme_constrained_fba(model: &Model, data: &EnzymeData) -> Result<Enzyme
         p.add_row(f64::NEG_INFINITY, 0.0, forward);
         p.add_row(0.0, f64::INFINITY, reverse);
     }
-    p.sense = Some(model.sense.unwrap_or(Sense::Maximize));
+    let sense = model.sense.unwrap_or(Sense::Maximize);
+    p.sense = Some(sense);
     let mut session = backend.open(&p)?;
     let s = session.solve()?;
     if !s.is_optimal() {
         return Err(Error::Solver(format!("enzyme-constrained FBA ended with {:?}", s.status)));
     }
-    let usage: BTreeMap<String, f64> = usage_col.iter().map(|(k, &c)| ((*k).to_string(), s.x[c])).collect();
-    let pool_used = pool_row.iter().map(|&(c, w)| s.x[c] * w).sum();
+    // The same optimum at the least protein. A rounding-size allowance keeps the row feasible.
+    let mut least = p.clone();
+    let objective: Vec<(usize, f64)> = model.objective.clone();
+    let allowance = 1e-10 * (1.0 + s.objective.abs());
+    match sense {
+        Sense::Maximize => least.add_row(s.objective - allowance, f64::INFINITY, objective),
+        Sense::Minimize => least.add_row(f64::NEG_INFINITY, s.objective + allowance, objective),
+    };
+    least.obj.iter_mut().for_each(|c| *c = 0.0);
+    for &(col, weight) in &pool_row {
+        least.obj[col] = weight;
+    }
+    least.sense = Some(Sense::Minimize);
+    let parsimonious = backend.open(&least)?.solve()?;
+    let chosen = if parsimonious.is_optimal() { &parsimonious } else { &s };
+    let usage: BTreeMap<String, f64> = usage_col.iter().map(|(k, &c)| ((*k).to_string(), chosen.x[c])).collect();
+    let pool_used = pool_row.iter().map(|&(c, w)| chosen.x[c] * w).sum();
     Ok(EnzymeSolution {
         flux: FluxSolution {
             status: s.status,
             objective: s.objective,
-            fluxes: s.x[..n].to_vec(),
+            fluxes: chosen.x[..n].to_vec(),
             shadow_prices: Vec::new(),
             reduced_costs: Vec::new(),
         },

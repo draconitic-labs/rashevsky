@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<sbml xmlns="http://www.sbml.org/sbml/level2/version1" level="2" version="1"><model id="m">
+<listOfCompartments><compartment id="c"/></listOfCompartments>
+<listOfSpecies><species id="A" compartment="c"/></listOfSpecies>
+<listOfReactions>
+<reaction id="in" reversible="false"><listOfProducts><speciesReference species="A"/></listOfProducts><kineticLaw><listOfParameters><parameter id="LOWER_BOUND" value="0"/><parameter id="UPPER_BOUND" value="10"/><parameter id="OBJECTIVE_COEFFICIENT" value="0"/></listOfParameters></kineticLaw></reaction>
+<reaction id="out" reversible="false"><listOfReactants><speciesReference species="A"/></listOfReactants><kineticLaw><listOfParameters><parameter id="LOWER_BOUND" value="0"/><parameter id="UPPER_BOUND" value="1000"/><parameter id="OBJECTIVE_COEFFICIENT" value="1"/></listOfParameters></kineticLaw></reaction>
+</listOfReactions></model></sbml>

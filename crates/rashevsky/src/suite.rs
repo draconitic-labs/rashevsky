@@ -241,7 +241,7 @@ pub fn run_case(dir: &Path, options: &SuiteOptions) -> Result<CaseResult> {
     let run = || -> Result<Option<String>> {
         let mut doc = crate::sbml::read::read_file(&path)?;
         if options.round_trip {
-            doc = crate::sbml::read::read_str(&crate::sbml::write::write_string(&doc))?;
+            doc = crate::sbml::read::read_str(&crate::sbml::write::write_string(&doc)?)?;
         }
         if test_type.starts_with("FluxBalance") {
             flux_balance(&doc, &settings, &results)

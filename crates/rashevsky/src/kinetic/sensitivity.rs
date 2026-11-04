@@ -11,8 +11,10 @@ use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
 /// Local steady-state sensitivities. A parameter moves the rates of change at the steady state by
-/// `b = N dv/dp + (dN/dp) v`, and the independent amounts respond by `ds/dp = -(Nr E L)^-1 b`, which gives
-/// `dy/dp = L ds/dp` and `dJ/dp = dv/dp + E dy/dp`. The partial derivatives at the frozen state come from a
+/// `b = N dv/dp + (dN/dp) v`, and it can move the start: with `d0 = dy0/dp - L dy0_ind/dp`, the part of that
+/// move that the dynamics cannot undo, such as a conserved total, the independent amounts respond by
+/// `ds/dp = -(Nr E L)^-1 (b + Nr E d0)`, which gives `dy/dp = d0 + L ds/dp` and `dJ/dp = dv/dp + E dy/dp`.
+/// The partial derivatives at the frozen state come from a
 /// fourth-order central difference through [`KineticModel::set_value`], so a parameter counts everywhere
 /// it reaches: laws, stoichiometries, compartment sizes and other values assigned from it.
 #[derive(Clone, Debug)]
@@ -26,7 +28,12 @@ pub struct LocalSensitivity {
 }
 
 /// Rates of change and reaction rates at the frozen `state` with one parameter overridden.
-fn frozen_rates(model: &KineticModel, state: &SteadyState, name: &str, value: f64) -> Result<(Vec<f64>, Vec<f64>)> {
+fn frozen_rates(
+    model: &KineticModel,
+    state: &SteadyState,
+    name: &str,
+    value: f64,
+) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>)> {
     let mut m = model.clone();
     m.set_value(name, value)?;
     let mut vals = m.initial.clone();
@@ -34,7 +41,7 @@ fn frozen_rates(model: &KineticModel, state: &SteadyState, name: &str, value: f6
     let mut dy = vec![0.0; state.y.len()];
     m.rhs_from_vals(state.time, &vals, &mut dy, &NoDelay);
     let rates = m.reactions.iter().map(|r| vals[r.rate]).collect();
-    Ok((dy, rates))
+    Ok((dy, rates, m.initial_state()))
 }
 
 /// Local steady-state sensitivities with respect to constant symbols.
@@ -63,11 +70,21 @@ pub fn local_steady(
         let (a, b, c, d) = (at(-2.0)?, at(-1.0)?, at(1.0)?, at(2.0)?);
         let stencil = |w: f64, x: f64, y: f64, z: f64| (w - 8.0 * x + 8.0 * y - z) / (12.0 * h);
         let dv = DVector::from_iterator(n_reactions, (0..n_reactions).map(|j| stencil(a.1[j], b.1[j], c.1[j], d.1[j])));
-        let rhs = DVector::from_iterator(ind.len(), ind.iter().map(|&i| -stencil(a.0[i], b.0[i], c.0[i], d.0[i])));
-        let ds = lu
-            .solve(&rhs)
-            .ok_or_else(|| Error::Kinetic("the reduced Jacobian is singular at this steady state".into()))?;
-        let dy = &moieties.link * ds;
+        let dy0 = DVector::from_iterator(n_states, (0..n_states).map(|i| stencil(a.2[i], b.2[i], c.2[i], d.2[i])));
+        let dy0_ind = DVector::from_iterator(ind.len(), ind.iter().map(|&i| dy0[i]));
+        let unreachable = &dy0 - &moieties.link * dy0_ind;
+        let through_rates = &moieties.nr * (&control.elasticities * &unreachable);
+        let rhs = DVector::from_iterator(
+            ind.len(),
+            ind.iter().enumerate().map(|(row, &i)| -stencil(a.0[i], b.0[i], c.0[i], d.0[i]) - through_rates[row]),
+        );
+        let ds = if ind.is_empty() {
+            DVector::zeros(0)
+        } else {
+            lu.solve(&rhs)
+                .ok_or_else(|| Error::Kinetic("the reduced Jacobian is singular at this steady state".into()))?
+        };
+        let dy = &moieties.link * ds + unreachable;
         let dj = dv + &control.elasticities * &dy;
         flux.column_mut(column).copy_from(&dj);
         response.column_mut(column).copy_from(&dy);
@@ -164,6 +181,17 @@ pub fn sobol(
     let mean: f64 = rows.iter().map(|r| 0.5 * (r.0 + r.1)).sum::<f64>() / n as f64;
     let variance: f64 =
         rows.iter().map(|r| 0.5 * ((r.0 - mean).powi(2) + (r.1 - mean).powi(2))).sum::<f64>() / n as f64;
+    // An output that does not respond has variance of the size of rounding, and ratios of that mean nothing.
+    let floor = (1e-10 * mean.abs()).powi(2);
+    if variance <= floor {
+        return Ok(SobolIndices {
+            parameters: ranges.iter().map(|r| r.name.clone()).collect(),
+            first: vec![0.0; d],
+            total: vec![0.0; d],
+            evaluations: n * (d + 2),
+            failures: samples - n,
+        });
+    }
     let mut first = vec![0.0; d];
     let mut total = vec![0.0; d];
     for i in 0..d {
@@ -230,7 +258,12 @@ pub fn sobol_model(
         let reading = match output {
             Output::Steady { integrate, .. } => {
                 let options = SteadyOptions { integrate_first: *integrate, ..SteadyOptions::default() };
-                steady_state(&m, &options).ok()?.values[slot]
+                // A root that is not an attractor is not what this parameter set does.
+                let state = steady_state(&m, &options).ok()?;
+                if !state.stable {
+                    return None;
+                }
+                state.values[slot]
             }
             Output::AtTime { time, .. } => {
                 let run = simulate(&m, &[0.0, *time], &SimOptions::default()).ok()?;

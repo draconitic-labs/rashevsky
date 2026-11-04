@@ -3,7 +3,6 @@
 use crate::error::{Error, Result};
 use quick_xml::Reader;
 use quick_xml::events::{BytesStart, Event};
-use std::collections::HashMap;
 
 /// An XML element. Names and attribute keys use canonical package prefixes (`fbc:`, `groups:`).
 #[derive(Clone, Debug, Default)]
@@ -67,43 +66,69 @@ fn canonical_package(uri: &str) -> Option<&'static str> {
     }
 }
 
+/// Namespace bindings in force, innermost last. A binding lasts as long as its element.
 struct Names {
-    prefix_map: HashMap<String, String>,
+    /// `(element depth, prefix, canonical name)`, with an empty prefix for the default namespace.
+    bindings: Vec<(usize, String, String)>,
+    depth: usize,
 }
 
 impl Names {
-    fn canonical(&self, raw: &str) -> String {
+    fn lookup(&self, prefix: &str) -> Option<&str> {
+        self.bindings.iter().rev().find(|(_, p, _)| p == prefix).map(|(_, _, canon)| canon.as_str())
+    }
+
+    fn close(&mut self) {
+        let depth = self.depth;
+        self.bindings.retain(|(d, _, _)| *d < depth);
+        self.depth -= 1;
+    }
+
+    fn canonical(&self, raw: &str, is_element: bool) -> String {
         match raw.split_once(':') {
-            Some((prefix, local)) => match self.prefix_map.get(prefix) {
-                // MathML has no prefix once its namespace is known.
-                Some(canon) if canon.is_empty() => local.to_string(),
+            Some((prefix, local)) => match self.lookup(prefix) {
+                // MathML and SBML core have no prefix once their namespaces are known.
+                Some("") => local.to_string(),
                 Some(canon) => format!("{canon}:{local}"),
                 None => format!("{prefix}:{local}"),
+            },
+            // A default namespace applies to elements only, never to attributes.
+            None if is_element => match self.lookup("") {
+                Some(canon) if !canon.is_empty() => format!("{canon}:{raw}"),
+                _ => raw.to_string(),
             },
             None => raw.to_string(),
         }
     }
 }
 
+/// The name a namespace goes by in the tree: a package name or `rdf`, nothing for MathML and SBML core, and
+/// for a namespace this reader does not interpret, the prefix as written.
+fn canonical_namespace(uri: &str, prefix: &str) -> String {
+    if let Some(package) = canonical_package(uri) {
+        return package.to_string();
+    }
+    if uri.contains("22-rdf-syntax-ns") {
+        return "rdf".to_string();
+    }
+    let core = uri.contains("sbml.org/sbml/level") && (uri.ends_with("/core") || !uri.contains("/level3/"));
+    if core || uri.contains("/Math/MathML") { String::new() } else { prefix.to_string() }
+}
+
 fn open_node(start: &BytesStart<'_>, names: &mut Names, packages: &mut Vec<String>) -> Result<Node> {
     let bad = |e: &dyn std::fmt::Display| Error::Sbml(format!("xml: {e}"));
+    names.depth += 1;
     let mut raw_attrs = Vec::new();
     for attr in start.attributes() {
         let attr = attr.map_err(|e| bad(&e))?;
         let key = std::str::from_utf8(attr.key.as_ref()).map_err(|e| bad(&e))?.to_string();
         let value = attr.unescape_value().map_err(|e| bad(&e))?.into_owned();
-        // MathML and SBML core can arrive under a prefix of the writer's choosing, and mean the same.
-        let core = value.contains("sbml.org/sbml/level") && (value.ends_with("/core") || !value.contains("/level3/"));
-        if let Some(prefix) = key.strip_prefix("xmlns:")
-            && (value.contains("/Math/MathML") || core)
-        {
-            names.prefix_map.insert(prefix.to_string(), String::new());
-        }
-        if let Some(prefix) = key.strip_prefix("xmlns:")
-            && let Some(canon) = canonical_package(&value)
-        {
-            names.prefix_map.insert(prefix.to_string(), canon.to_string());
-            if !packages.iter().any(|p| p == canon) {
+        let prefix = if key == "xmlns" { Some("") } else { key.strip_prefix("xmlns:") };
+        if let Some(prefix) = prefix {
+            names.bindings.push((names.depth, prefix.to_string(), canonical_namespace(&value, prefix)));
+            if let Some(canon) = canonical_package(&value)
+                && !packages.iter().any(|p| p == canon)
+            {
                 packages.push(canon.to_string());
             }
         }
@@ -111,8 +136,8 @@ fn open_node(start: &BytesStart<'_>, names: &mut Names, packages: &mut Vec<Strin
     }
     let name = std::str::from_utf8(start.name().as_ref()).map_err(|e| bad(&e))?.to_string();
     Ok(Node {
-        name: names.canonical(&name),
-        attrs: raw_attrs.into_iter().map(|(k, v)| (names.canonical(&k), v)).collect(),
+        name: names.canonical(&name, true),
+        attrs: raw_attrs.into_iter().map(|(k, v)| (names.canonical(&k, false), v)).collect(),
         ..Node::default()
     })
 }
@@ -120,7 +145,7 @@ fn open_node(start: &BytesStart<'_>, names: &mut Names, packages: &mut Vec<Strin
 /// Parses an XML document into a tree and returns the root with the SBML packages it declares.
 pub fn parse(xml: &str) -> Result<(Node, Vec<String>)> {
     let mut reader = Reader::from_str(xml);
-    let mut names = Names { prefix_map: HashMap::new() };
+    let mut names = Names { bindings: Vec::new(), depth: 0 };
     let mut packages = Vec::new();
     let mut stack: Vec<Node> = Vec::new();
     let mut root: Option<Node> = None;
@@ -131,6 +156,7 @@ pub fn parse(xml: &str) -> Result<(Node, Vec<String>)> {
             Event::Start(start) => stack.push(open_node(&start, &mut names, &mut packages)?),
             Event::Empty(start) => {
                 let node = open_node(&start, &mut names, &mut packages)?;
+                names.close();
                 match stack.last_mut() {
                     Some(parent) => parent.children.push(node),
                     None => root = Some(node),
@@ -138,6 +164,7 @@ pub fn parse(xml: &str) -> Result<(Node, Vec<String>)> {
             }
             Event::End(_) => {
                 let node = stack.pop().ok_or_else(|| Error::Sbml("unbalanced xml".into()))?;
+                names.close();
                 match stack.last_mut() {
                     Some(parent) => parent.children.push(node),
                     None => root = Some(node),

@@ -306,7 +306,7 @@ impl Integrator for Rodas4 {
             return Ok(());
         }
         if self.h <= 0.0 {
-            self.h = initial_step(sys, self.t, &self.y, &self.f, tol, 4.0).max(1e-14);
+            self.h = initial_step(sys, self.t, &self.y, &self.f, tol, 4.0).max(1e-14).max(4e-14 * self.t.abs());
         }
         let mut jac = DMatrix::zeros(n, n);
         sys.jacobian(self.t, &self.y, &mut jac);
@@ -314,8 +314,8 @@ impl Integrator for Rodas4 {
         let mut fx = vec![0.0; n];
         sys.time_derivative(self.t, &self.y, &mut fx);
         let remaining = t_limit - self.t;
-        // A remainder of the order of the rounding in `t` is not a step.
-        let rounding = 8.0 * f64::EPSILON * t_limit.abs();
+        // A remainder of the order of the rounding in `t`, or below the smallest step allowed, is not a step.
+        let rounding = 2e-14 * t_limit.abs();
         if remaining <= rounding {
             self.t_prev = self.t;
             self.t = t_limit;
@@ -557,12 +557,21 @@ impl Integrator for Bdf {
             self.t = t_limit;
             return Ok(());
         }
+        // A remainder of the order of the rounding in `t`, or below the smallest step allowed, is not a step.
+        if t_limit - self.t <= 2e-14 * t_limit.abs() {
+            self.t_prev = self.t;
+            self.t = t_limit;
+            return Ok(());
+        }
         let mass: Vec<f64> = sys.mass().to_vec();
         if self.h <= 0.0 {
             let mut f = vec![0.0; n];
             sys.rhs(self.t, &self.y, &mut f);
             self.stats.rhs_evals += 1;
-            self.h = initial_step(sys, self.t, &self.y, &f, tol, 1.0).max(1e-14).min(t_limit - self.t);
+            self.h = initial_step(sys, self.t, &self.y, &f, tol, 1.0)
+                .max(1e-14)
+                .max(4e-14 * self.t.abs())
+                .min(t_limit - self.t);
             for k in 0..n {
                 self.d[1][k] = f[k] * self.h * mass[k];
             }
@@ -593,6 +602,14 @@ impl Integrator for Bdf {
                 self.h = t_new - self.t;
             }
             let h = t_new - self.t;
+            // Far from time zero, `t + h - t` can differ measurably from `h`. The difference table must
+            // describe the step actually taken, or a state near zero cannot pass its absolute tolerance.
+            if (h / self.h - 1.0).abs() > 1e-10 {
+                self.change_d(h / self.h);
+                self.n_equal = 0;
+                lu = None;
+                self.h = h;
+            }
             let order = self.order;
             let mut predict = vec![0.0; n];
             for j in 0..=order {

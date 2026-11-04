@@ -469,11 +469,163 @@ fn annotations_survive_a_round_trip() {
         "/../../models/e_coli_core/e_coli_core.xml.gz"
     ))
     .unwrap();
-    let again = rashevsky::sbml::read::read_str(&rashevsky::sbml::write::write_string(&doc)).unwrap();
+    let again = rashevsky::sbml::read::read_str(&rashevsky::sbml::write::write_string(&doc).unwrap()).unwrap();
     let count = |d: &rashevsky::sbml::Document| -> usize {
         d.model.reactions.iter().map(|r| r.annotations.len()).sum::<usize>()
             + d.model.species.iter().map(|s| s.annotations.len()).sum::<usize>()
     };
     assert!(count(&doc) > 1000);
     assert_eq!(count(&doc), count(&again));
+}
+
+const REVIEW_MODELS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/models");
+
+fn read_file(name: &str) -> Model {
+    Model::read_sbml(format!("{REVIEW_MODELS}/{name}.xml")).unwrap()
+}
+
+fn followed(exchange: &str, initial: f64, vmax: f64, km: f64, biomass: f64, t_end: f64, dt: f64) -> DfbaOptions {
+    DfbaOptions {
+        biomass,
+        t_end,
+        dt,
+        substrates: vec![Substrate { exchange: exchange.into(), initial, vmax, km }],
+        tracked: Vec::new(),
+    }
+}
+
+#[test]
+fn dfba_stops_forced_uptake_when_the_substrate_is_gone() {
+    // 2 A per unit biomass: 10 mmol/L makes 5 more of biomass, in either way of writing the exchange.
+    for name in ["dfba_force_neg", "dfba_force_pos"] {
+        let m = read_file(name);
+        let run = cb::dfba(&m, &followed("EX_A", 10.0, 1000.0, 0.0, 0.1, 5.0, 0.1)).unwrap();
+        let end = *run.biomass.last().unwrap();
+        assert!((end - 5.1).abs() < 1e-6, "{name}: {end}");
+    }
+}
+
+#[test]
+fn dfba_uses_all_of_the_substrate_in_one_long_step() {
+    // Unbounded uptake and a step of one hour: the closed form is 2 x (e^(mu dt) - 1) = S, so mu = 3.93.
+    let m = read_file("dfba_free");
+    let run = cb::dfba(&m, &followed("EX_A", 10.0, 1e9, 0.0, 0.1, 3.0, 1.0)).unwrap();
+    assert!((run.growth_rate[0] - 3.931_825_6).abs() < 1e-5, "{}", run.growth_rate[0]);
+    assert!((run.biomass.last().unwrap() - 5.1).abs() < 1e-6, "{:?}", run.biomass);
+}
+
+#[test]
+fn dfba_reads_growth_from_the_reaction_and_checks_its_input() {
+    // Biomass flux bounded at 0.5, with an objective coefficient of 2.
+    let m = read_file("dfba_obj2");
+    let run = cb::dfba(&m, &followed("EX_A", 1000.0, 1000.0, 0.0, 1.0, 1.0, 0.01)).unwrap();
+    assert!((run.biomass.last().unwrap() - 0.5f64.exp()).abs() < 1e-6, "{:?}", run.biomass.last());
+
+    let mut twice = followed("EX_A", 10.0, 1.0, 1.0, 1.0, 1.0, 0.1);
+    twice.tracked = vec![("EX_A".to_string(), 10.0)];
+    assert!(cb::dfba(&m, &twice).unwrap_err().to_string().contains("twice"));
+    assert!(cb::dfba(&m, &followed("EX_A", 10.0, 1.0, 1.0, -1.0, 1.0, 0.1)).is_err());
+    assert!(cb::dfba(&m, &followed("EX_A", -10.0, 1.0, 1.0, 1.0, 1.0, 0.1)).is_err());
+    assert!(cb::dfba(&m, &followed("EX_A", 10.0, 1.0, -1.0, 1.0, 1.0, 0.1)).is_err());
+}
+
+fn one_route() -> Model {
+    model(
+        vec![met("A", false)],
+        vec![rxn("in", &[(0, 1.0)], 0.0, 5.0), rxn("r", &[(0, -1.0)], 0.0, 1000.0)],
+        &[(1, 1.0)],
+    )
+}
+
+fn enzyme_data(catalysis: Vec<cb::enzyme::Catalysis>, enzymes: Vec<cb::enzyme::Enzyme>, pool: f64) -> cb::EnzymeData {
+    cb::EnzymeData { enzymes, catalysis, protein_pool: pool }
+}
+
+fn enzyme(id: &str, weight: f64) -> cb::enzyme::Enzyme {
+    cb::enzyme::Enzyme { id: id.into(), molecular_weight: weight, abundance: None }
+}
+
+fn catalysis(enzyme: &str, subunits: Vec<(String, f64)>, kcat: f64) -> cb::enzyme::Catalysis {
+    cb::enzyme::Catalysis {
+        reaction: "r".into(),
+        enzyme: enzyme.into(),
+        subunits,
+        kcat_forward: kcat,
+        kcat_reverse: 0.0,
+    }
+}
+
+#[test]
+fn enzyme_usage_is_what_the_flux_needs_not_what_the_pool_allows() {
+    let d = enzyme_data(vec![catalysis("E", Vec::new(), 100.0)], vec![enzyme("E", 1.0)], 100.0);
+    let s = cb::enzyme_constrained_fba(&one_route(), &d).unwrap();
+    assert!((s.flux.objective - 5.0).abs() < 1e-8);
+    assert!((s.usage["E"] - 0.05).abs() < 1e-8, "{}", s.usage["E"]);
+    assert!((s.pool_used - 0.05).abs() < 1e-8, "{}", s.pool_used);
+}
+
+#[test]
+fn enzyme_data_that_cannot_be_meant_is_refused_and_a_repeated_subunit_adds() {
+    let m = one_route();
+    let single = |copies: f64| vec![("E".to_string(), copies)];
+    for bad in [
+        enzyme_data(vec![catalysis("", single(-1.0), 100.0)], vec![enzyme("E", 1.0)], 1.0),
+        enzyme_data(vec![catalysis("", single(0.0), 100.0)], vec![enzyme("E", 1.0)], 1.0),
+        enzyme_data(vec![catalysis("E", Vec::new(), -100.0)], vec![enzyme("E", 1.0)], 1.0),
+        enzyme_data(vec![catalysis("E", Vec::new(), 0.0)], vec![enzyme("E", 1.0)], 1.0),
+        enzyme_data(vec![catalysis("E", Vec::new(), 100.0)], vec![enzyme("E", 1.0), enzyme("E", 100.0)], 1.0),
+    ] {
+        assert!(cb::enzyme_constrained_fba(&m, &bad).is_err());
+    }
+    // Two entries of E are two copies per cycle, at kcat 100 and weight 1: flux = 100 * 0.05 / 2.
+    let twice = vec![("E".to_string(), 1.0), ("E".to_string(), 1.0)];
+    let d = enzyme_data(vec![catalysis("", twice, 100.0)], vec![enzyme("E", 1.0)], 0.05);
+    let s = cb::enzyme_constrained_fba(&m, &d).unwrap();
+    assert!((s.flux.objective - 2.5).abs() < 1e-8, "{}", s.flux.objective);
+}
+
+fn rewritten(name: &str) -> String {
+    let doc = rashevsky::sbml::read::read_file(format!("{REVIEW_MODELS}/{name}.xml")).unwrap();
+    rashevsky::sbml::write::write_string(&doc).unwrap()
+}
+
+#[test]
+fn writing_keeps_kinetic_law_parameters_and_constraints() {
+    let again = read(&rewritten("w_cobra"));
+    assert!((cb::fba(&again).unwrap().objective - 10.0).abs() < 1e-9);
+    assert!(rewritten("w_con").contains("<listOfConstraints>"));
+}
+
+#[test]
+fn writing_refuses_what_it_would_silently_change() {
+    for name in ["w_udc", "w_quad"] {
+        let doc = rashevsky::sbml::read::read_file(format!("{REVIEW_MODELS}/{name}.xml")).unwrap();
+        assert!(rashevsky::sbml::write::write_string(&doc).is_err(), "{name}");
+    }
+    let mut doc = rashevsky::sbml::read::read_file(format!("{REVIEW_MODELS}/w_cobra.xml")).unwrap();
+    doc.model.reactions[0].gene_rule = Some("(b1 and b2".to_string());
+    assert!(rashevsky::sbml::write::write_string(&doc).is_err());
+}
+
+#[test]
+fn writing_declares_the_version_its_math_needs_and_leaves_out_empty_identifiers() {
+    let text = rewritten("w_v2");
+    assert!(text.contains("level3/version2/core"), "{}", &text[..200]);
+    assert!(!text.contains("fast="));
+    let text = rewritten("z_noid");
+    assert!(!text.contains("id=\"\""));
+}
+
+#[test]
+fn namespaces_keep_to_the_element_that_declares_them() {
+    // An association under a default FBC namespace is read.
+    let m = read_file("z_gene2");
+    assert_eq!(m.genes.len(), 1);
+    assert_eq!(cb::single_gene_deletion(&m, None).unwrap()[0].growth, 0.0);
+    // A prefix bound in an annotation does not reach what follows it.
+    let k = rashevsky::kinetic::KineticModel::read_sbml(format!("{REVIEW_MODELS}/z_leak1.xml")).unwrap();
+    let run = rashevsky::kinetic::simulate(&k, &[0.0, 1.0], &rashevsky::kinetic::SimOptions::default()).unwrap();
+    assert!((run.series(&k, "S").unwrap()[1] - 3.0 * (-2.0f64).exp()).abs() < 1e-6);
+    let m = read_file("w_ns5");
+    assert!((cb::fba(&m).unwrap().objective - 10.0).abs() < 1e-9);
 }

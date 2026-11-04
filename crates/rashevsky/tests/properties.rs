@@ -99,7 +99,7 @@ fn sbml_round_trip_keeps_the_model() {
         "/../../models/e_coli_core/e_coli_core.xml.gz"
     ))
     .unwrap();
-    let text = rashevsky::sbml::write::write_string(&doc);
+    let text = rashevsky::sbml::write::write_string(&doc).unwrap();
     let back = Model::from_sbml_str(&text).unwrap();
     let original = Model::from_document(&doc).unwrap();
     assert_eq!(back.reactions.len(), original.reactions.len());

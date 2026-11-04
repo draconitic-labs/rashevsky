@@ -123,10 +123,15 @@ pub fn control_analysis(model: &KineticModel, state: &SteadyState) -> Result<Con
     }
     let m = moieties(model)?;
     let e = elasticities(model, &state.values, state.time)?;
-    let reduced = &m.nr * &e * &m.link;
-    let solved = solve_refined(&reduced, &m.nr)
-        .ok_or_else(|| Error::Kinetic("the reduced Jacobian is singular at this steady state".into()))?;
-    let cs = -(&m.link * solved);
+    // Without independent amounts nothing can respond, so the control of each flux stays with its own reaction.
+    let cs = if m.independent.is_empty() {
+        DMatrix::zeros(model.n_states(), model.reactions.len())
+    } else {
+        let reduced = &m.nr * &e * &m.link;
+        let solved = solve_refined(&reduced, &m.nr)
+            .ok_or_else(|| Error::Kinetic("the reduced Jacobian is singular at this steady state".into()))?;
+        -(&m.link * solved)
+    };
     let n_r = model.reactions.len();
     let n_s = model.n_states();
     let cj = DMatrix::identity(n_r, n_r) + &e * &cs;

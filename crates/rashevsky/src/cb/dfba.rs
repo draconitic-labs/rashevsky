@@ -4,12 +4,14 @@
 //! concentrations, FBA gives the growth rate and exchange fluxes, and biomass and concentrations
 //! advance over `dt` with those fluxes held constant:
 //! `X(t+dt) = X exp(mu dt)`, `S_i(t+dt) = S_i - c_i v_i X (exp(mu dt) - 1) / mu`, with `c_i` the
-//! exchange's coefficient on its metabolite, so that either way of writing an exchange works. Uptake is
-//! capped by what the step's biomass integral can take without a concentration going below zero, and
-//! the kinetic limit never widens the model's own bounds.
+//! exchange's coefficient on its metabolite, so that either way of writing an exchange works. The kinetic
+//! limit never widens the model's own bounds, and what is there to take up overrides a bound that forces
+//! uptake. The growth rate is the flux of the one reaction in the objective. Uptake is capped so that a
+//! concentration stays above zero over the step: since the biomass integral grows with the growth rate
+//! and the growth rate with the cap, the cap that uses up exactly what remains is found by bisection.
 
 use crate::error::{Error, Result};
-use crate::lp::{self, Session, Status};
+use crate::lp::{self, Sense, Session, Status};
 use crate::model::Model;
 use serde::{Deserialize, Serialize};
 
@@ -73,11 +75,13 @@ impl Followed {
         let r = &model.reactions[self.column];
         let per_flux = self.coefficient.abs().max(1e-300);
         let (lb, ub) = if self.coefficient < 0.0 {
-            (r.lb.max(-limit / per_flux), r.ub)
+            let lb = r.lb.max(-limit / per_flux);
+            (lb, r.ub.max(lb))
         } else {
-            (r.lb, r.ub.min(limit / per_flux))
+            let ub = r.ub.min(limit / per_flux);
+            (r.lb.min(ub), ub)
         };
-        session.set_col_bounds(self.column, lb.min(ub), ub)
+        session.set_col_bounds(self.column, lb, ub)
     }
 }
 
@@ -86,34 +90,57 @@ fn biomass_integral(x: f64, mu: f64, dt: f64) -> f64 {
     if mu > 1e-12 { x * ((mu * dt).exp() - 1.0) / mu } else { x * dt }
 }
 
+/// What one solve of a step gives.
+struct StepSolve {
+    status: Status,
+    mu: f64,
+    fluxes: Option<Vec<f64>>,
+}
+
 /// Runs dynamic FBA.
 pub fn dfba(model: &Model, options: &DfbaOptions) -> Result<DfbaResult> {
     if options.dt <= 0.0 || options.t_end <= 0.0 {
         return Err(Error::Invalid("dt and t_end must be positive".into()));
     }
+    if !(options.biomass >= 0.0 && options.biomass.is_finite()) {
+        return Err(Error::Invalid("the initial biomass must not be negative".into()));
+    }
+    let growth = match model.objective.as_slice() {
+        [(j, coefficient)] if *coefficient > 0.0 && model.sense.unwrap_or(Sense::Maximize) == Sense::Maximize => *j,
+        _ => {
+            return Err(Error::Invalid(
+                "dynamic FBA reads the growth rate from one maximized reaction, so the objective must be that".into(),
+            ));
+        }
+    };
     let backend = lp::default_backend();
     let mut session = backend.open(&model.to_lp())?;
     let mut ids = Vec::new();
-    let mut followed = Vec::new();
+    let mut followed: Vec<Followed> = Vec::new();
     let mut conc = Vec::new();
-    let coefficient = |j: usize, id: &str| {
-        model.exchange_coefficient(j).ok_or_else(|| Error::Invalid(format!("{id} is not an exchange reaction")))
+    let mut follow = |id: &str, kinetics: Option<(f64, f64)>, initial: f64| -> Result<()> {
+        let j = model.reaction_index(id)?;
+        let coefficient =
+            model.exchange_coefficient(j).ok_or_else(|| Error::Invalid(format!("{id} is not an exchange reaction")))?;
+        if followed.iter().any(|f| f.column == j) {
+            return Err(Error::Invalid(format!("{id} is followed twice")));
+        }
+        if !(initial >= 0.0 && initial.is_finite()) {
+            return Err(Error::Invalid(format!("the concentration of {id} must not be negative")));
+        }
+        if kinetics.is_some_and(|(vmax, km)| vmax < 0.0 || km < 0.0) {
+            return Err(Error::Invalid(format!("the kinetics of {id} must not be negative")));
+        }
+        followed.push(Followed { column: j, coefficient, kinetics });
+        ids.push(id.to_string());
+        conc.push(initial);
+        Ok(())
     };
     for s in &options.substrates {
-        let j = model.reaction_index(&s.exchange)?;
-        followed.push(Followed {
-            column: j,
-            coefficient: coefficient(j, &s.exchange)?,
-            kinetics: Some((s.vmax, s.km)),
-        });
-        ids.push(s.exchange.clone());
-        conc.push(s.initial);
+        follow(&s.exchange, Some((s.vmax, s.km)), s.initial)?;
     }
     for (id, initial) in &options.tracked {
-        let j = model.reaction_index(id)?;
-        followed.push(Followed { column: j, coefficient: coefficient(j, id)?, kinetics: None });
-        ids.push(id.clone());
-        conc.push(*initial);
+        follow(id, None, *initial)?;
     }
     let steps = ((options.t_end / options.dt) - 1e-9).ceil().max(1.0) as usize;
     let mut result = DfbaResult {
@@ -127,67 +154,80 @@ pub fn dfba(model: &Model, options: &DfbaOptions) -> Result<DfbaResult> {
     let mut x = options.biomass;
     for k in 0..=steps {
         let t = (k as f64 * options.dt).min(options.t_end);
-        let dt = (options.t_end - t).min(options.dt).max(if k == steps { options.dt } else { 0.0 });
-        // The cap depends on the growth rate through the biomass integral, and the growth rate on the
-        // cap, so the two are iterated until no concentration would go below zero.
+        let dt = if k == steps { options.dt } else { (options.t_end - t).min(options.dt) };
+        let mut solve = |limits: &[f64]| -> Result<StepSolve> {
+            for (f, &limit) in followed.iter().zip(limits) {
+                f.apply(model, session.as_mut(), limit)?;
+            }
+            let s = session.solve()?;
+            if s.status == Status::Unbounded {
+                return Err(Error::Solver(format!(
+                    "the flux problem is unbounded at t = {t}; give the exchange a bound"
+                )));
+            }
+            Ok(if s.status == Status::Optimal {
+                StepSolve { status: s.status, mu: s.x[growth].max(0.0), fluxes: Some(s.x) }
+            } else {
+                StepSolve { status: s.status, mu: 0.0, fluxes: None }
+            })
+        };
+        // At zero growth the biomass integral is smallest, so this cap is the largest that can apply.
         let mut limits: Vec<f64> = followed
             .iter()
             .zip(&conc)
             .map(|(f, &s)| {
                 let s = s.max(0.0);
-                let kinetic = f.kinetics.map_or(f64::INFINITY, |(vmax, km)| vmax * s / (km + s));
+                let kinetic = f.kinetics.map_or(f64::INFINITY, |(vmax, km)| vmax * s / (km + s).max(1e-300));
                 kinetic.min(s / biomass_integral(x.max(1e-300), 0.0, dt))
             })
             .collect();
-        let mut status = Status::Unknown;
-        let mut mu = 0.0;
-        let mut fluxes = None;
-        for _ in 0..40 {
-            for (f, &limit) in followed.iter().zip(&limits) {
-                f.apply(model, session.as_mut(), limit)?;
-            }
-            let s = session.solve()?;
-            status = s.status;
-            if status == Status::Unbounded {
-                return Err(Error::Solver(format!(
-                    "the flux problem is unbounded at t = {t}; give the exchange a bound"
-                )));
-            }
-            if status != Status::Optimal {
-                fluxes = None;
-                mu = 0.0;
+        let overdrawn = |i: usize, solved: &StepSolve, conc: &[f64]| -> bool {
+            solved.fluxes.as_ref().is_some_and(|v| {
+                let uptake = followed[i].coefficient * v[followed[i].column];
+                uptake * biomass_integral(x, solved.mu, dt) > conc[i].max(0.0) * (1.0 + 1e-11) + 1e-13
+            })
+        };
+        let mut solved = solve(&limits)?;
+        for _ in 0..6 {
+            let over: Vec<usize> = (0..followed.len()).filter(|&i| overdrawn(i, &solved, &conc)).collect();
+            if over.is_empty() {
                 break;
             }
-            mu = s.objective.max(0.0);
-            let integral = biomass_integral(x, mu, dt);
-            let mut over = false;
-            for (i, f) in followed.iter().enumerate() {
-                let uptake = f.coefficient * s.x[f.column];
-                let available = conc[i].max(0.0);
-                if uptake * integral > available * (1.0 + 1e-12) + 1e-12 {
-                    limits[i] = available / integral;
-                    over = true;
+            for i in over {
+                let (mut low, mut high) = (0.0, limits[i]);
+                for _ in 0..60 {
+                    if high - low <= 1e-13 * high {
+                        break;
+                    }
+                    limits[i] = 0.5 * (low + high);
+                    let trial = solve(&limits)?;
+                    if trial.fluxes.is_some() && !overdrawn(i, &trial, &conc) {
+                        low = limits[i];
+                    } else if trial.fluxes.is_none() {
+                        // Too little to meet what the model requires, such as maintenance.
+                        low = limits[i];
+                    } else {
+                        high = limits[i];
+                    }
                 }
+                limits[i] = low;
             }
-            fluxes = Some(s.x);
-            if !over {
-                break;
-            }
+            solved = solve(&limits)?;
         }
         result.time.push(t);
         result.biomass.push(x);
-        result.growth_rate.push(mu);
+        result.growth_rate.push(solved.mu);
         result.concentrations.push(conc.clone());
-        result.status.push(status);
+        result.status.push(solved.status);
         if k == steps {
             break;
         }
-        if let Some(v) = fluxes {
-            let integral = biomass_integral(x, mu, dt);
+        if let Some(v) = &solved.fluxes {
+            let integral = biomass_integral(x, solved.mu, dt);
             for (i, f) in followed.iter().enumerate() {
                 conc[i] = (conc[i] - f.coefficient * v[f.column] * integral).max(0.0);
             }
-            x *= (mu * dt).exp();
+            x *= (solved.mu * dt).exp();
         }
     }
     Ok(result)

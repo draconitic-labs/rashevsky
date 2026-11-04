@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbml xmlns="http://www.sbml.org/sbml/level3/version1/core" level="3" version="1"><model id="m"><listOfCompartments><compartment id="c" size="1" constant="true"/></listOfCompartments><listOfSpecies><species id="X" compartment="c" hasOnlySubstanceUnits="true" boundaryCondition="false" constant="false" initialAmount="1.0"/></listOfSpecies></model></sbml>

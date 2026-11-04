@@ -15,6 +15,8 @@ let map;
 let reply = null;
 
 function compute() {
+  // Any value on show is about to change.
+  tip.hidden = true;
   const glucose = Number($('glc').value);
   const oxygenValue = Number($('o2').value);
   const oxygen = oxygenValue >= 60 ? 1000 : oxygenValue;

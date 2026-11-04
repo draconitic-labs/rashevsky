@@ -6,7 +6,7 @@
 //! transition, delays and priorities are evaluated as specified, each executed event re-evaluates all
 //! triggers, and integration restarts from the new state.
 
-use super::compile::{C, DelayContext, KineticModel, PreStart, SpeciesKind, Target, eval};
+use super::compile::{C, DelayContext, KineticModel, PreStart, eval};
 use super::ode::{Bdf, Integrator, OdeSystem, Rodas4, Stats, Tolerances};
 use crate::error::{Error, Result};
 use nalgebra::DMatrix;
@@ -302,7 +302,7 @@ struct Driver<'a> {
 /// How far either side of a rate threshold integration stops. The state moves by a negligible amount
 /// over this gap, and no stage of a step sees the jump.
 fn threshold_margin(t: f64) -> f64 {
-    1e-12 * (1.0 + t.abs())
+    4e-14 * (1.0 + t.abs())
 }
 
 impl Driver<'_> {
@@ -378,58 +378,11 @@ impl Driver<'_> {
                 Some(v) => v,
                 None => e.assignments.iter().map(|(_, c)| eval(c, &vals, t, &self.sys)).collect(),
             };
-            self.apply(t, y, due.event, &values);
+            self.model.apply_event(due.event, &values, t, y, &self.sys);
             self.project_algebraic(t, y)?;
             changed = true;
         }
         Err(Error::Kinetic(format!("event loop did not settle at t = {t}")))
-    }
-
-    fn apply(&self, t: f64, y: &mut [f64], event: usize, values: &[f64]) {
-        let e = &self.model.events[event];
-        let vals = self.sys.values(t, y);
-        let mut assigned = Vec::with_capacity(e.assignments.len());
-        for ((target, _), &value) in e.assignments.iter().zip(values) {
-            assigned.push(match *target {
-                Target::State(i) => self.model.state_slots[i],
-                Target::Amount { state, .. } => self.model.state_slots[state],
-            });
-            match *target {
-                Target::State(i) => {
-                    let slot = self.model.state_slots[i];
-                    let old = y[i];
-                    y[i] = value;
-                    // Rate-rule species keep their amount when their compartment's size jumps.
-                    for s in &self.model.species {
-                        if s.compartment == slot
-                            && !s.has_only_substance_units
-                            && matches!(s.kind, SpeciesKind::RateRule | SpeciesKind::Algebraic)
-                            && let Some(k) = self.model.state_slots.iter().position(|&ss| ss == s.view)
-                            && value != 0.0
-                        {
-                            y[k] *= old / value;
-                        }
-                    }
-                }
-                Target::Amount { state, compartment, hosu } => {
-                    y[state] = if hosu { value } else { value * vals[compartment] };
-                }
-            }
-        }
-        // A size that moves through a rule on an assigned symbol treats rate-rule species the same way.
-        let after = self.sys.values(t, y);
-        for s in &self.model.species {
-            if !s.has_only_substance_units
-                && matches!(s.kind, SpeciesKind::RateRule | SpeciesKind::Algebraic)
-                && !assigned.contains(&s.compartment)
-                && !assigned.contains(&s.view)
-                && after[s.compartment] != vals[s.compartment]
-                && after[s.compartment] != 0.0
-                && let Some(k) = self.model.state_slots.iter().position(|&ss| ss == s.view)
-            {
-                y[k] *= vals[s.compartment] / after[s.compartment];
-            }
-        }
     }
 
     /// Restores the algebraic rules after a jump, by Newton iteration on the variables they determine.
@@ -512,10 +465,9 @@ impl Driver<'_> {
         Ok(())
     }
 
-    /// Moves past a rate threshold: nothing happens to the state, and integration restarts on the far
-    /// side so that no stage of a step straddles the jump.
-    fn cross(&mut self, threshold: f64) -> Result<()> {
-        let at = threshold + threshold_margin(threshold);
+    /// Moves to a time beside a rate threshold, over a gap small enough that the state does not change,
+    /// and restarts integration there so that no stage of a step straddles the jump.
+    fn move_to(&mut self, at: f64) -> Result<()> {
         let mut y = self.int.state().to_vec();
         self.push_history(at, &y);
         if self.handle_events(at, &mut y)? {
@@ -532,20 +484,24 @@ impl Driver<'_> {
             let t0 = self.int.time();
             let y0 = self.int.state().to_vec();
             let mut limit = target.min(self.next_exec()).max(t0);
-            if let Some(&threshold) = self.rate_thresholds.iter().find(|&&th| th + threshold_margin(th) > t0) {
+            let next = self.rate_thresholds.partition_point(|&th| th + threshold_margin(th) <= t0);
+            if let Some(&threshold) = self.rate_thresholds.get(next) {
                 let below = threshold - threshold_margin(threshold);
                 if t0 >= below {
-                    if target > threshold {
-                        self.cross(threshold)?;
-                        continue;
+                    if t0 < threshold {
+                        // Reach the threshold itself without a step, whose last stage would see the jump.
+                        self.move_to(threshold)?;
+                    } else if target > threshold {
+                        self.move_to(threshold + threshold_margin(threshold))?;
+                    } else {
+                        break;
                     }
-                    // An output sits on the threshold: land on it, and cross on the way out.
-                    limit = limit.min(threshold);
-                } else {
-                    limit = limit.min(below);
+                    continue;
                 }
+                limit = limit.min(below);
             }
-            if let Some(&threshold) = self.trigger_thresholds.iter().find(|&&th| th > t0) {
+            let next = self.trigger_thresholds.partition_point(|&th| th <= t0);
+            if let Some(&threshold) = self.trigger_thresholds.get(next) {
                 limit = limit.min(threshold);
             }
             if limit > t0 {
@@ -714,8 +670,8 @@ pub fn simulate(model: &KineticModel, times: &[f64], options: &SimOptions) -> Re
         trig: model.events.iter().map(|e| e.initial_value).collect(),
         pending: Vec::new(),
         rng: ChaCha8Rng::seed_from_u64(options.seed),
-        rate_thresholds: model.rate_thresholds(),
-        trigger_thresholds: model.trigger_thresholds(),
+        rate_thresholds: model.rate_thresholds(times[times.len() - 1]),
+        trigger_thresholds: model.trigger_thresholds(times[times.len() - 1]),
     };
     driver.sys.t0 = t0;
     driver.equilibrate(t0, &mut y)?;

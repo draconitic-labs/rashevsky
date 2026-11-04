@@ -601,7 +601,7 @@ fn run(cli: Cli) -> Result<()> {
             let text = if is_json {
                 serde_json::to_string_pretty(&Model::from_document(&doc)?)?
             } else {
-                rashevsky::sbml::write::write_string(&doc)
+                rashevsky::sbml::write::write_string(&doc)?
             };
             std::fs::write(&output, text)?;
             Ok(())

@@ -7,10 +7,12 @@
 //! Newton can reach any root from where integration stops, so a root that is unstable or has negative
 //! amounts sends the integration further before it is accepted. The result reports the largest real
 //! part of the Jacobian's eigenvalues: a positive one means the state is not an attractor, as on a
-//! limit cycle. `delay` reads the present at a steady state. Rates that still depend on the time at
-//! the end of the integration have no steady state, and that is an error.
+//! limit cycle. `delay` reads the present at a steady state, where eigenvalues of the delay-free system
+//! do not decide stability, so a delayed model counts as stable only if the integration reached the root.
+//! Rates that still depend on the time at the end of the integration have no steady state, and an event
+//! that would fire on the way to the root, or a Newton iteration that runs away, are errors too.
 
-use super::compile::{Coef, KineticModel};
+use super::compile::{Coef, KineticModel, NoDelay, eval};
 use super::ode::OdeSystem;
 use super::sim::{KineticSystem, Method, SimOptions, simulate};
 use crate::error::{Error, Result};
@@ -104,9 +106,11 @@ pub struct SteadyState {
     pub iterations: usize,
     /// Time at which the rates were evaluated.
     pub time: f64,
-    /// Largest real part of the eigenvalues of the Jacobian over the independent amounts.
+    /// Largest real part of the eigenvalues of the Jacobian over the independent amounts. NaN for a model
+    /// with `delay`, whose spectrum this does not describe.
     pub largest_eigenvalue: f64,
-    /// Whether every perturbation decays.
+    /// Whether every perturbation decays. For a model with `delay`, whether the integration reached this
+    /// state.
     pub stable: bool,
 }
 
@@ -185,11 +189,28 @@ fn newton(
     let full = lift(&s);
     let values = sys.values(time, &full);
     let fluxes = model.reactions.iter().map(|r| values[r.rate]).collect();
-    let reduced = reduced_jacobian(&s);
-    let eigenvalues = reduced.complex_eigenvalues();
-    let largest = eigenvalues.iter().map(|z| z.re).fold(f64::NEG_INFINITY, f64::max);
-    let size = eigenvalues.iter().map(|z| z.norm()).fold(0.0f64, f64::max);
-    let largest_eigenvalue = if eigenvalues.is_empty() { 0.0 } else { largest };
+    // A root has a last Newton step that is small. Where the rate only tends to zero as an amount grows
+    // without limit, as with `1 / (1 + S)`, the residual falls but the step does not.
+    let (largest_eigenvalue, size) = if ind.is_empty() {
+        (0.0, 0.0)
+    } else {
+        let reduced = reduced_jacobian(&s);
+        if norm > 0.0 {
+            let rhs = DVector::from_iterator(ind.len(), ind.iter().map(|&i| -f[i]));
+            if let Some(step) = reduced.clone().lu().solve(&rhs) {
+                let largest_step = step.iter().fold(0.0f64, |a, v| a.max(v.abs()));
+                let largest_amount = s.iter().fold(0.0f64, |a, v| a.max(v.abs()));
+                if largest_step > 1e-6 * (1.0 + largest_amount) {
+                    return Err(Error::Kinetic(format!(
+                        "no steady state found: the iteration runs away, with amounts near {largest_amount:e} and steps of {largest_step:e}"
+                    )));
+                }
+            }
+        }
+        let eigenvalues = reduced.complex_eigenvalues();
+        let largest = eigenvalues.iter().map(|z| z.re).fold(f64::NEG_INFINITY, f64::max);
+        (largest, eigenvalues.iter().map(|z| z.norm()).fold(0.0f64, f64::max))
+    };
     Ok(SteadyState {
         y: full,
         values,
@@ -198,7 +219,7 @@ fn newton(
         iterations,
         time,
         largest_eigenvalue,
-        stable: largest_eigenvalue <= 1e-9 * size.max(1.0),
+        stable: largest_eigenvalue <= 1e-9 * size,
     })
 }
 
@@ -208,21 +229,49 @@ fn has_negative_amount(model: &KineticModel, state: &SteadyState) -> bool {
     model.species.iter().any(|s| state.values[s.amount] < -1e-9 * scale)
 }
 
-/// Rejects a model whose rates still change with the time at `t`.
+/// Rejects a model whose rates still change with the time at `t`, reading them at times that do not share
+/// a period.
 fn check_time_settled(model: &KineticModel, y: &[f64], t: f64) -> Result<()> {
     if !model.reads_time() {
         return Ok(());
     }
     let sys = KineticSystem::new(model, false);
     let n = y.len();
-    let (mut now, mut later) = (vec![0.0; n], vec![0.0; n]);
+    let mut now = vec![0.0; n];
+    let mut later = vec![0.0; n];
     sys.rhs(t, y, &mut now);
-    sys.rhs(2.0 * t + 1.0, y, &mut later);
-    let scale = now.iter().chain(&later).fold(1.0f64, |acc, v| acc.max(v.abs()));
-    if now.iter().zip(&later).any(|(a, b)| (a - b).abs() > 1e-8 * scale) {
-        return Err(Error::Kinetic(format!(
-            "the rates still depend on the time at t = {t}, so there is no steady state"
-        )));
+    let scale = now.iter().fold(1.0f64, |acc, v| acc.max(v.abs()));
+    for offset in [0.37, 1.0, std::f64::consts::E, std::f64::consts::PI * 3.0, 17.3, 101.7] {
+        for at in [t + offset, 2.0 * t + offset] {
+            sys.rhs(at, y, &mut later);
+            if now.iter().zip(&later).any(|(a, b)| (a - b).abs() > 1e-8 * scale) {
+                return Err(Error::Kinetic(format!(
+                    "the rates still depend on the time at t = {t}, so there is no steady state"
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Rejects a root that an event would stop the system from reaching.
+fn check_events_quiet(model: &KineticModel, integrated: &[f64], root: &SteadyState) -> Result<()> {
+    if model.events.is_empty() {
+        return Ok(());
+    }
+    let mut vals = model.initial.clone();
+    model.eval_state(root.time, integrated, &mut vals, &NoDelay);
+    for e in &model.events {
+        let holds = |v: &[f64]| {
+            let x = eval(&e.trigger, v, root.time, &NoDelay);
+            x != 0.0 && !x.is_nan()
+        };
+        if holds(&vals) != holds(&root.values) {
+            return Err(Error::Kinetic(format!(
+                "event {} fires between the integrated state and the root, so that root is not reached",
+                e.id
+            )));
+        }
     }
     Ok(())
 }
@@ -244,15 +293,29 @@ pub fn steady_state(model: &KineticModel, options: &SteadyOptions) -> Result<Ste
         let vals = &run.values[1];
         Ok(model.state_slots.iter().map(|&s| vals[s]).collect())
     };
-    let last_jump = model.rate_thresholds().last().copied().unwrap_or(0.0);
+    // Everything that changes with the time alone must have happened by the end of the integration.
+    let reach = options.integrate_first.max(1.0);
+    let last_jump =
+        model.rate_thresholds(reach).into_iter().chain(model.trigger_thresholds(reach)).fold(0.0f64, f64::max);
     let mut horizon = if options.integrate_first > 0.0 { options.integrate_first.max(2.0 * last_jump) } else { 0.0 };
     let mut fallback = None;
     for extension in 0..=EXTENSIONS {
-        let y = integrate(horizon)?;
+        // A run that diverges during an extension has told us all it can: the root found before is unstable.
+        let y = match integrate(horizon) {
+            Ok(y) => y,
+            Err(e) => return fallback.ok_or(e),
+        };
         check_time_settled(analysed, &y, horizon)?;
         let state = newton(analysed, &m, &y, horizon, options);
         match state {
-            Ok(state) => {
+            Ok(mut state) => {
+                check_events_quiet(model, &y, &state)?;
+                if model.has_delay {
+                    let distance = y.iter().zip(&state.y).fold(0.0f64, |a, (p, q)| a.max((p - q).abs()));
+                    let size = state.y.iter().fold(1.0f64, |a, v| a.max(v.abs()));
+                    state.stable = distance <= 1e-4 * size;
+                    state.largest_eigenvalue = f64::NAN;
+                }
                 let negative = has_negative_amount(model, &state);
                 if state.stable && !negative {
                     return Ok(state);
