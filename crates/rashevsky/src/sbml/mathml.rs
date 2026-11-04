@@ -287,6 +287,16 @@ fn op_tag(op: Op) -> &'static str {
     }
 }
 
+/// Writes an expression in a Boolean position, where `1` and `0` were read from `<true/>` and `<false/>`
+/// and numbers are not allowed.
+pub fn write_condition(e: &Expr, out: &mut String) {
+    match e {
+        Expr::Num(v) if *v == 1.0 => out.push_str("<true/>"),
+        Expr::Num(v) if *v == 0.0 => out.push_str("<false/>"),
+        other => write_expr(other, out),
+    }
+}
+
 /// Writes an expression as the content of a `<math>` element.
 pub fn write_expr(e: &Expr, out: &mut String) {
     const CS: &str = "http://www.sbml.org/sbml/symbols";
@@ -319,6 +329,7 @@ pub fn write_expr(e: &Expr, out: &mut String) {
                     out.push_str(&format!("</{q}>"));
                     write_expr(&args[1], out);
                 }
+                Op::And | Op::Or | Op::Xor | Op::Not | Op::Implies => args.iter().for_each(|a| write_condition(a, out)),
                 _ => args.iter().for_each(|a| write_expr(a, out)),
             }
             out.push_str("</apply>");
@@ -328,7 +339,7 @@ pub fn write_expr(e: &Expr, out: &mut String) {
             for (value, cond) in pieces {
                 out.push_str("<piece>");
                 write_expr(value, out);
-                write_expr(cond, out);
+                write_condition(cond, out);
                 out.push_str("</piece>");
             }
             if let Some(o) = otherwise {

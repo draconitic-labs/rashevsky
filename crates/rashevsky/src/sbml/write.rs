@@ -1,7 +1,7 @@
 //! SBML writer: Level 3 Version 1 core with FBC version 2 and groups version 1.
 
 use super::Document;
-use super::mathml::write_expr;
+use super::mathml::{write_condition, write_expr};
 use crate::kinetic::expr::Expr;
 use std::fmt::Write as _;
 
@@ -28,6 +28,24 @@ fn math(e: &Expr, out: &mut String) {
     out.push_str("</math>");
 }
 
+fn condition(e: &Expr, out: &mut String) {
+    out.push_str(MATH);
+    write_condition(e, out);
+    out.push_str("</math>");
+}
+
+/// `bqbiol:is` resources as an annotation on the element with this `metaid`.
+fn annotation(metaid: &str, resources: &[String], out: &mut String) {
+    let _ = write!(
+        out,
+        "<annotation><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:bqbiol=\"http://biomodels.net/biology-qualifiers/\"><rdf:Description rdf:about=\"#{metaid}\"><bqbiol:is><rdf:Bag>"
+    );
+    for r in resources {
+        let _ = write!(out, "<rdf:li rdf:resource=\"{}\"/>", escape(r));
+    }
+    out.push_str("</rdf:Bag></bqbiol:is></rdf:Description></rdf:RDF></annotation>");
+}
+
 fn lambda(args: &[String], body: &Expr, out: &mut String) {
     out.push_str(MATH);
     out.push_str("<lambda>");
@@ -41,6 +59,21 @@ fn lambda(args: &[String], body: &Expr, out: &mut String) {
 /// Renders a document as SBML Level 3 Version 1 text, keeping every object the reader understands.
 pub fn write_string(doc: &Document) -> String {
     let m = &doc.model;
+    let older_level = doc.level < 3;
+    // A Level 2 stoichiometry expression becomes a rule on a named species reference.
+    let mut stoichiometry_rules: Vec<(String, &Expr)> = Vec::new();
+    let mut reference_ids: std::collections::HashMap<(usize, bool, usize), String> = std::collections::HashMap::new();
+    for (j, r) in m.reactions.iter().enumerate() {
+        for (is_product, refs) in [(false, &r.reactants), (true, &r.products)] {
+            for (k, sr) in refs.iter().enumerate() {
+                if let Some(e) = &sr.stoichiometry_math {
+                    let id = sr.id.clone().unwrap_or_else(|| format!("stoichiometry_{j}_{}_{k}", u8::from(is_product)));
+                    reference_ids.insert((j, is_product, k), id.clone());
+                    stoichiometry_rules.push((id, e));
+                }
+            }
+        }
+    }
     let mut s = String::with_capacity(1 << 16);
     s.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     // Only the packages a model uses are declared; some readers stop at an unused package.
@@ -84,10 +117,11 @@ pub fn write_string(doc: &Document) -> String {
             if !c.name.is_empty() {
                 let _ = write!(s, " name=\"{}\"", escape(&c.name));
             }
-            if let Some(v) = c.size {
+            // Level 2 gives a missing size the default of one, and Level 3 leaves it undefined.
+            if let Some(v) = c.size.or(older_level.then_some(1.0)) {
                 let _ = write!(s, " size=\"{}\"", num(v));
             }
-            if let Some(v) = c.spatial_dimensions {
+            if let Some(v) = c.spatial_dimensions.or(older_level.then_some(3.0)) {
                 let _ = write!(s, " spatialDimensions=\"{}\"", num(v));
             }
             s.push_str("/>\n");
@@ -96,7 +130,7 @@ pub fn write_string(doc: &Document) -> String {
     }
     if !m.species.is_empty() {
         s.push_str("<listOfSpecies>\n");
-        for sp in &m.species {
+        for (i, sp) in m.species.iter().enumerate() {
             let _ = write!(
                 s,
                 "<species id=\"{}\" compartment=\"{}\" hasOnlySubstanceUnits=\"{}\" boundaryCondition=\"{}\" constant=\"{}\"",
@@ -124,7 +158,14 @@ pub fn write_string(doc: &Document) -> String {
             if let Some(c) = sp.charge {
                 let _ = write!(s, " fbc:charge=\"{c}\"");
             }
-            s.push_str("/>\n");
+            if sp.annotations.is_empty() {
+                s.push_str("/>\n");
+            } else {
+                let metaid = format!("meta_species_{i}");
+                let _ = write!(s, " metaid=\"{metaid}\">");
+                annotation(&metaid, &sp.annotations, &mut s);
+                s.push_str("</species>\n");
+            }
         }
         s.push_str("</listOfSpecies>\n");
     }
@@ -148,8 +189,13 @@ pub fn write_string(doc: &Document) -> String {
         }
         s.push_str("</listOfInitialAssignments>\n");
     }
-    if !m.rules.is_empty() {
+    if !m.rules.is_empty() || !stoichiometry_rules.is_empty() {
         s.push_str("<listOfRules>\n");
+        for (id, e) in &stoichiometry_rules {
+            let _ = write!(s, "<assignmentRule variable=\"{}\">", escape(id));
+            math(e, &mut s);
+            s.push_str("</assignmentRule>\n");
+        }
         for rule in &m.rules {
             match rule {
                 super::Rule::Assignment { variable, math: e } => {
@@ -173,8 +219,11 @@ pub fn write_string(doc: &Document) -> String {
     }
     if !m.reactions.is_empty() {
         s.push_str("<listOfReactions>\n");
-        for r in &m.reactions {
-            let _ = write!(s, "<reaction id=\"{}\" reversible=\"{}\" fast=\"false\"", escape(&r.id), r.reversible);
+        for (j, r) in m.reactions.iter().enumerate() {
+            let _ = write!(s, "<reaction id=\"{}\" reversible=\"{}\" fast=\"{}\"", escape(&r.id), r.reversible, r.fast);
+            if !r.annotations.is_empty() {
+                let _ = write!(s, " metaid=\"meta_reaction_{j}\"");
+            }
             if !r.name.is_empty() {
                 let _ = write!(s, " name=\"{}\"", escape(&r.name));
             }
@@ -185,18 +234,29 @@ pub fn write_string(doc: &Document) -> String {
                 let _ = write!(s, " fbc:upperFluxBound=\"{}\"", escape(b));
             }
             s.push_str(">\n");
-            for (tag, refs) in [("listOfReactants", &r.reactants), ("listOfProducts", &r.products)] {
+            if !r.annotations.is_empty() {
+                annotation(&format!("meta_reaction_{j}"), &r.annotations, &mut s);
+            }
+            for (tag, is_product, refs) in [("listOfReactants", false, &r.reactants), ("listOfProducts", true, &r.products)] {
                 if refs.is_empty() {
                     continue;
                 }
                 let _ = writeln!(s, "<{tag}>");
-                for sr in refs {
-                    let _ =
-                        write!(s, "<speciesReference species=\"{}\" constant=\"{}\"", escape(&sr.species), sr.constant);
-                    if let Some(id) = &sr.id {
+                for (k, sr) in refs.iter().enumerate() {
+                    let named = reference_ids.get(&(j, is_product, k));
+                    let _ = write!(
+                        s,
+                        "<speciesReference species=\"{}\" constant=\"{}\"",
+                        escape(&sr.species),
+                        sr.constant && named.is_none()
+                    );
+                    if let Some(id) = named.or(sr.id.as_ref()) {
                         let _ = write!(s, " id=\"{}\"", escape(id));
                     }
-                    if let Some(v) = sr.stoichiometry {
+                    // Level 2 gives a missing stoichiometry the default of one.
+                    if named.is_none()
+                        && let Some(v) = sr.stoichiometry.or(older_level.then_some(1.0))
+                    {
                         let _ = write!(s, " stoichiometry=\"{}\"", num(v));
                     }
                     s.push_str("/>\n");
@@ -245,7 +305,7 @@ pub fn write_string(doc: &Document) -> String {
                 e.use_values_from_trigger_time
             );
             let _ = write!(s, "<trigger initialValue=\"{}\" persistent=\"{}\">", e.initial_value, e.persistent);
-            math(&e.trigger, &mut s);
+            condition(&e.trigger, &mut s);
             s.push_str("</trigger>");
             if let Some(p) = &e.priority {
                 s.push_str("<priority>");

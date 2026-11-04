@@ -1,16 +1,20 @@
 //! Parameter sensitivities: local steady-state coefficients and variance-based global indices.
 
-use super::compile::KineticModel;
-use super::mca::{ControlAnalysis, parameter_elasticities};
+use super::compile::{KineticModel, NoDelay};
+use super::mca::ControlAnalysis;
 use super::sim::{SimOptions, simulate};
 use super::steady::{SteadyOptions, SteadyState, steady_state};
 use crate::error::{Error, Result};
-use nalgebra::DMatrix;
+use nalgebra::{DMatrix, DVector};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
-/// Local steady-state sensitivities: `dJ/dp = Cj dv/dp` and `dy/dp = Cs dv/dp`.
+/// Local steady-state sensitivities. A parameter moves the rates of change at the steady state by
+/// `b = N dv/dp + (dN/dp) v`, and the independent amounts respond by `ds/dp = -(Nr E L)^-1 b`, which gives
+/// `dy/dp = L ds/dp` and `dJ/dp = dv/dp + E dy/dp`. The partial derivatives at the frozen state come from a
+/// fourth-order central difference through [`KineticModel::set_value`], so a parameter counts everywhere
+/// it reaches: laws, stoichiometries, compartment sizes and other values assigned from it.
 #[derive(Clone, Debug)]
 pub struct LocalSensitivity {
     /// Parameter names.
@@ -21,6 +25,18 @@ pub struct LocalSensitivity {
     pub state: DMatrix<f64>,
 }
 
+/// Rates of change and reaction rates at the frozen `state` with one parameter overridden.
+fn frozen_rates(model: &KineticModel, state: &SteadyState, name: &str, value: f64) -> Result<(Vec<f64>, Vec<f64>)> {
+    let mut m = model.clone();
+    m.set_value(name, value)?;
+    let mut vals = m.initial.clone();
+    m.eval_state(state.time, &state.y, &mut vals, &NoDelay);
+    let mut dy = vec![0.0; state.y.len()];
+    m.rhs_from_vals(state.time, &vals, &mut dy, &NoDelay);
+    let rates = m.reactions.iter().map(|r| vals[r.rate]).collect();
+    Ok((dy, rates))
+}
+
 /// Local steady-state sensitivities with respect to constant symbols.
 pub fn local_steady(
     model: &KineticModel,
@@ -28,12 +44,33 @@ pub fn local_steady(
     control: &ControlAnalysis,
     parameters: &[String],
 ) -> Result<LocalSensitivity> {
-    let dv = parameter_elasticities(model, &state.values, parameters)?;
-    Ok(LocalSensitivity {
-        parameters: parameters.to_vec(),
-        flux: &control.flux_control * &dv,
-        state: &control.concentration_control * &dv,
-    })
+    let varying = model.varying_slots();
+    let moieties = &control.moieties;
+    let ind = &moieties.independent;
+    let reduced = &moieties.nr * &control.elasticities * &moieties.link;
+    let lu = reduced.lu();
+    let (n_states, n_reactions, k) = (state.y.len(), model.reactions.len(), parameters.len());
+    let mut flux = DMatrix::zeros(n_reactions, k);
+    let mut response = DMatrix::zeros(n_states, k);
+    for (column, name) in parameters.iter().enumerate() {
+        let slot = model.slot(name)?;
+        if varying.contains(&slot) {
+            return Err(Error::Invalid(format!("`{name}` varies during a simulation, so it has no local sensitivity")));
+        }
+        let p = model.initial[slot];
+        let h = 1e-3 * if p == 0.0 { 1.0 } else { p.abs() };
+        let at = |offset: f64| frozen_rates(model, state, name, p + offset * h);
+        let (a, b, c, d) = (at(-2.0)?, at(-1.0)?, at(1.0)?, at(2.0)?);
+        let stencil = |w: f64, x: f64, y: f64, z: f64| (w - 8.0 * x + 8.0 * y - z) / (12.0 * h);
+        let dv = DVector::from_iterator(n_reactions, (0..n_reactions).map(|j| stencil(a.1[j], b.1[j], c.1[j], d.1[j])));
+        let rhs = DVector::from_iterator(ind.len(), ind.iter().map(|&i| -stencil(a.0[i], b.0[i], c.0[i], d.0[i])));
+        let ds = lu.solve(&rhs).ok_or_else(|| Error::Kinetic("the reduced Jacobian is singular at this steady state".into()))?;
+        let dy = &moieties.link * ds;
+        let dj = dv + &control.elasticities * &dy;
+        flux.column_mut(column).copy_from(&dj);
+        response.column_mut(column).copy_from(&dy);
+    }
+    Ok(LocalSensitivity { parameters: parameters.to_vec(), flux, state: response })
 }
 
 /// A parameter's range for global analysis.
@@ -61,7 +98,8 @@ pub struct SobolIndices {
     pub total: Vec<f64>,
     /// Output evaluations used.
     pub evaluations: usize,
-    /// Samples that failed to evaluate and were replaced by resampling.
+    /// Samples that failed to evaluate and were left out. A failure region biases the indices, so more
+    /// than 5 % of samples failing is an error.
     pub failures: usize,
 }
 
@@ -118,8 +156,8 @@ pub fn sobol(
     });
     let rows: Vec<(f64, f64, Vec<f64>)> = parts.into_iter().flatten().flatten().collect();
     let n = rows.len();
-    if n < 2 {
-        return Err(Error::Kinetic("too few Sobol samples evaluated".into()));
+    if n < 2 || (samples - n) * 20 > samples {
+        return Err(Error::Kinetic(format!("{} of {samples} Sobol samples could not be evaluated", samples - n)));
     }
     let mean: f64 = rows.iter().map(|r| 0.5 * (r.0 + r.1)).sum::<f64>() / n as f64;
     let variance: f64 =

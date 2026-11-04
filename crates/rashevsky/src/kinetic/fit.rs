@@ -164,8 +164,16 @@ pub fn fit(
     data: &[Observation],
     options: &SimOptions,
 ) -> Result<FitResult> {
-    if parameters.iter().any(|p| p.start <= 0.0) {
+    if parameters.iter().any(|p| p.start <= 0.0 || !p.start.is_finite()) {
         return Err(Error::Invalid("starting values must be positive".into()));
+    }
+    if let Some(bad) = data.iter().find(|o| !o.time.is_finite() || !o.value.is_finite() || !(o.sigma > 0.0) || !o.sigma.is_finite()) {
+        return Err(Error::Invalid(format!("the measurement of {} at t = {} is not usable", bad.symbol, bad.time)));
+    }
+    // An override that is refused should say why, rather than look like a failed simulation.
+    let mut trial = model.clone();
+    for p in parameters {
+        trial.set_value(&p.name, p.start)?;
     }
     let problem = Problem {
         base: model,
@@ -234,8 +242,13 @@ pub fn profile(
         .map(|(i, p)| FitParameter { name: p.name.clone(), start: fit_result.estimates[i] })
         .collect();
     let times = observation_times(data);
-    let grid: Vec<f64> =
+    // The estimate is on the grid, since the walk to each limit starts from it.
+    let mut grid: Vec<f64> =
         (0..points).map(|k| estimate * factor.powf(2.0 * k as f64 / (points - 1).max(1) as f64 - 1.0)).collect();
+    grid.push(estimate);
+    grid.sort_by(f64::total_cmp);
+    grid.dedup_by(|a, b| (*a - *b).abs() <= 1e-12 * b.abs());
+    let points = grid.len();
     let chi2: Vec<f64> = crate::parallel::map_chunks(&grid, 1, |slice| {
         let problem = Problem {
             base: model,
@@ -254,16 +267,18 @@ pub fn profile(
     });
     let threshold = fit_result.chi2 + CHI2_95_1DOF;
     let centre = grid.iter().position(|v| *v >= estimate).unwrap_or(points / 2);
+    // Walks out from the estimate. A failed simulation says nothing about the likelihood there, so a
+    // limit beyond one stays undetermined.
     let crossing = |range: Vec<usize>| -> Option<f64> {
         let mut prev: Option<usize> = None;
         for k in range {
+            if !chi2[k].is_finite() {
+                return None;
+            }
             if chi2[k] > threshold {
-                return Some(match prev {
-                    Some(p) => {
-                        let w = (threshold - chi2[p]) / (chi2[k] - chi2[p]);
-                        (grid[p].ln() + w * (grid[k].ln() - grid[p].ln())).exp()
-                    }
-                    None => grid[k],
+                return prev.map(|p| {
+                    let w = (threshold - chi2[p]) / (chi2[k] - chi2[p]);
+                    (grid[p].ln() + w * (grid[k].ln() - grid[p].ln())).exp()
                 });
             }
             prev = Some(k);

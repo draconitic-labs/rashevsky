@@ -325,3 +325,131 @@ fn deletions_report_unbounded_rather_than_lethal() {
     assert_eq!(spare.status, Status::Unbounded);
     assert_eq!(spare.growth, f64::INFINITY);
 }
+
+fn read(text: &str) -> Model {
+    let doc = rashevsky::sbml::read::read_str(text).unwrap();
+    Model::from_document(&doc).unwrap()
+}
+
+const COBRA_LEVEL2: &str = r#"<?xml version="1.0"?>
+<sbml xmlns="http://www.sbml.org/sbml/level2/version4" level="2" version="4"><model id="m">
+<listOfCompartments><compartment id="c"/></listOfCompartments>
+<listOfSpecies><species id="A" compartment="c"/></listOfSpecies>
+<listOfReactions>
+<reaction id="in" reversible="true"><listOfProducts><speciesReference species="A"/></listOfProducts>
+<notes><html xmlns="http://www.w3.org/1999/xhtml"><p>GENE_ASSOCIATION: b1 and b2</p><p>SUBSYSTEM: X</p></html></notes>
+<kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><ci>F</ci></math><listOfParameters>
+<parameter id="LOWER_BOUND" value="-10"/><parameter id="UPPER_BOUND" value="5"/><parameter id="OBJECTIVE_COEFFICIENT" value="0"/>
+</listOfParameters></kineticLaw></reaction>
+<reaction id="out" reversible="false"><listOfReactants><speciesReference species="A"/></listOfReactants>
+<kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><ci>F</ci></math><listOfParameters>
+<parameter id="LOWER_BOUND" value="0"/><parameter id="UPPER_BOUND" value="1000"/><parameter id="OBJECTIVE_COEFFICIENT" value="1"/>
+</listOfParameters></kineticLaw></reaction>
+</listOfReactions></model></sbml>"#;
+
+#[test]
+fn cobra_level_2_keeps_bounds_objective_and_gene_rules_in_old_places() {
+    let m = read(COBRA_LEVEL2);
+    assert_eq!((m.reactions[0].lb, m.reactions[0].ub), (-10.0, 5.0));
+    assert!((cb::fba(&m).unwrap().objective - 5.0).abs() < 1e-9);
+    // Paragraphs on one line stay apart, and the rule is exactly two genes.
+    assert_eq!(m.genes.len(), 2, "{:?}", m.genes.iter().map(|g| &g.id).collect::<Vec<_>>());
+}
+
+#[test]
+fn fbc_version_1_bounds_and_gene_associations_are_read() {
+    let text = r#"<?xml version="1.0"?>
+<sbml xmlns="http://www.sbml.org/sbml/level3/version1/core" xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version1" level="3" version="1" fbc:required="false">
+<model id="m"><listOfCompartments><compartment id="c" constant="true" size="1"/></listOfCompartments>
+<listOfSpecies><species id="A" compartment="c" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/></listOfSpecies>
+<listOfReactions>
+<reaction id="in" reversible="true" fast="false"><listOfProducts><speciesReference species="A" constant="true" stoichiometry="1"/></listOfProducts></reaction>
+<reaction id="out" reversible="false" fast="false"><listOfReactants><speciesReference species="A" constant="true" stoichiometry="1"/></listOfReactants></reaction>
+</listOfReactions>
+<fbc:listOfFluxBounds>
+<fbc:fluxBound fbc:reaction="in" fbc:operation="less" fbc:value="7"/>
+<fbc:fluxBound fbc:reaction="in" fbc:operation="greater" fbc:value="-7"/>
+</fbc:listOfFluxBounds>
+<fbc:listOfGeneAssociations><fbc:geneAssociation fbc:id="g" fbc:reaction="in"><fbc:and><fbc:gene fbc:reference="b1"/><fbc:gene fbc:reference="b2"/></fbc:and></fbc:geneAssociation></fbc:listOfGeneAssociations>
+<fbc:listOfObjectives fbc:activeObjective="o"><fbc:objective fbc:id="o" fbc:type="maximize"><fbc:listOfFluxObjectives><fbc:fluxObjective fbc:reaction="out" fbc:coefficient="1"/></fbc:listOfFluxObjectives></fbc:objective></fbc:listOfObjectives>
+</model></sbml>"#;
+    let m = read(text);
+    assert!((cb::fba(&m).unwrap().objective - 7.0).abs() < 1e-9);
+    assert_eq!(m.genes.len(), 2);
+}
+
+#[test]
+fn fbc_version_3_content_the_flux_model_lacks_is_refused() {
+    let base = r#"<?xml version="1.0"?>
+<sbml xmlns="http://www.sbml.org/sbml/level3/version1/core" xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version3" level="3" version="1" fbc:required="false">
+<model id="m"><listOfCompartments><compartment id="c" constant="true" size="1"/></listOfCompartments>
+<listOfSpecies><species id="A" compartment="c" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/></listOfSpecies>
+<fbc:listOfObjectives fbc:activeObjective="o"><fbc:objective fbc:id="o" fbc:type="maximize"><fbc:listOfFluxObjectives><fbc:fluxObjective fbc:reaction="r" fbc:coefficient="1" EXTRA/></fbc:listOfFluxObjectives></fbc:objective></fbc:listOfObjectives>
+USER
+</model></sbml>"#;
+    let quadratic = base.replace("EXTRA", r#"fbc:variableType="quadratic""#).replace("USER", "");
+    let doc = rashevsky::sbml::read::read_str(&quadratic).unwrap();
+    assert!(Model::from_document(&doc).unwrap_err().to_string().contains("quadratic"));
+    let user = base.replace("EXTRA", "").replace(
+        "USER",
+        r#"<fbc:listOfUserDefinedConstraints><fbc:userDefinedConstraint fbc:lowerBound="a" fbc:upperBound="b"/></fbc:listOfUserDefinedConstraints>"#,
+    );
+    let doc = rashevsky::sbml::read::read_str(&user).unwrap();
+    assert!(Model::from_document(&doc).unwrap_err().to_string().contains("user-defined"));
+}
+
+#[test]
+fn stoichiometry_math_reaches_the_flux_model() {
+    let text = r#"<?xml version="1.0"?>
+<sbml xmlns="http://www.sbml.org/sbml/level2/version4" level="2" version="4"><model id="m">
+<listOfCompartments><compartment id="c"/></listOfCompartments>
+<listOfSpecies><species id="A" compartment="c"/></listOfSpecies>
+<listOfReactions><reaction id="r" reversible="false"><listOfProducts><speciesReference species="A"><stoichiometryMath><math xmlns="http://www.w3.org/1998/Math/MathML"><cn>3</cn></math></stoichiometryMath></speciesReference></listOfProducts></reaction></listOfReactions></model></sbml>"#;
+    assert_eq!(read(text).reactions[0].stoichiometry[0].1, 3.0);
+}
+
+#[test]
+fn gene_rules_read_operators_without_spaces() {
+    let mut names = Vec::new();
+    let mut intern = |g: &str| {
+        names.push(g.to_string());
+        names.len() - 1
+    };
+    rashevsky::gpr::Gpr::parse("a&&b||c", &mut intern).unwrap();
+    assert_eq!(names, ["a", "b", "c"]);
+}
+
+#[test]
+fn a_task_can_name_a_metabolite_on_both_sides_and_a_bad_reaction_fails_alone() {
+    use rashevsky::tasks::{Task, check_tasks};
+    let m = model(
+        vec![Metabolite { name: "A".into(), ..met("A", false) }, Metabolite { name: "B".into(), ..met("B", false) }],
+        vec![rxn("make", &[(0, -1.0), (1, 1.0)], 0.0, 100.0)],
+        &[],
+    );
+    let task = |id: &str, equation: Option<&str>, changed: Option<&str>| Task {
+        id: id.into(),
+        description: String::new(),
+        should_fail: false,
+        inputs: vec![("A[c]".to_string(), 0.0, 1.0)],
+        outputs: vec![("B[c]".to_string(), 0.0, 1.0)],
+        equations: equation.map(|e| (e.to_string(), 0.0, 1.0)).into_iter().collect(),
+        changed: changed.map(|c| (c.to_string(), 0.0, 1.0)).into_iter().collect(),
+    };
+    let tasks = [task("both_sides", Some("A[c] => A[c] + B[c]"), None), task("bad", None, Some("no_such_reaction")), task("plain", None, None)];
+    let results = check_tasks(&m, &tasks, false).unwrap();
+    assert!(results[0].error.is_none(), "{:?}", results[0]);
+    assert!(results[1].error.is_some());
+    assert!(results[2].error.is_none(), "{:?}", results[2]);
+}
+
+#[test]
+fn annotations_survive_a_round_trip() {
+    let doc = rashevsky::sbml::read::read_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../models/e_coli_core/e_coli_core.xml.gz")).unwrap();
+    let again = rashevsky::sbml::read::read_str(&rashevsky::sbml::write::write_string(&doc)).unwrap();
+    let count = |d: &rashevsky::sbml::Document| -> usize {
+        d.model.reactions.iter().map(|r| r.annotations.len()).sum::<usize>() + d.model.species.iter().map(|s| s.annotations.len()).sum::<usize>()
+    };
+    assert!(count(&doc) > 1000);
+    assert_eq!(count(&doc), count(&again));
+}

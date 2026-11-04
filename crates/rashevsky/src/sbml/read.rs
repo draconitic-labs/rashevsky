@@ -29,11 +29,29 @@ pub fn read_str(xml: &str) -> Result<Document> {
     if root.name != "sbml" {
         return Err(Error::Sbml(format!("root element is <{}>, expected <sbml>", root.name)));
     }
+    // A package marked required changes what the model means, so a model using one cannot be read here.
+    for (key, value) in &root.attrs {
+        if let Some(package) = key.strip_suffix(":required")
+            && value == "true"
+            && !matches!(package, "fbc" | "groups")
+            && root.children.iter().any(|c| uses_package(c, package))
+        {
+            return Err(Error::Sbml(format!("this model requires the {package} package, which this engine does not implement")));
+        }
+    }
     let level: u32 = parse_num(root.attr("level"), "level")?;
     let version: u32 = parse_num(root.attr("version"), "version")?;
     let model = root.child("model").ok_or_else(|| Error::Sbml("no <model> element".into()))?;
     let model = read_model(model, level)?;
     Ok(Document { level, version, packages, model })
+}
+
+/// True when an element or attribute below this node belongs to a package.
+fn uses_package(node: &Node, package: &str) -> bool {
+    let prefix = format!("{package}:");
+    node.name.starts_with(&prefix)
+        || node.attrs.iter().any(|(k, _)| k.starts_with(&prefix))
+        || node.children.iter().any(|c| uses_package(c, package))
 }
 
 fn parse_num<T: std::str::FromStr>(v: Option<&str>, what: &str) -> Result<T> {
@@ -236,7 +254,7 @@ fn read_reaction(r: &Node, level: u32) -> Result<Reaction> {
     if out.gene_rule.is_none()
         && let Some(notes) = r.child("notes")
     {
-        out.gene_rule = legacy_gene_rule(&notes.deep_text());
+        out.gene_rule = legacy_gene_rule(notes);
     }
     Ok(out)
 }
@@ -245,6 +263,8 @@ fn read_reaction(r: &Node, level: u32) -> Result<Reaction> {
 fn gpa_rule(node: &Node) -> String {
     match node.name.as_str() {
         "fbc:geneProductRef" => text_attr(node, "fbc:geneProduct"),
+        // FBC version 1.
+        "fbc:gene" => text_attr(node, "fbc:reference"),
         "fbc:and" | "fbc:or" => {
             let sep = if node.name == "fbc:and" { " and " } else { " or " };
             let parts: Vec<String> = node.children.iter().map(|c| format!("({})", gpa_rule(c))).collect();
@@ -254,14 +274,30 @@ fn gpa_rule(node: &Node) -> String {
     }
 }
 
+/// Text of each element in the notes, so that paragraphs written on one line stay apart.
+fn note_lines(node: &Node, out: &mut Vec<String>) {
+    if !node.text.trim().is_empty() {
+        out.extend(node.text.lines().map(str::to_string));
+    }
+    for child in &node.children {
+        note_lines(child, out);
+        if !child.tail.trim().is_empty() {
+            out.extend(child.tail.lines().map(str::to_string));
+        }
+    }
+}
+
 /// COBRA-style `GENE_ASSOCIATION: ...` or `GPR: ...` line in the reaction notes.
-fn legacy_gene_rule(notes: &str) -> Option<String> {
+fn legacy_gene_rule(notes: &Node) -> Option<String> {
+    let mut lines = Vec::new();
+    note_lines(notes, &mut lines);
     for key in ["GENE_ASSOCIATION:", "GENE ASSOCIATION:", "GPR:"] {
-        if let Some(pos) = notes.find(key) {
-            let rest = &notes[pos + key.len()..];
-            let line = rest.lines().next().unwrap_or_default().trim();
-            if !line.is_empty() {
-                return Some(line.to_string());
+        for line in &lines {
+            if let Some(pos) = line.find(key) {
+                let rule = line[pos + key.len()..].trim();
+                if !rule.is_empty() {
+                    return Some(rule.to_string());
+                }
             }
         }
     }
@@ -312,11 +348,26 @@ fn read_fbc(node: &Node, model: &mut SbmlModel) -> Result<()> {
             };
             if let Some(fluxes) = o.child("fbc:listOfFluxObjectives") {
                 for f in fluxes.children_named("fbc:fluxObjective") {
+                    if f.attr("fbc:variableType") == Some("quadratic") {
+                        model.unsupported_fbc = Some("a quadratic objective term".to_string());
+                    }
                     let coef = opt_f64(f, "fbc:coefficient")?.unwrap_or(1.0);
                     objective.flux_objectives.push((text_attr(f, "fbc:reaction"), coef));
                 }
             }
             model.objectives.push(objective);
+        }
+    }
+    if node.child("fbc:listOfUserDefinedConstraints").is_some_and(|c| !c.children.is_empty()) {
+        model.unsupported_fbc = Some("user-defined constraints".to_string());
+    }
+    // FBC version 1 keeps gene rules apart from the reactions.
+    if let Some(list) = node.child("fbc:listOfGeneAssociations") {
+        for a in list.children_named("fbc:geneAssociation") {
+            let rid = text_attr(a, "fbc:reaction");
+            if let (Some(inner), Some(r)) = (a.children.first(), model.reactions.iter_mut().find(|r| r.id == rid)) {
+                r.gene_rule = Some(gpa_rule(inner));
+            }
         }
     }
     if let Some(genes) = node.child("fbc:listOfGeneProducts") {
@@ -343,8 +394,8 @@ fn read_fbc(node: &Node, model: &mut SbmlModel) -> Result<()> {
             });
             if let Some(r) = model.reactions.iter_mut().find(|r| r.id == rid) {
                 match op.as_str() {
-                    "lessEqual" => r.upper_bound = Some(pid),
-                    "greaterEqual" => r.lower_bound = Some(pid),
+                    "lessEqual" | "less" => r.upper_bound = Some(pid),
+                    "greaterEqual" | "greater" => r.lower_bound = Some(pid),
                     "equal" => {
                         r.lower_bound = Some(pid.clone());
                         r.upper_bound = Some(pid);

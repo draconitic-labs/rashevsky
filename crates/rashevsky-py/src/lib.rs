@@ -493,7 +493,13 @@ impl PyKinetic {
             .map_err(err)?;
         let species: BTreeMap<&str, f64> = m.species.iter().map(|x| (x.id.as_str(), s.values[x.view])).collect();
         let fluxes: BTreeMap<&str, f64> = m.reactions.iter().zip(&s.fluxes).map(|(r, v)| (r.id.as_str(), *v)).collect();
-        result(py, &json!({"species": species, "fluxes": fluxes, "residual": s.residual}))
+        result(
+            py,
+            &json!({
+                "species": species, "fluxes": fluxes, "residual": s.residual,
+                "largest_eigenvalue": s.largest_eigenvalue, "stable": s.stable,
+            }),
+        )
     }
 
     /// Metabolic control analysis at the steady state; matrices are lists of rows, scaled.

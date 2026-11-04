@@ -118,13 +118,24 @@ fn best_sbml(dir: &Path, case: &str) -> Option<std::path::PathBuf> {
     None
 }
 
+/// How a suite run reads its cases.
+#[derive(Clone, Debug, Default)]
+pub struct SuiteOptions {
+    /// Integration method.
+    pub method: Method,
+    /// Read this SBML version, such as `l2v5`, rather than the newest in each case.
+    pub level: Option<String>,
+    /// Write each model and read it back before running it.
+    pub round_trip: bool,
+}
+
 fn time_course(
-    path: &Path,
+    doc: &crate::sbml::Document,
     settings: &Settings,
     results: &(Vec<String>, Vec<Vec<f64>>),
     method: Method,
 ) -> Result<Option<String>> {
-    let model = KineticModel::read_sbml(path)?;
+    let model = KineticModel::compile(doc)?;
     let times: Vec<f64> = results.1.iter().map(|r| r[0]).collect();
     let options = SimOptions { method, ..SimOptions::default() };
     let course = simulate(&model, &times, &options)?;
@@ -152,9 +163,8 @@ fn time_course(
 }
 
 /// FBC cases: objective and fluxes at the reference tolerance, by the column names of the results.
-fn flux_balance(path: &Path, settings: &Settings, results: &(Vec<String>, Vec<Vec<f64>>)) -> Result<Option<String>> {
-    let doc = crate::sbml::read::read_file(path)?;
-    let model = crate::Model::from_document(&doc)?;
+fn flux_balance(doc: &crate::sbml::Document, settings: &Settings, results: &(Vec<String>, Vec<Vec<f64>>)) -> Result<Option<String>> {
+    let model = crate::Model::from_document(doc)?;
     let solution = crate::cb::fba(&model)?;
     let row = results.1.first().ok_or_else(|| Error::Invalid("no result row".into()))?;
     for (c, name) in results.0.iter().enumerate() {
@@ -180,7 +190,7 @@ fn flux_balance(path: &Path, settings: &Settings, results: &(Vec<String>, Vec<Ve
 }
 
 /// Runs one case directory.
-pub fn run_case(dir: &Path, method: Method) -> Result<CaseResult> {
+pub fn run_case(dir: &Path, options: &SuiteOptions) -> Result<CaseResult> {
     let case = dir.file_name().and_then(|s| s.to_str()).unwrap_or_default().to_string();
     let read = |suffix: &str| std::fs::read_to_string(dir.join(format!("{case}-{suffix}")));
     let settings = parse_settings(&read("settings.txt")?);
@@ -213,17 +223,29 @@ pub fn run_case(dir: &Path, method: Method) -> Result<CaseResult> {
         result.detail = Some("hierarchical model composition (comp package)".into());
         return Ok(result);
     }
-    let Some(path) = best_sbml(dir, &case) else {
-        result.detail = Some("no SBML file".into());
+    let path = match &options.level {
+        Some(level) => Some(dir.join(format!("{case}-sbml-{level}.xml"))).filter(|p| p.exists()),
+        None => best_sbml(dir, &case),
+    };
+    let Some(path) = path else {
+        result.applicable = false;
+        result.detail = Some("no SBML file at this level".into());
         return Ok(result);
     };
     let started = std::time::Instant::now();
     let results = parse_results(&read("results.csv")?)?;
-    let outcome = if test_type.starts_with("FluxBalance") {
-        flux_balance(&path, &settings, &results)
-    } else {
-        time_course(&path, &settings, &results, method)
+    let run = || -> Result<Option<String>> {
+        let mut doc = crate::sbml::read::read_file(&path)?;
+        if options.round_trip {
+            doc = crate::sbml::read::read_str(&crate::sbml::write::write_string(&doc))?;
+        }
+        if test_type.starts_with("FluxBalance") {
+            flux_balance(&doc, &settings, &results)
+        } else {
+            time_course(&doc, &settings, &results, options.method)
+        }
     };
+    let outcome = run();
     result.seconds = started.elapsed().as_secs_f64();
     match outcome {
         Ok(None) => result.passed = true,
@@ -234,7 +256,7 @@ pub fn run_case(dir: &Path, method: Method) -> Result<CaseResult> {
 }
 
 /// Runs every case under `root` in parallel. `filter` keeps cases by number.
-pub fn run_suite(root: &Path, method: Method, filter: Option<&[String]>) -> Result<Vec<CaseResult>> {
+pub fn run_suite(root: &Path, options: &SuiteOptions, filter: Option<&[String]>) -> Result<Vec<CaseResult>> {
     let mut dirs: Vec<std::path::PathBuf> = std::fs::read_dir(root)?
         .filter_map(|e| e.ok().map(|e| e.path()))
         .filter(|p| {
@@ -248,6 +270,6 @@ pub fn run_suite(root: &Path, method: Method, filter: Option<&[String]>) -> Resu
         })
         .collect();
     dirs.sort();
-    let parts = crate::parallel::map_chunks(&dirs, 1, |slice| run_case(&slice[0], method));
+    let parts = crate::parallel::map_chunks(&dirs, 1, |slice| run_case(&slice[0], options));
     parts.into_iter().collect()
 }

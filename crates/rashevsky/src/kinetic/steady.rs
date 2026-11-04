@@ -3,6 +3,12 @@
 //! The stoichiometric matrix `N` factors as `N = L Nr`, with `Nr` the independent rows and `L` the
 //! link matrix (Reder 1988). Dependent species follow from the independent ones through the
 //! conserved totals, and damped Newton solves `Nr v(y(s)) = 0` over the independent amounts `s`.
+//!
+//! Newton can reach any root from where integration stops, so a root that is unstable or has negative
+//! amounts sends the integration further before it is accepted. The result reports the largest real
+//! part of the Jacobian's eigenvalues: a positive one means the state is not an attractor, as on a
+//! limit cycle. `delay` reads the present at a steady state. Rates that still depend on the time at
+//! the end of the integration have no steady state, and that is an error.
 
 use super::compile::{Coef, KineticModel};
 use super::ode::OdeSystem;
@@ -40,6 +46,11 @@ pub fn stoichiometric_matrix(model: &KineticModel) -> DMatrix<f64> {
 
 /// Finds independent rows and the link matrix.
 pub fn moieties(model: &KineticModel) -> Result<Moieties> {
+    if model.has_varying_stoichiometry() {
+        return Err(Error::Kinetic(
+            "moiety analysis needs fixed stoichiometry, and a coefficient or conversion factor here varies".into(),
+        ));
+    }
     if !model.rate_rules.is_empty() || !model.algebraic.is_empty() {
         return Err(Error::Kinetic(
             "moiety analysis applies to reaction networks without rate or algebraic rules".into(),
@@ -65,7 +76,8 @@ pub fn moieties(model: &KineticModel) -> Result<Moieties> {
 pub struct SteadyOptions {
     /// Largest entry of the rate of change accepted at the solution.
     pub tolerance: f64,
-    /// Integrate over this time first, which selects the attractor reached from the initial state.
+    /// Integrate over this time first, which selects the attractor reached from the initial state. It
+    /// is extended past the last time a rate can jump.
     pub integrate_first: f64,
     /// Newton iterations.
     pub max_iterations: usize,
@@ -90,24 +102,22 @@ pub struct SteadyState {
     pub residual: f64,
     /// Newton iterations used.
     pub iterations: usize,
+    /// Time at which the rates were evaluated.
+    pub time: f64,
+    /// Largest real part of the eigenvalues of the Jacobian over the independent amounts.
+    pub largest_eigenvalue: f64,
+    /// Whether every perturbation decays.
+    pub stable: bool,
 }
 
-/// Solves for a steady state.
-pub fn steady_state(model: &KineticModel, options: &SteadyOptions) -> Result<SteadyState> {
-    let mut y = model.initial_state();
-    if options.integrate_first > 0.0 {
-        let run = simulate(
-            model,
-            &[0.0, options.integrate_first],
-            &SimOptions { method: Method::Rodas4, rtol: 1e-8, atol: 1e-10, ..SimOptions::default() },
-        )?;
-        let vals = &run.values[1];
-        y = model.state_slots.iter().map(|&s| vals[s]).collect();
-    }
+/// How many times the integration is extended, tenfold each, in search of an attractor. A limit cycle uses all of them.
+const EXTENSIONS: usize = 2;
+
+/// Damped Newton from `start`, evaluating at time `time`.
+fn newton(model: &KineticModel, m: &Moieties, start: &[f64], time: f64, options: &SteadyOptions) -> Result<SteadyState> {
     let sys = KineticSystem::new(model, false);
-    let m = moieties(model)?;
-    let n = y.len();
-    let y0 = y.clone();
+    let n = start.len();
+    let y0 = start.to_vec();
     let ind = &m.independent;
     let lift = |s: &[f64]| -> Vec<f64> {
         // y = y0 + L (s - s0)
@@ -118,25 +128,29 @@ pub fn steady_state(model: &KineticModel, options: &SteadyOptions) -> Result<Ste
     let residual_of = |s: &[f64]| -> (Vec<f64>, f64) {
         let full = lift(s);
         let mut f = vec![0.0; n];
-        sys.rhs(0.0, &full, &mut f);
+        sys.rhs(time, &full, &mut f);
         let norm = f.iter().fold(0.0f64, |acc, v| acc.max(v.abs()));
         (f, norm)
     };
-    let mut s: Vec<f64> = ind.iter().map(|&i| y[i]).collect();
+    let reduced_jacobian = |s: &[f64]| -> DMatrix<f64> {
+        let full = lift(s);
+        let mut jac = DMatrix::zeros(n, n);
+        sys.jacobian(time, &full, &mut jac);
+        let mut reduced = DMatrix::zeros(ind.len(), ind.len());
+        let jl = &jac * &m.link;
+        for (row, &i) in ind.iter().enumerate() {
+            reduced.row_mut(row).copy_from(&jl.row(i));
+        }
+        reduced
+    };
+    let mut s: Vec<f64> = ind.iter().map(|&i| y0[i]).collect();
     let (mut f, mut norm) = residual_of(&s);
     let mut iterations = 0;
     // Newton runs until it stops improving, not merely to the tolerance: control coefficients divide
     // by small fluxes, so they need the steady state as exact as the arithmetic allows.
     while norm > 0.0 && iterations < options.max_iterations {
         iterations += 1;
-        let full = lift(&s);
-        let mut jac = DMatrix::zeros(n, n);
-        sys.jacobian(0.0, &full, &mut jac);
-        let mut reduced = DMatrix::zeros(ind.len(), ind.len());
-        let jl = &jac * &m.link;
-        for (row, &i) in ind.iter().enumerate() {
-            reduced.row_mut(row).copy_from(&jl.row(i));
-        }
+        let reduced = reduced_jacobian(&s);
         let rhs = DVector::from_iterator(ind.len(), ind.iter().map(|&i| -f[i]));
         let Some(step) = reduced.lu().solve(&rhs) else {
             return Err(Error::Kinetic("singular Jacobian in the steady-state iteration".into()));
@@ -163,7 +177,92 @@ pub fn steady_state(model: &KineticModel, options: &SteadyOptions) -> Result<Ste
         return Err(Error::Kinetic(format!("no steady state found; residual {norm:e}")));
     }
     let full = lift(&s);
-    let values = sys.values(0.0, &full);
+    let values = sys.values(time, &full);
     let fluxes = model.reactions.iter().map(|r| values[r.rate]).collect();
-    Ok(SteadyState { y: full, values, fluxes, residual: norm, iterations })
+    let reduced = reduced_jacobian(&s);
+    let eigenvalues = reduced.complex_eigenvalues();
+    let largest = eigenvalues.iter().map(|z| z.re).fold(f64::NEG_INFINITY, f64::max);
+    let size = eigenvalues.iter().map(|z| z.norm()).fold(0.0f64, f64::max);
+    let largest_eigenvalue = if eigenvalues.is_empty() { 0.0 } else { largest };
+    Ok(SteadyState {
+        y: full,
+        values,
+        fluxes,
+        residual: norm,
+        iterations,
+        time,
+        largest_eigenvalue,
+        stable: largest_eigenvalue <= 1e-9 * size.max(1.0),
+    })
+}
+
+/// True when a species at this state has a clearly negative amount.
+fn has_negative_amount(model: &KineticModel, state: &SteadyState) -> bool {
+    let scale = model.species.iter().map(|s| state.values[s.amount].abs()).fold(0.0f64, f64::max).max(1.0);
+    model.species.iter().any(|s| state.values[s.amount] < -1e-9 * scale)
+}
+
+/// Rejects a model whose rates still change with the time at `t`.
+fn check_time_settled(model: &KineticModel, y: &[f64], t: f64) -> Result<()> {
+    if !model.reads_time() {
+        return Ok(());
+    }
+    let sys = KineticSystem::new(model, false);
+    let n = y.len();
+    let (mut now, mut later) = (vec![0.0; n], vec![0.0; n]);
+    sys.rhs(t, y, &mut now);
+    sys.rhs(2.0 * t + 1.0, y, &mut later);
+    let scale = now.iter().chain(&later).fold(1.0f64, |acc, v| acc.max(v.abs()));
+    if now.iter().zip(&later).any(|(a, b)| (a - b).abs() > 1e-8 * scale) {
+        return Err(Error::Kinetic(format!("the rates still depend on the time at t = {t}, so there is no steady state")));
+    }
+    Ok(())
+}
+
+/// Solves for a steady state.
+pub fn steady_state(model: &KineticModel, options: &SteadyOptions) -> Result<SteadyState> {
+    let m = moieties(model)?;
+    let frozen = model.has_delay.then(|| model.without_delays());
+    let analysed = frozen.as_ref().unwrap_or(model);
+    let integrate = |until: f64| -> Result<Vec<f64>> {
+        if until <= 0.0 {
+            return Ok(model.initial_state());
+        }
+        let run = simulate(
+            model,
+            &[0.0, until],
+            &SimOptions { method: Method::Rodas4, rtol: 1e-8, atol: 1e-10, ..SimOptions::default() },
+        )?;
+        let vals = &run.values[1];
+        Ok(model.state_slots.iter().map(|&s| vals[s]).collect())
+    };
+    let last_jump = model.rate_thresholds().last().copied().unwrap_or(0.0);
+    let mut horizon = if options.integrate_first > 0.0 { options.integrate_first.max(2.0 * last_jump) } else { 0.0 };
+    let mut fallback = None;
+    for extension in 0..=EXTENSIONS {
+        let y = integrate(horizon)?;
+        check_time_settled(analysed, &y, horizon)?;
+        let state = newton(analysed, &m, &y, horizon, options);
+        match state {
+            Ok(state) => {
+                let negative = has_negative_amount(model, &state);
+                if state.stable && !negative {
+                    return Ok(state);
+                }
+                if !negative {
+                    fallback = Some(state);
+                }
+            }
+            Err(e) => {
+                if horizon <= 0.0 || extension == EXTENSIONS {
+                    return fallback.ok_or(e);
+                }
+            }
+        }
+        if horizon <= 0.0 {
+            break;
+        }
+        horizon *= 10.0;
+    }
+    fallback.ok_or_else(|| Error::Kinetic("the only steady state found has negative amounts".into()))
 }

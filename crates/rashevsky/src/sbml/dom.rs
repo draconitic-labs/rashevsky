@@ -75,6 +75,8 @@ impl Names {
     fn canonical(&self, raw: &str) -> String {
         match raw.split_once(':') {
             Some((prefix, local)) => match self.prefix_map.get(prefix) {
+                // MathML has no prefix once its namespace is known.
+                Some(canon) if canon.is_empty() => local.to_string(),
                 Some(canon) => format!("{canon}:{local}"),
                 None => format!("{prefix}:{local}"),
             },
@@ -90,6 +92,13 @@ fn open_node(start: &BytesStart<'_>, names: &mut Names, packages: &mut Vec<Strin
         let attr = attr.map_err(|e| bad(&e))?;
         let key = std::str::from_utf8(attr.key.as_ref()).map_err(|e| bad(&e))?.to_string();
         let value = attr.unescape_value().map_err(|e| bad(&e))?.into_owned();
+        // MathML and SBML core can arrive under a prefix of the writer's choosing, and mean the same.
+        let core = value.contains("sbml.org/sbml/level") && (value.ends_with("/core") || !value.contains("/level3/"));
+        if let Some(prefix) = key.strip_prefix("xmlns:")
+            && (value.contains("/Math/MathML") || core)
+        {
+            names.prefix_map.insert(prefix.to_string(), String::new());
+        }
         if let Some(prefix) = key.strip_prefix("xmlns:")
             && let Some(canon) = canonical_package(&value)
         {

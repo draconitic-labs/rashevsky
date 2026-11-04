@@ -157,6 +157,11 @@ fn diff_apply(op: Op, a: &[Expr], x: Var<'_>) -> Expr {
         Op::Root => {
             if a.len() == 1 {
                 power_rule(&a[0], &num(0.5), x)
+            } else if matches!(a[0], Expr::Num(n) if n.fract() == 0.0 && (n as i64) % 2 != 0) {
+                // An odd root is defined below zero, where the power rule's `x^(1/n)` is not.
+                let root = Expr::Apply(Op::Root, vec![a[0].clone(), a[1].clone()]);
+                let power = Expr::Apply(Op::Pow, vec![root, sub(a[0].clone(), num(1.0))]);
+                div(d(1), mul(a[0].clone(), power))
             } else {
                 power_rule(&a[1], &div(num(1.0), a[0].clone()), x)
             }

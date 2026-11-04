@@ -375,6 +375,12 @@ enum Command {
         /// `rodas4` or `bdf`.
         #[arg(long, default_value = "rodas4")]
         method: String,
+        /// Read this SBML version, such as `l2v5`, rather than the newest in each case.
+        #[arg(long)]
+        level: Option<String>,
+        /// Write each model and read it back before running it.
+        #[arg(long)]
+        round_trip: bool,
     },
 }
 
@@ -448,7 +454,10 @@ fn steady_json(km: &KineticModel, state: &SteadyState) -> serde_json::Value {
     let species: BTreeMap<String, f64> = km.species.iter().map(|s| (s.id.clone(), state.values[s.view])).collect();
     let fluxes: BTreeMap<String, f64> =
         km.reactions.iter().zip(&state.fluxes).map(|(r, v)| (r.id.clone(), *v)).collect();
-    serde_json::json!({"species": species, "fluxes": fluxes, "residual": state.residual, "newton_iterations": state.iterations})
+    serde_json::json!({
+        "species": species, "fluxes": fluxes, "residual": state.residual, "newton_iterations": state.iterations,
+        "time": state.time, "largest_eigenvalue": state.largest_eigenvalue, "stable": state.stable,
+    })
 }
 
 fn parse_method(text: &str) -> Result<rashevsky::kinetic::Method> {
@@ -891,10 +900,10 @@ fn run(cli: Cli) -> Result<()> {
             }
             emit(&out, &serde_json::json!({"time": e.time, "runs": e.runs, "mean": mean, "sd": sd}))
         }
-        Command::SbmlSuite { root, cases: list, method } => {
+        Command::SbmlSuite { root, cases: list, method, level, round_trip } => {
             let filter: Option<Vec<String>> = list.map(|l| l.split(',').map(|c| format!("{:0>5}", c.trim())).collect());
-            let chosen = parse_method(&method)?;
-            emit(&out, &rashevsky::suite::run_suite(&root, chosen, filter.as_deref())?)
+            let options = rashevsky::suite::SuiteOptions { method: parse_method(&method)?, level, round_trip };
+            emit(&out, &rashevsky::suite::run_suite(&root, &options, filter.as_deref())?)
         }
     }
 }

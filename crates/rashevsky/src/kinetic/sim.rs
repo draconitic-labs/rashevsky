@@ -108,7 +108,8 @@ impl<'a> KineticSystem<'a> {
             t0: 0.0,
             y0: model.initial_state(),
             vals0: model.initial.clone(),
-            numeric_jacobian: numeric_jacobian || model.jacobian.is_none(),
+            // The symbolic derivatives leave `delay` out, which would cost the integrator its order.
+            numeric_jacobian: numeric_jacobian || model.jacobian.is_none() || model.has_delay,
         }
     }
 
@@ -293,6 +294,15 @@ struct Driver<'a> {
     trig: Vec<bool>,
     pending: Vec<PendingEvent>,
     rng: ChaCha8Rng,
+    /// Times at which a rate can jump, and at which a trigger can change.
+    rate_thresholds: Vec<f64>,
+    trigger_thresholds: Vec<f64>,
+}
+
+/// How far either side of a rate threshold integration stops. The state moves by a negligible amount
+/// over this gap, and no stage of a step sees the jump.
+fn threshold_margin(t: f64) -> f64 {
+    1e-12 * (1.0 + t.abs())
 }
 
 impl Driver<'_> {
@@ -323,6 +333,9 @@ impl Driver<'_> {
             for (k, e) in self.model.events.iter().enumerate() {
                 if current[k] && !self.trig[k] {
                     let delay = e.delay.as_ref().map_or(0.0, |d| eval(d, &vals, t, &self.sys));
+                    if delay < 0.0 || delay.is_nan() {
+                        return Err(Error::Kinetic(format!("event {} has delay {delay} at t = {t}", e.id)));
+                    }
                     let values = if e.use_values_from_trigger_time {
                         Some(e.assignments.iter().map(|(_, c)| eval(c, &vals, t, &self.sys)).collect())
                     } else {
@@ -375,7 +388,12 @@ impl Driver<'_> {
     fn apply(&self, t: f64, y: &mut [f64], event: usize, values: &[f64]) {
         let e = &self.model.events[event];
         let vals = self.sys.values(t, y);
+        let mut assigned = Vec::with_capacity(e.assignments.len());
         for ((target, _), &value) in e.assignments.iter().zip(values) {
+            assigned.push(match *target {
+                Target::State(i) => self.model.state_slots[i],
+                Target::Amount { state, .. } => self.model.state_slots[state],
+            });
             match *target {
                 Target::State(i) => {
                     let slot = self.model.state_slots[i];
@@ -396,6 +414,20 @@ impl Driver<'_> {
                 Target::Amount { state, compartment, hosu } => {
                     y[state] = if hosu { value } else { value * vals[compartment] };
                 }
+            }
+        }
+        // A size that moves through a rule on an assigned symbol treats rate-rule species the same way.
+        let after = self.sys.values(t, y);
+        for s in &self.model.species {
+            if !s.has_only_substance_units
+                && matches!(s.kind, SpeciesKind::RateRule | SpeciesKind::Algebraic)
+                && !assigned.contains(&s.compartment)
+                && !assigned.contains(&s.view)
+                && after[s.compartment] != vals[s.compartment]
+                && after[s.compartment] != 0.0
+                && let Some(k) = self.model.state_slots.iter().position(|&ss| ss == s.view)
+            {
+                y[k] *= vals[s.compartment] / after[s.compartment];
             }
         }
     }
@@ -457,12 +489,54 @@ impl Driver<'_> {
         self.pending.iter().map(|p| p.exec_time).fold(f64::INFINITY, f64::min)
     }
 
+    /// Integrates to `limit`, keeping the history that `delay` reads.
+    fn integrate_to(&mut self, limit: f64) -> Result<()> {
+        while self.int.time() < limit {
+            self.int.step(&self.sys, limit, &self.tol)?;
+            if self.model.has_delay {
+                let (t, y) = (self.int.time(), self.int.state().to_vec());
+                self.push_history(t, &y);
+            }
+        }
+        Ok(())
+    }
+
+    /// Moves past a rate threshold: nothing happens to the state, and integration restarts on the far
+    /// side so that no stage of a step straddles the jump.
+    fn cross(&mut self, threshold: f64) -> Result<()> {
+        let at = threshold + threshold_margin(threshold);
+        let mut y = self.int.state().to_vec();
+        self.push_history(at, &y);
+        if self.handle_events(at, &mut y)? {
+            self.equilibrate(at, &mut y)?;
+            self.push_history(at, &y);
+        }
+        self.int.restart(&self.sys, at, &y);
+        Ok(())
+    }
+
     /// Integrates to `target`, handling every event on the way.
     fn advance(&mut self, target: f64) -> Result<()> {
         while self.int.time() < target {
             let t0 = self.int.time();
             let y0 = self.int.state().to_vec();
-            let limit = target.min(self.next_exec()).max(t0);
+            let mut limit = target.min(self.next_exec()).max(t0);
+            if let Some(&threshold) = self.rate_thresholds.iter().find(|&&th| th + threshold_margin(th) > t0) {
+                let below = threshold - threshold_margin(threshold);
+                if t0 >= below {
+                    if target > threshold {
+                        self.cross(threshold)?;
+                        continue;
+                    }
+                    // An output sits on the threshold: land on it, and cross on the way out.
+                    limit = limit.min(threshold);
+                } else {
+                    limit = limit.min(below);
+                }
+            }
+            if let Some(&threshold) = self.trigger_thresholds.iter().find(|&&th| th > t0) {
+                limit = limit.min(threshold);
+            }
             if limit > t0 {
                 self.int.step(&self.sys, limit, &self.tol)?;
             }
@@ -508,24 +582,21 @@ impl Driver<'_> {
                 if self.model.has_delay {
                     self.sys.history.borrow_mut().retain(|p| p.t <= t0);
                 }
-                while self.int.time() < hi {
-                    self.int.step(&self.sys, hi, &self.tol)?;
-                }
+                self.integrate_to(hi)?;
                 let mut y = self.int.state().to_vec();
                 let located = self.triggers_at(hi, &y);
                 if !self.transition(&located) {
                     // The exact state lags the interpolant; nudge across the transition.
                     let nudge = hi + 1e-10 * (1.0 + hi.abs());
                     if nudge < t1 {
-                        while self.int.time() < nudge {
-                            self.int.step(&self.sys, nudge, &self.tol)?;
-                        }
+                        self.integrate_to(nudge)?;
                         y = self.int.state().to_vec();
                     } else {
                         self.int.restart(&self.sys, t0, &y0);
-                        while self.int.time() < t1 {
-                            self.int.step(&self.sys, t1, &self.tol)?;
+                        if self.model.has_delay {
+                            self.sys.history.borrow_mut().retain(|p| p.t <= t0);
                         }
+                        self.integrate_to(t1)?;
                         y = y1.clone();
                     }
                 }
@@ -608,7 +679,11 @@ pub fn simulate(model: &KineticModel, times: &[f64], options: &SimOptions) -> Re
     if times.windows(2).any(|w| w[1] < w[0]) {
         return Err(Error::Invalid("output times must not decrease".into()));
     }
-    let t0 = times[0];
+    if times[0] < 0.0 {
+        return Err(Error::Invalid("output times must not be negative".into()));
+    }
+    // The dynamics start at time zero whatever the first output time.
+    let t0 = 0.0;
     let mut y = model.initial_state();
     let sys = KineticSystem::new(model, options.numeric_jacobian);
     let int: Box<dyn Integrator> = match options.method {
@@ -628,6 +703,8 @@ pub fn simulate(model: &KineticModel, times: &[f64], options: &SimOptions) -> Re
         trig: model.events.iter().map(|e| e.initial_value).collect(),
         pending: Vec::new(),
         rng: ChaCha8Rng::seed_from_u64(options.seed),
+        rate_thresholds: model.rate_thresholds(),
+        trigger_thresholds: model.trigger_thresholds(),
     };
     driver.sys.t0 = t0;
     driver.equilibrate(t0, &mut y)?;

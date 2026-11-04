@@ -56,6 +56,9 @@ pub struct SbmlModel {
     pub gene_products: Vec<GeneProduct>,
     /// Groups-package groups.
     pub groups: Vec<Group>,
+    /// FBC content that the flux model cannot represent, when present.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unsupported_fbc: Option<String>,
 }
 
 /// A function definition.

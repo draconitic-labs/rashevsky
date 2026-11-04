@@ -9,7 +9,6 @@
 
 use super::compile::{KineticModel, NoDelay, compile_expr, eval};
 use super::diff::{Var, diff};
-use super::expr::Expr;
 use super::steady::{Moieties, SteadyState, moieties};
 use crate::error::{Error, Result};
 use crate::linalg::nullspace;
@@ -94,7 +93,7 @@ fn solve_refined(a: &DMatrix<f64>, b: &DMatrix<f64>) -> Option<DMatrix<f64>> {
 }
 
 /// Unscaled elasticity matrix at given slot values, by symbolic differentiation.
-pub fn elasticities(model: &KineticModel, values: &[f64]) -> Result<DMatrix<f64>> {
+pub fn elasticities(model: &KineticModel, values: &[f64], time: f64) -> Result<DMatrix<f64>> {
     if model.flat_rates.len() != model.reactions.len() {
         return Err(Error::Kinetic("rate laws were too large to differentiate".into()));
     }
@@ -107,26 +106,9 @@ pub fn elasticities(model: &KineticModel, values: &[f64]) -> Result<DMatrix<f64>
         for name in syms {
             if let Some(k) = model.state_names.iter().position(|n| *n == name) {
                 let d = diff(law, Var::Sym(&name));
-                if !matches!(d, Expr::Num(v) if v == 0.0) {
+                if !matches!(d, super::expr::Expr::Num(v) if v == 0.0) {
                     let c = compile_expr(&d, &model.index)?;
-                    e[(j, k)] = eval(&c, values, 0.0, &NoDelay);
-                }
-            }
-        }
-    }
-    Ok(e)
-}
-
-/// Partial derivatives of each rate with respect to constant symbols, `reactions x parameters`.
-pub fn parameter_elasticities(model: &KineticModel, values: &[f64], parameters: &[String]) -> Result<DMatrix<f64>> {
-    let mut e = DMatrix::zeros(model.reactions.len(), parameters.len());
-    for (j, law) in model.flat_rates.iter().enumerate() {
-        for (k, name) in parameters.iter().enumerate() {
-            if law.mentions(name) {
-                let d = diff(law, Var::Sym(name));
-                if !matches!(d, Expr::Num(v) if v == 0.0) {
-                    let c = compile_expr(&d, &model.index)?;
-                    e[(j, k)] = eval(&c, values, 0.0, &NoDelay);
+                    e[(j, k)] = eval(&c, values, time, &NoDelay);
                 }
             }
         }
@@ -136,8 +118,11 @@ pub fn parameter_elasticities(model: &KineticModel, values: &[f64], parameters: 
 
 /// Runs control analysis at `state`.
 pub fn control_analysis(model: &KineticModel, state: &SteadyState) -> Result<ControlAnalysis> {
+    if model.has_delay {
+        return Err(Error::Kinetic("control analysis does not cover delay".into()));
+    }
     let m = moieties(model)?;
-    let e = elasticities(model, &state.values)?;
+    let e = elasticities(model, &state.values, state.time)?;
     let reduced = &m.nr * &e * &m.link;
     let solved = solve_refined(&reduced, &m.nr)
         .ok_or_else(|| Error::Kinetic("the reduced Jacobian is singular at this steady state".into()))?;

@@ -244,6 +244,11 @@ pub struct KineticModel {
     pub flat_rates: Vec<Expr>,
     /// Names of the state variables.
     pub state_names: Vec<String>,
+    /// Slots and defining expressions as compiled, which overrides start from.
+    compiled_initial: Vec<f64>,
+    compiled_items: Vec<(usize, C)>,
+    /// Overrides in force, by slot.
+    overrides: Vec<(usize, f64)>,
 }
 
 /// True when an expression reads the simulation time.
@@ -311,6 +316,25 @@ fn collect_thresholds(c: &C, varying: &HashSet<usize>, initial: &[f64], out: &mu
     }
 }
 
+fn tidy_thresholds(mut found: Vec<f64>) -> Vec<f64> {
+    found.retain(|t| t.is_finite() && *t > 0.0);
+    found.sort_by(f64::total_cmp);
+    found.dedup();
+    found
+}
+
+fn strip_delays(c: &C) -> C {
+    match c {
+        C::Num(_) | C::Slot(_) | C::Time => c.clone(),
+        C::Ap(op, args) => C::Ap(*op, args.iter().map(strip_delays).collect()),
+        C::Piece(pieces, otherwise) => C::Piece(
+            pieces.iter().map(|(v, w)| (strip_delays(v), strip_delays(w))).collect(),
+            otherwise.as_ref().map(|o| Box::new(strip_delays(o))),
+        ),
+        C::Delay(x, _) => strip_delays(x),
+    }
+}
+
 impl KineticModel {
     /// Slots whose values change during a simulation.
     pub fn varying_slots(&self) -> HashSet<usize> {
@@ -331,21 +355,39 @@ impl KineticModel {
             || self.events.iter().any(|e| reads_time(&e.trigger))
     }
 
-    /// Positive times at which a comparison with the time changes value, in increasing order. Rates can
-    /// jump there, so integration stops on them instead of stepping across.
-    pub fn time_thresholds(&self) -> Vec<f64> {
+    /// Positive times at which a comparison with the time inside a rate or rule changes value, in
+    /// increasing order. Rates can jump there, so integration does not step across them.
+    pub fn rate_thresholds(&self) -> Vec<f64> {
         let varying = self.varying_slots();
         let mut found = Vec::new();
         for (_, c) in self.derived.iter().chain(&self.rate_rules).chain(&self.algebraic) {
             collect_thresholds(c, &varying, &self.initial, &mut found);
         }
+        tidy_thresholds(found)
+    }
+
+    /// Positive times at which a comparison with the time inside a trigger changes value, in increasing
+    /// order. A step ends on each, so that a trigger window cannot fall between the points examined.
+    pub fn trigger_thresholds(&self) -> Vec<f64> {
+        let varying = self.varying_slots();
+        let mut found = Vec::new();
         for e in &self.events {
             collect_thresholds(&e.trigger, &varying, &self.initial, &mut found);
         }
-        found.retain(|t| t.is_finite() && *t > 0.0);
-        found.sort_by(f64::total_cmp);
-        found.dedup();
-        found
+        tidy_thresholds(found)
+    }
+
+    /// The same model with every `delay` reading the present, as it does at a steady state.
+    pub fn without_delays(&self) -> KineticModel {
+        let mut m = self.clone();
+        for (_, c) in m.derived.iter_mut().chain(&mut m.rate_rules).chain(&mut m.algebraic) {
+            *c = strip_delays(c);
+        }
+        m.has_delay = false;
+        // The symbolic derivatives leave `delay` out, so derivatives are taken numerically.
+        m.jacobian = None;
+        m.time_derivative.clear();
+        m
     }
 
     /// Stoichiometric coefficients or conversion factors that change during a simulation, by reaction.
@@ -589,35 +631,91 @@ impl KineticModel {
     /// Compiles a parsed SBML document.
     pub fn compile(doc: &Document) -> Result<Self> {
         let src = &doc.model;
-        let mut b = Builder {
+        let builder = || Builder {
             level: doc.level,
             slots: HashMap::new(),
             names: Vec::new(),
             funcs: src.functions.iter().map(|f| (f.id.as_str(), f)).collect(),
         };
-        build(&mut b, src)
+        let model = build(&mut builder(), src, &HashMap::new())?;
+        // A fast reaction's law can be of any size, so its multiple is chosen to put the reaction's rate
+        // constant at the scale of the singular perturbation.
+        let factors = model.fast_law_factors();
+        if factors.is_empty() {
+            return Ok(model);
+        }
+        build(&mut builder(), src, &factors)
     }
 
-    /// Overrides the initial value of a symbol and re-evaluates everything that depends on it.
-    /// For a species name the value is an amount when written `S#a`, otherwise what math sees.
+    /// Overrides the value of a symbol at the start and re-evaluates everything that depends on it. The
+    /// result does not depend on the order of overrides. For a species name the value is an amount when
+    /// written `S#a`, otherwise what math sees. A symbol that a rule determines cannot be overridden.
     pub fn set_value(&mut self, name: &str, value: f64) -> Result<()> {
         let slot = self.slot(name)?;
-        self.initial_items.retain(|(s, _)| *s != slot);
-        self.initial[slot] = value;
-        // When the math value of an amount species is overridden, the amount follows.
-        if let Some(sp) = self.species.iter().find(|s| s.view == slot)
-            && matches!(sp.kind, SpeciesKind::Amount | SpeciesKind::Constant)
-        {
-            let size = self.initial[sp.compartment];
-            let amount = if sp.has_only_substance_units { value } else { value * size };
-            let amount_slot = sp.amount;
-            self.initial_items.retain(|(s, _)| *s != amount_slot);
-            self.initial[amount_slot] = amount;
+        let species_view = self.species.iter().any(|s| s.view == slot && matches!(s.kind, SpeciesKind::Amount | SpeciesKind::Constant));
+        let species_amount = self.species.iter().any(|s| s.amount == slot);
+        if !species_view && !species_amount && self.derived.iter().any(|(d, _)| *d == slot) {
+            return Err(Error::Invalid(format!("`{name}` is determined by a rule, so it cannot be overridden")));
         }
-        for _ in 0..self.initial_items.len() + 3 {
+        if self.algebraic.iter().any(|(state, _)| self.state_slots[*state] == slot) {
+            return Err(Error::Invalid(format!("`{name}` is determined by an algebraic rule, so it cannot be overridden")));
+        }
+        self.overrides.retain(|(s, _)| *s != slot);
+        self.overrides.push((slot, value));
+        self.apply_overrides();
+        Ok(())
+    }
+
+    /// Rebuilds the initial values from the compiled ones. Everything but species values goes first, so
+    /// that a species value given as a concentration meets its compartment's final size.
+    fn apply_overrides(&mut self) {
+        self.initial.clone_from(&self.compiled_initial);
+        self.initial_items.clone_from(&self.compiled_items);
+        let overrides = self.overrides.clone();
+        let species_of: Vec<Option<usize>> =
+            overrides.iter().map(|(slot, _)| self.species.iter().position(|s| s.view == *slot || s.amount == *slot)).collect();
+        for (&(slot, value), _) in overrides.iter().zip(&species_of).filter(|(_, owner)| owner.is_none()) {
+            self.initial_items.retain(|(s, _)| *s != slot);
+            self.initial[slot] = value;
+        }
+        self.settle_initial(&[]);
+        for (&(slot, value), owner) in overrides.iter().zip(&species_of) {
+            let Some(owner) = owner else { continue };
+            let sp = &self.species[*owner];
+            let (view, amount, compartment, hosu) = (sp.view, sp.amount, sp.compartment, sp.has_only_substance_units);
+            let size = self.initial[compartment];
+            let (view_value, amount_value) = if slot == amount {
+                (if hosu { value } else { value / size }, value)
+            } else {
+                (value, if hosu { value } else { value * size })
+            };
+            self.initial_items.retain(|(s, _)| *s != view && *s != amount);
+            self.initial[view] = view_value;
+            self.initial[amount] = amount_value;
+        }
+        self.settle_initial(&[]);
+        if !self.algebraic.is_empty() {
+            let targets: Vec<usize> = self.algebraic.iter().map(|(state, _)| self.state_slots[*state]).collect();
+            for _ in 0..3 {
+                solve_algebraic_initial(self);
+                self.settle_initial(&targets);
+            }
+            solve_algebraic_initial(self);
+        }
+    }
+
+    /// Re-evaluates the initial definitions until stable, leaving out the slots in `keep`.
+    fn settle_initial(&mut self, keep: &[usize]) {
+        let items = std::mem::take(&mut self.initial_items);
+        for _ in 0..items.len() + 3 {
+            let base = self.initial.clone();
+            let context = PreStart { items: &items, base: &base, rate_of_slots: &self.rate_of_slots };
             let mut changed = false;
-            for (s, c) in &self.initial_items {
-                let v = eval(c, &self.initial, 0.0, &NoDelay);
+            for (s, c) in &items {
+                if keep.contains(s) {
+                    continue;
+                }
+                let v = if self.has_delay { eval(c, &self.initial, 0.0, &context) } else { eval(c, &self.initial, 0.0, &NoDelay) };
                 let old = self.initial[*s];
                 if v.to_bits() != old.to_bits() && !(v.is_nan() && old.is_nan()) {
                     self.initial[*s] = v;
@@ -628,7 +726,7 @@ impl KineticModel {
                 break;
             }
         }
-        Ok(())
+        self.initial_items = items;
     }
 
     /// Number of state variables.
@@ -692,6 +790,41 @@ impl KineticModel {
         }
     }
 
+    /// For fast reactions whose law is far from unit size, the factor that brings its largest partial
+    /// derivative at the initial state to [`FAST_SCALE`].
+    fn fast_law_factors(&self) -> HashMap<String, f64> {
+        let mut factors = HashMap::new();
+        if self.flat_rates.len() != self.reactions.len() {
+            return factors;
+        }
+        for (j, law) in self.flat_rates.iter().enumerate() {
+            if !self.fast[j] {
+                continue;
+            }
+            let mut syms = Vec::new();
+            law.symbols(&mut syms);
+            let mut largest = 0.0f64;
+            for name in &syms {
+                if self.state_names.contains(name) {
+                    let d = diff::diff(law, Var::Sym(name));
+                    if let Ok(c) = compile_expr(&d, &self.index) {
+                        let v = eval(&c, &self.initial, 0.0, &NoDelay);
+                        if v.is_finite() {
+                            largest = largest.max(v.abs());
+                        }
+                    }
+                }
+            }
+            if largest > 0.0 {
+                let factor = FAST_SCALE / largest;
+                if !(1e-3..=1e3).contains(&factor) {
+                    factors.insert(self.reactions[j].id.clone(), factor);
+                }
+            }
+        }
+        factors
+    }
+
     /// True if any reaction is fast.
     pub fn has_fast(&self) -> bool {
         self.fast.iter().any(|&f| f)
@@ -704,15 +837,23 @@ struct SpeciesInit {
     amount: Option<Expr>,
 }
 
-fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
+/// The slot name of a local parameter. An SBML identifier has no dot, so this cannot clash.
+fn local_slot_name(reaction: &str, parameter: &str) -> String {
+    format!("{reaction}.{parameter}")
+}
+
+fn build(b: &mut Builder<'_>, src: &SbmlModel, fast_factors: &HashMap<String, f64>) -> Result<KineticModel> {
+    let fast_scale = FAST_SCALE;
     let local_substituted = |r: &sbml::Reaction| -> Result<Expr> {
         let Some(law) = &r.kinetic_law else { return Ok(Expr::Num(0.0)) };
-        let locals: HashMap<&str, f64> =
-            r.local_parameters.iter().map(|p| (p.id.as_str(), p.value.unwrap_or(f64::NAN))).collect();
+        // A local parameter gets its own slot, named `reaction.parameter`, so that it can be overridden,
+        // fitted and analysed like a global one.
+        let locals: HashSet<&str> = r.local_parameters.iter().map(|p| p.id.as_str()).collect();
         // A local parameter is constant, so `rateOf` of one is zero.
-        let shadowed = zero_rate_of(law, &|s| locals.contains_key(s));
-        let law = shadowed.substitute(&|s| locals.get(s).map(|v| Expr::Num(*v)));
-        Ok(if r.fast { mul(law, Expr::Num(FAST_SCALE)) } else { law })
+        let shadowed = zero_rate_of(law, &|s| locals.contains(s));
+        let law = shadowed.substitute(&|s| locals.contains(s).then(|| Expr::Sym(local_slot_name(&r.id, s))));
+        let scale = fast_scale * fast_factors.get(r.id.as_str()).copied().unwrap_or(1.0);
+        Ok(if r.fast { mul(law, Expr::Num(scale)) } else { law })
     };
 
     // Classify symbols.
@@ -774,6 +915,11 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
     // Slots of all named symbols.
     for c in &src.compartments {
         b.slot(&c.id);
+    }
+    for r in &src.reactions {
+        for p in &r.local_parameters {
+            b.slot(&local_slot_name(&r.id, &p.id));
+        }
     }
     for p in &src.parameters {
         b.slot(&p.id);
@@ -1122,6 +1268,11 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
                 plain[slot] = p.value.unwrap_or(f64::NAN);
             }
         }
+        for r in &src.reactions {
+            for p in &r.local_parameters {
+                plain[b.slots[local_slot_name(&r.id, &p.id).as_str()]] = p.value.unwrap_or(f64::NAN);
+            }
+        }
         for (id, e) in &sr_initial {
             let slot = b.slots[id.as_str()];
             if let Some(ia) = ia_of.get(id.as_str()) {
@@ -1201,11 +1352,23 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
         min_constant_lag,
         fast: src.reactions.iter().map(|r| r.fast).collect(),
         rate_of_slots: b.names.iter().enumerate().filter(|(_, n)| n.starts_with("rateOf#")).map(|(i, _)| i).collect(),
+        compiled_items: init_items.clone(),
         initial_items: init_items,
         flat_rates: Vec::new(),
         state_names: state_names.clone(),
+        compiled_initial: Vec::new(),
+        overrides: Vec::new(),
     };
+    // Initial assignments can read what algebraic rules determine, and the reverse.
     solve_algebraic_initial(&mut model);
+    if !model.algebraic.is_empty() {
+        let targets: Vec<usize> = model.algebraic.iter().map(|(state, _)| model.state_slots[*state]).collect();
+        for _ in 0..3 {
+            model.settle_initial(&targets);
+            solve_algebraic_initial(&mut model);
+        }
+    }
+    model.compiled_initial.clone_from(&model.initial);
     build_derivatives(
         &mut model,
         b,

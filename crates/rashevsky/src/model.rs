@@ -109,9 +109,14 @@ impl Model {
     /// Builds the model from a parsed SBML document.
     pub fn from_document(doc: &Document) -> Result<Self> {
         let m = &doc.model;
+        if let Some(what) = &m.unsupported_fbc {
+            return Err(Error::Invalid(format!("this model uses {what} from FBC version 3, which the flux analyses do not implement")));
+        }
         // Initial assignments and rules can define flux bounds and stoichiometries. The kinetic
         // compiler already evaluates them, so its initial values serve when any are present.
-        let evaluated = if m.initial_assignments.is_empty() && m.rules.is_empty() {
+        let has_math_stoichiometry =
+            m.reactions.iter().flat_map(|r| r.reactants.iter().chain(&r.products)).any(|sr| sr.stoichiometry_math.is_some());
+        let evaluated = if m.initial_assignments.is_empty() && m.rules.is_empty() && !has_math_stoichiometry {
             None
         } else {
             crate::kinetic::KineticModel::compile(doc).ok()
@@ -166,7 +171,12 @@ impl Model {
                 for (refs, sign) in [(&r.reactants, -1.0), (&r.products, 1.0)] {
                     for sr in refs {
                         let i = species_index[sr.species.as_str()];
-                        let value = sr.id.as_deref().and_then(&initial_value).or(sr.stoichiometry).unwrap_or(1.0);
+                        let from_math = sr.stoichiometry_math.as_ref().and_then(|e| {
+                            let km = evaluated.as_ref()?;
+                            let c = crate::kinetic::compile::compile_expr(e, &km.index).ok()?;
+                            Some(crate::kinetic::compile::eval(&c, &km.initial, 0.0, &crate::kinetic::compile::NoDelay))
+                        });
+                        let value = from_math.or_else(|| sr.id.as_deref().and_then(&initial_value)).or(sr.stoichiometry).unwrap_or(1.0);
                         *merged.entry(i).or_insert(0.0) += sign * value;
                     }
                 }
@@ -186,6 +196,16 @@ impl Model {
             .as_deref()
             .and_then(|a| m.objectives.iter().find(|o| o.id == a))
             .or_else(|| m.objectives.first());
+        if active.is_none() {
+            // The COBRA convention before FBC: an objective coefficient among the local parameters.
+            for (j, r) in m.reactions.iter().enumerate() {
+                let coef = local_value(r, "OBJECTIVE_COEFFICIENT").unwrap_or(0.0);
+                if coef != 0.0 {
+                    model.objective.push((j, coef));
+                    model.sense = Some(Sense::Maximize);
+                }
+            }
+        }
         if let Some(obj) = active {
             model.sense = Some(if obj.maximize { Sense::Maximize } else { Sense::Minimize });
             let by_id: HashMap<&str, usize> = m.reactions.iter().enumerate().map(|(i, r)| (r.id.as_str(), i)).collect();
@@ -385,6 +405,11 @@ pub fn parse_formula(formula: &str) -> Option<Vec<(String, f64)>> {
     Some(out)
 }
 
+/// A value from a kinetic law's parameters, where COBRA files before FBC keep bounds and objectives.
+fn local_value(r: &crate::sbml::Reaction, name: &str) -> Option<f64> {
+    r.local_parameters.iter().find(|p| p.id == name).and_then(|p| p.value)
+}
+
 fn read_reaction(
     r: &sbml::Reaction,
     params: &HashMap<&str, f64>,
@@ -402,8 +427,10 @@ fn read_reaction(
             },
         }
     };
-    let lb = bound(&r.lower_bound)?.unwrap_or(if r.reversible { f64::NEG_INFINITY } else { 0.0 });
-    let ub = bound(&r.upper_bound)?.unwrap_or(f64::INFINITY);
+    let lb = bound(&r.lower_bound)?
+        .or_else(|| local_value(r, "LOWER_BOUND"))
+        .unwrap_or(if r.reversible { f64::NEG_INFINITY } else { 0.0 });
+    let ub = bound(&r.upper_bound)?.or_else(|| local_value(r, "UPPER_BOUND")).unwrap_or(f64::INFINITY);
     let mut merged: BTreeMap<usize, f64> = BTreeMap::new();
     for (refs, sign) in [(&r.reactants, -1.0), (&r.products, 1.0)] {
         for sr in refs {

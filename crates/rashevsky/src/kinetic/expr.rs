@@ -179,6 +179,8 @@ pub fn apply_op(op: Op, a: &[f64]) -> f64 {
                 a[1].sqrt()
             } else if a[0] == 3.0 {
                 a[1].cbrt()
+            } else if a[1] < 0.0 && a[0].fract() == 0.0 && (a[0] as i64) % 2 != 0 {
+                -pow(-a[1], 1.0 / a[0])
             } else {
                 pow(a[1], 1.0 / a[0])
             }

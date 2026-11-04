@@ -314,10 +314,17 @@ impl Integrator for Rodas4 {
         let mut fx = vec![0.0; n];
         sys.time_derivative(self.t, &self.y, &mut fx);
         let remaining = t_limit - self.t;
+        // A remainder of the order of the rounding in `t` is not a step.
+        let rounding = 8.0 * f64::EPSILON * t_limit.abs();
+        if remaining <= rounding {
+            self.t_prev = self.t;
+            self.t = t_limit;
+            return Ok(());
+        }
         let mut last_planned = None;
         for _ in 0..tol.max_steps {
             let mut h = self.h.min(tol.h_max);
-            let clipped = h >= remaining * (1.0 - 1e-12);
+            let clipped = h >= remaining * (1.0 - 1e-12) || remaining - h <= rounding;
             if clipped {
                 last_planned = Some(self.h);
                 h = remaining;
@@ -575,8 +582,9 @@ impl Integrator for Bdf {
             }
             let mut t_new = self.t + self.h;
             // A step that ends within rounding of the limit lands on it, or the next step would be
-            // of the order of the rounding error and destroy the difference table.
-            if t_new >= t_limit - 1e-12 * (t_limit.abs() + self.h.abs()) {
+            // of the order of the rounding error and destroy the difference table. The band stays
+            // small, so that a step rejected near the limit can still shrink.
+            if t_new >= t_limit - 2e-14 * (t_limit.abs() + self.h.abs()) {
                 t_new = t_limit;
                 let factor = (t_new - self.t) / self.h;
                 self.change_d(factor);

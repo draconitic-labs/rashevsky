@@ -498,7 +498,10 @@ pub fn ensemble(model: &KineticModel, times: &[f64], runs: usize, algorithm: Alg
     }
     let end = times[times.len() - 1];
     let continuous = model.reads_time() || !model.rate_rules.is_empty();
-    let thresholds = model.time_thresholds();
+    let mut thresholds = model.rate_thresholds();
+    thresholds.extend(model.trigger_thresholds());
+    thresholds.sort_by(f64::total_cmp);
+    thresholds.dedup();
     let plan = Plan {
         times,
         algorithm,
