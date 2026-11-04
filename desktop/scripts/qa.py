@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""Goes through every workspace of the real window with real input, on a private display.
+
+Reports errors raised in the interface and the map's frame rate, and writes screenshots. A nonzero exit
+means the interface raised an error. Set CARGO_TARGET_DIR to where the release binary is, and
+RASHEVSKY_DATA to a folder holding Human-GEM.xml to include the Atlas with a human model.
+
+Usage: qa.py [screenshot folder]
+"""
+from __future__ import annotations
+
+import os
+import pathlib
+import sys
+import time
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import drive
+
+OUT = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else pathlib.Path(__file__).resolve().parents[2] / "docs" / "screenshots"
+RUN_BUTTON = (1486, 52)
+
+
+def problems(session):
+    return [line for line in session.read_log().splitlines() if line.startswith("QA ") and ("error" in line or "rejection" in line)]
+
+
+def main() -> int:
+    OUT.mkdir(parents=True, exist_ok=True)
+    found = []
+    with drive.Session() as s:
+        time.sleep(3)
+        s.shot(OUT / "map.png")
+        fps = [line for line in s.read_log().splitlines() if "fps" in line]
+        print("map frame rate:", fps[-1] if fps else "no frames reported")
+        s.click(656, 190, settle=1.0)  # PGI, on the spine between G6P and F6P
+        s.key("k", settle=1.4)
+        s.shot(OUT / "knockout.png")
+        s.key("Escape", settle=0.5)
+        s.key("2", settle=0.6)
+        s.click(*RUN_BUTTON, settle=2.5)
+        s.shot(OUT / "screen.png")
+        s.key("3", settle=2.5)
+        s.shot(OUT / "ranges.png")
+        s.key("4", settle=0.6)
+        s.click(*RUN_BUTTON, settle=6)
+        s.shot(OUT / "samples.png")
+        s.key("5", settle=2.5)
+        s.shot(OUT / "kinetics.png")
+        s.click(636, 52, settle=3)  # the steady state and control tab
+        s.shot(OUT / "control.png")
+        s.key("7", settle=0.8)
+        s.shot(OUT / "models.png")
+        s.key("8", settle=1.2)
+        s.shot(OUT / "checks.png")
+        s.key("1", settle=1)
+        found += problems(s)
+    human = pathlib.Path(os.environ.get("RASHEVSKY_DATA", "")) / "Human-GEM.xml"
+    if human.exists():
+        with drive.Session(args=[str(human)]) as s:
+            time.sleep(10)
+            s.shot(OUT / "human-map.png")
+            s.key("6", settle=7)
+            s.shot(OUT / "atlas.png")
+            found += problems(s)
+    print("errors in the interface:", found or "none")
+    return 1 if found else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
