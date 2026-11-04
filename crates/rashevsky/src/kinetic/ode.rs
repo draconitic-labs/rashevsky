@@ -161,6 +161,7 @@ pub struct Rodas4 {
     t_prev: f64,
     y_prev: Vec<f64>,
     f_prev: Vec<f64>,
+    mass: Vec<f64>,
     h: f64,
     stats: Stats,
 }
@@ -280,6 +281,7 @@ impl Integrator for Rodas4 {
         self.f = vec![0.0; y.len()];
         sys.rhs(t, y, &mut self.f);
         self.f_prev = self.f.clone();
+        self.mass = sys.mass().to_vec();
         self.stats.rhs_evals += 1;
         self.h = 0.0;
     }
@@ -371,7 +373,12 @@ impl Integrator for Rodas4 {
         let (h00, h10) = ((1.0 + 2.0 * s) * (1.0 - s) * (1.0 - s), s * (1.0 - s) * (1.0 - s));
         let (h01, h11) = (s * s * (3.0 - 2.0 * s), s * s * (s - 1.0));
         for k in 0..out.len() {
-            out[k] = h00 * self.y_prev[k] + h10 * h * self.f_prev[k] + h01 * self.y[k] + h11 * h * self.f[k];
+            out[k] = if self.mass[k] == 0.0 {
+                // The right-hand side of an algebraic equation is a residual, not a slope.
+                self.y_prev[k] + s * (self.y[k] - self.y_prev[k])
+            } else {
+                h00 * self.y_prev[k] + h10 * h * self.f_prev[k] + h01 * self.y[k] + h11 * h * self.f[k]
+            };
         }
     }
 }

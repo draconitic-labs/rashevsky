@@ -417,7 +417,7 @@ fn constant_lags(e: &Expr, out: &mut Vec<f64>) {
 }
 
 /// Finds which symbol each algebraic rule determines, by augmenting-path matching.
-fn match_algebraic(rules: &[Expr], candidates: &HashSet<String>) -> Result<Vec<String>> {
+fn match_algebraic(rules: &[Expr], candidates: &HashSet<String>, prefer_not: &HashSet<&str>) -> Result<Vec<String>> {
     let options: Vec<Vec<String>> = rules
         .iter()
         .map(|r| {
@@ -426,6 +426,8 @@ fn match_algebraic(rules: &[Expr], candidates: &HashSet<String>) -> Result<Vec<S
             syms.sort();
             syms.dedup();
             syms.retain(|s| candidates.contains(s));
+            // A symbol that events assign is a poor choice: the rule would undo the assignment.
+            syms.sort_by_key(|s| prefer_not.contains(s.as_str()));
             syms
         })
         .collect();
@@ -631,7 +633,7 @@ fn build(b: &mut Builder<'_>, src: &SbmlModel) -> Result<KineticModel> {
             }
         }
     }
-    let algebraic_vars = match_algebraic(&algebraic_exprs, &candidates)?;
+    let algebraic_vars = match_algebraic(&algebraic_exprs, &candidates, &event_targets)?;
     let algebraic_set: HashSet<&str> = algebraic_vars.iter().map(String::as_str).collect();
 
     // Slots of all named symbols.
