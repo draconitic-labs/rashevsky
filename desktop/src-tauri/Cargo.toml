@@ -23,6 +23,7 @@ nalgebra = { version = "0.34", default-features = false, features = ["std"] }
 rayon = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
+sha2 = "0.10"
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 ureq = "3"

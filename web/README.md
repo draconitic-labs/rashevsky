@@ -14,6 +14,7 @@ Test in the webview it targets, not a browser:
 
 then run `rashevsky-web-preview` from the target folder, or drive it with `desktop/scripts/drive.py`.
 
-The demo bundles iCH360, which is under the MIT license, so it can sit on any site. Its notice has to
-travel with the model: `build.sh` copies it to `dist/NOTICE-iCH360.txt`, and the page links to it as
-"Model terms". Keep both when installing.
+The demo bundles iCH360. Its notice has to travel with the model: `build.sh` copies it to
+`dist/NOTICE-iCH360.txt` and the licenses of linked software to `dist/THIRD-PARTY-NOTICES.txt`, and the
+page links to both. Keep them when installing. Before putting the demo on a commercial site, read the
+question about the model in `docs/DATA.md`.

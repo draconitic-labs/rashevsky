@@ -5,7 +5,7 @@
       "pass": true
     },
     "double_gene_deletion": {
-      "max_abs_difference": 7.159210724250187e-10,
+      "max_abs_difference": 5.302448480293265e-10,
       "pairs": 63190,
       "pass": true
     },
@@ -51,7 +51,7 @@
       "rashevsky": 6.447592154924052
     },
     "moma_distance": {
-      "cobrapy_osqp": 373.44729983478925,
+      "cobrapy_osqp": 373.44729983479397,
       "knockout": "PGI",
       "pass": true,
       "rashevsky_highs_qp": 373.44769436206604,
@@ -75,11 +75,11 @@
     },
     "single_gene_deletion": {
       "genes": 356,
-      "max_abs_difference": 1.349034217668077e-10,
+      "max_abs_difference": 1.3489875883010427e-10,
       "pass": true
     },
     "single_reaction_deletion": {
-      "max_abs_difference": 2.7206570329951774e-12,
+      "max_abs_difference": 1.417040021180359e-12,
       "pass": true,
       "reactions": 349
     }

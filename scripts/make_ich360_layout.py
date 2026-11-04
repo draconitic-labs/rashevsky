@@ -4,7 +4,8 @@
 Positions, routes and pathway names come from the map in the iCH360 repository (MIT), which
 scripts/fetch_data.py downloads at a pinned commit. Each reaction's substrates and products come from
 the model's own stoichiometry, so the drawing cannot disagree with the model about direction. As on the
-Escher map, cofactors stay off the pathways: only metabolites marked primary are drawn.
+Escher map, cofactors stay off the pathways: only metabolites marked primary are drawn, and those in
+ALSO_DRAWN, which the map marks secondary but which are the only link at one side of a reaction.
 """
 from __future__ import annotations
 
@@ -47,6 +48,7 @@ REGIONS = {
     "reduction of redox proteins": "Redox proteins",
     "uptake of water, phosphorus, and nitrogen": "Water, phosphate and nitrogen uptake",
 }
+ALSO_DRAWN = {"pram_c", "5mthf_c", "for_c", "met__L_c"}
 # Where a name would land on a line at the map's own position: x, y and which end of the text is there.
 REGION_AT = {
     "Glucose uptake": (901, 136, "end"),
@@ -67,7 +69,7 @@ SHORT = {
     "ru5p__D_c": "Ru5P", "r5p_c": "R5P", "xu5p__D_c": "Xu5P", "s7p_c": "S7P", "e4p_c": "E4P", "cit_c": "Citrate",
     "acon_C_c": "cis-Aconitate", "icit_c": "Isocitrate", "akg_c": "2-Oxoglutarate", "succoa_c": "Succinyl-CoA",
     "succ_c": "Succinate", "fum_c": "Fumarate", "mal__L_c": "Malate", "oaa_c": "Oxaloacetate", "glx_c": "Glyoxylate",
-    "accoa_c": "Acetyl-CoA",
+    "accoa_c": "Acetyl-CoA", "pram_c": "PRA", "5mthf_c": "5-Methyl-THF", "for_c": "Formate", "met__L_c": "Methionine",
 }
 
 
@@ -162,6 +164,25 @@ def label_side(x: float, y: float, towards: list[tuple[float, float]]) -> str:
     return "t" if clearance(sides["t"]) >= clearance(sides[best]) - 0.2 else best
 
 
+def clearance(at: list[float], reactions: dict, nodes: dict) -> float:
+    """The distance from a point to the nearest line drawn, with lines placed as the renderer places them."""
+    nearest = math.inf
+    for entry in reactions.values():
+        keys = entry["s"] + entry["p"]
+        for key in keys:
+            n = nodes[key]
+            mid = entry.get("end") or entry["m"]
+            bend = 0.5 if len(entry["s"]) == 1 and len(entry["p"]) == 1 else 0.42
+            cx, cy = entry.get("c", {}).get(key, (mid[0] + (n["x"] - mid[0]) * bend, mid[1] + (n["y"] - mid[1]) * bend))
+            for i in range(17):
+                t = i / 16
+                u = 1 - t
+                x = u * u * n["x"] + 2 * u * t * cx + t * t * mid[0]
+                y = u * u * n["y"] + 2 * u * t * cy + t * t * mid[1]
+                nearest = min(nearest, math.hypot(x - at[0], y - at[1]))
+    return nearest
+
+
 def main() -> None:
     source = json.load(open(DATA / "iCH360_full_map.json"))[1]
     table = reaction_table(ICH360)
@@ -200,7 +221,7 @@ def main() -> None:
             for end in (seg["from_node_id"], seg["to_node_id"])
             if nodes[end]["node_type"] == "metabolite" and nodes[end]["bigg_id"] in stoich
         }
-        chosen = sorted(e for e in ends if nodes[e]["node_is_primary"])
+        chosen = sorted(e for e in ends if nodes[e]["node_is_primary"] or nodes[e]["bigg_id"] in ALSO_DRAWN)
         if not chosen:
             raise SystemExit(f"{rid} has no primary metabolite on the map")
         entry: dict = {"s": [], "p": [], "m": [fx(nodes[mid]["x"]), fy(nodes[mid]["y"])]}
@@ -254,7 +275,11 @@ def main() -> None:
     missing = sorted(set(table) - set(reactions) - {"Biomass"})
     if missing:
         raise SystemExit(f"not on the map: {missing}")
-    reactions["Biomass"] = {"biomass": True, "s": [], "p": [], "m": BIOMASS_AT}
+    half = sorted(r for r, e in reactions.items() if not e.get("boundary") and not (e["s"] and e["p"]))
+    if half:
+        raise SystemExit(f"a side with nothing drawn: {half}")
+    room = clearance(BIOMASS_AT, reactions, out_nodes) - RING_MARGIN
+    reactions["Biomass"] = {"biomass": True, "s": [], "p": [], "m": BIOMASS_AT, "r": round(room)}
     layout = {
         "world": [round(width), round(height)],
         "nodes": out_nodes,
@@ -270,6 +295,8 @@ def main() -> None:
 
 # An empty part of the map, for the ring that shows growth.
 BIOMASS_AT = [2559, 1111]
+# Space kept between that ring and the nearest line.
+RING_MARGIN = 10
 
 if __name__ == "__main__":
     main()

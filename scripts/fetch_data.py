@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import pathlib
+import sys
 import urllib.request
 import zipfile
 
@@ -33,6 +34,7 @@ def main() -> None:
     args = parser.parse_args()
     folder = pathlib.Path(args.dir)
     folder.mkdir(parents=True, exist_ok=True)
+    differing = []
     for item in json.loads(MANIFEST.read_text()):
         path = folder / item["file"]
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,6 +47,7 @@ def main() -> None:
         if found != item["sha256"]:
             # A changed upstream file changes the results, so it must not pass silently.
             print(f"DIGEST DIFFERS for {item['file']}: found {found}, pinned {item['sha256']}")
+            differing.append(item["file"])
         else:
             print(f"ok {item['file']}")
         if item.get("unzip"):
@@ -52,6 +55,8 @@ def main() -> None:
             if not target.exists():
                 with zipfile.ZipFile(path) as archive:
                     archive.extractall(target)
+    if differing:
+        sys.exit(f"{len(differing)} files differ from the pinned ones: {', '.join(differing)}")
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ import { emit, h, invoke, on, pickFile, pickSave, setModel, solve, state, toast 
 
 const BIGG = 'Downloads once. BiGG terms: research, education, non-profit.';
 const CATALOG = [
-  { name: 'iCH360', title: 'E. coli iCH360', detail: '349 reactions. Energy and biosynthesis, on the authors\' map.', bundled: true },
+  { name: 'iCH360', title: 'E. coli iCH360', detail: '349 reactions. Energy and biosynthesis, on the authors\' map.', terms: 'Built in. Its terms are below.', bundled: true },
   { name: 'e_coli_core', title: 'E. coli core', detail: '95 reactions. The textbook model.', terms: BIGG },
   { name: 'iML1515', title: 'E. coli iML1515', detail: '2,712 reactions. Genome scale.', terms: BIGG },
   { name: 'iJO1366', title: 'E. coli iJO1366', detail: '2,583 reactions. Genome scale.', terms: BIGG },
@@ -13,7 +13,6 @@ const CATALOG = [
 ];
 
 let refs = {};
-let lastPath = null;
 
 function renderCurrent() {
   const m = state.model;
@@ -31,7 +30,7 @@ function renderCurrent() {
     h('h2', {}, m.name || m.id),
     h('div', { class: 'tiles' }, facts.map(([value, label]) => h('div', { class: 'tile' }, h('strong', {}, Number(value).toLocaleString('en')), h('span', {}, label)))),
     h('p', { class: 'hint' }, `Objective: ${m.objective.join(', ') || 'none'}`),
-    ...(lastPath ? [h('button', { class: 'button button-quiet', type: 'button', onclick: exportSbml }, 'Save as SBML Level 3')] : []),
+    ...(state.modelPath ? [h('button', { class: 'button button-quiet', type: 'button', onclick: exportSbml }, 'Save as SBML Level 3')] : []),
   );
 }
 
@@ -39,7 +38,7 @@ async function exportSbml() {
   const output = await pickSave('Save as SBML', `${state.model.id}.xml`, ['xml']);
   if (!output) return;
   try {
-    await invoke('export_sbml', { input: lastPath, output });
+    await invoke('export_sbml', { input: state.modelPath, output });
     toast(`Saved ${output}`);
   } catch (error) {
     toast(String(error));
@@ -50,8 +49,7 @@ async function openPath(path) {
   refs.status.textContent = 'Opening';
   try {
     const view = await invoke('open_file', { path });
-    lastPath = path;
-    setModel(view);
+    setModel(view, path);
     await solve();
     refs.status.textContent = '';
     emit('navigate', 'map');
@@ -64,7 +62,6 @@ async function openPath(path) {
 async function openCatalog(item) {
   if (item.bundled) {
     const view = await invoke('open_bundled', { name: item.name });
-    lastPath = null;
     setModel(view);
     await solve();
     emit('navigate', 'map');

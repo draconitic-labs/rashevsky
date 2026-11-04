@@ -131,8 +131,10 @@ export async function refreshReference() {
   if (ticket === referenceTicket) state.reference = base.growth;
 }
 
-export function setModel(view) {
+/** Makes a model the open one. `path` is the SBML file it was read from, when there is one. */
+export function setModel(view, path = null) {
   state.model = view;
+  state.modelPath = path;
   state.byId = new Map(view.reactions.map((r, i) => [r.id, i]));
   state.genes = [];
   state.reactions = [];
@@ -152,6 +154,12 @@ export function toast(message) {
   node.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { node.hidden = true; }, 6000);
+}
+
+/** A number with a sign only when the digits shown are not all zero. */
+export function fixed(value, digits) {
+  const text = value.toFixed(digits);
+  return Number(text) === 0 ? (0).toFixed(digits) : text;
 }
 
 export const fmt = {

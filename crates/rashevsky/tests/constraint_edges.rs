@@ -627,3 +627,19 @@ fn namespaces_keep_to_the_element_that_declares_them() {
     let m = read_file("w_ns5");
     assert!((cb::fba(&m).unwrap().objective - 10.0).abs() < 1e-9);
 }
+
+#[test]
+fn repeated_coefficients_in_a_row_add_up_after_a_refactor() {
+    use rashevsky::lp::simplex::Simplex;
+    use rashevsky::lp::{Backend, Problem, Sense, Status};
+    let mut problem = Problem { sense: Some(Sense::Maximize), ..Problem::default() };
+    problem.add_col(1.0, 0.0, 10.0, false);
+    problem.add_row(f64::NEG_INFINITY, 4.0, vec![(0, 1.0), (0, 1.0)]);
+    let mut session = Simplex::default().open(&problem).unwrap();
+    assert!((session.solve().unwrap().x[0] - 2.0).abs() < 1e-9);
+    // A new row makes the session rebuild its inverse with the column already basic.
+    session.add_row(f64::NEG_INFINITY, f64::INFINITY, &[(0, 1.0)]).unwrap();
+    let again = session.solve().unwrap();
+    assert_eq!(again.status, Status::Optimal);
+    assert!((again.x[0] - 2.0).abs() < 1e-9, "{}", again.x[0]);
+}

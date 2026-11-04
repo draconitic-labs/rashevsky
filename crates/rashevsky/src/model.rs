@@ -50,6 +50,14 @@ pub struct Reaction {
     pub annotations: Vec<String>,
 }
 
+impl Reaction {
+    /// Whether this is a biomass pseudo-reaction, going by its name. It touches every precursor, so
+    /// automatic maps leave it out.
+    pub fn is_biomass(&self) -> bool {
+        self.id.get(..7).is_some_and(|start| start.eq_ignore_ascii_case("biomass"))
+    }
+}
+
 /// A gene.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Gene {

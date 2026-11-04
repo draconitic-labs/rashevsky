@@ -17,7 +17,7 @@
       "genes": 2248,
       "growth_changed": 40,
       "lethal": 1,
-      "max_relative_difference": 5.209997128686349e-14,
+      "max_relative_difference": 5.164823743177508e-14,
       "pass": true,
       "tolerance": 1e-06,
       "worst_gene": "92745_AT1"

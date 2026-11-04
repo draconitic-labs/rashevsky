@@ -1,44 +1,44 @@
 {
   "benchmarks": {
     "Human-GEM": {
-      "cobrapy_fba_seconds": 0.039602976001333445,
-      "cobrapy_read_seconds": 10.16612979400088,
-      "rashevsky_read_and_fba_seconds": 0.9409172939776909,
-      "rashevsky_read_seconds": 0.6498066390049644
+      "cobrapy_fba_seconds": 0.03243530495092273,
+      "cobrapy_read_seconds": 9.651315332972445,
+      "rashevsky_read_and_fba_seconds": 0.8851725429994985,
+      "rashevsky_read_seconds": 0.571788537024986
     },
-    "core_chrr_10000_samples_seconds": 0.4579617859853897,
+    "core_chrr_10000_samples_seconds": 0.4366696680081077,
     "e_coli_core": {
-      "cobrapy_fba_seconds": 0.0001659299887251109,
-      "cobrapy_read_seconds": 0.1286812289908994,
-      "rashevsky_read_and_fba_seconds": 0.012344890012172982,
-      "rashevsky_read_seconds": 0.01077715601422824
+      "cobrapy_fba_seconds": 0.00015145301586017013,
+      "cobrapy_read_seconds": 0.10780478297965601,
+      "rashevsky_read_and_fba_seconds": 0.011941651988308877,
+      "rashevsky_read_seconds": 0.011115049012005329
     },
-    "human_gem_essential_tasks_seconds": 5.464132952009095,
+    "human_gem_essential_tasks_seconds": 3.95799766498385,
     "iCH360": {
-      "cobrapy_fba_seconds": 0.0005384249961934984,
-      "cobrapy_read_seconds": 0.4307782620016951,
-      "rashevsky_read_and_fba_seconds": 0.03746655199211091,
-      "rashevsky_read_seconds": 0.03289944599964656
+      "cobrapy_fba_seconds": 0.0005162199959158897,
+      "cobrapy_read_seconds": 0.40957554994383827,
+      "rashevsky_read_and_fba_seconds": 0.036276102997362614,
+      "rashevsky_read_seconds": 0.03324861399596557
     },
     "iML1515": {
-      "cobrapy_fba_seconds": 0.003406488976906985,
-      "cobrapy_read_seconds": 2.3824314289959148,
-      "rashevsky_read_and_fba_seconds": 0.20351496498915367,
-      "rashevsky_read_seconds": 0.14130292501067743
+      "cobrapy_fba_seconds": 0.0037835100083611906,
+      "cobrapy_read_seconds": 2.3074569670134224,
+      "rashevsky_read_and_fba_seconds": 0.21165291196666658,
+      "rashevsky_read_seconds": 0.14861765404930338
     },
     "iML1515_fva": {
-      "cobrapy_glpk_4_processes_seconds": 7.679677833977621,
+      "cobrapy_glpk_4_processes_seconds": 5.817758721997961,
       "max_abs_difference": 1.7540003663323354e-06,
-      "rashevsky_seconds": 2.7845774489978794,
+      "rashevsky_seconds": 2.1324912639684044,
       "reactions": 2712,
       "worst_reaction": "I2FE2SR"
     },
     "iML1515_single_gene_deletion": {
-      "cobrapy_glpk_4_processes_seconds": 2.5820042789855506,
+      "cobrapy_glpk_4_processes_seconds": 2.9947487620520405,
       "genes": 1516,
-      "rashevsky_seconds": 4.526553416013485
+      "rashevsky_seconds": 2.8809318490093574
     },
-    "teusink_time_course_100_min_1000_points_seconds": 0.19996010698378086
+    "teusink_time_course_100_min_1000_points_seconds": 0.14444456197088584
   },
   "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
   "logical_cores": 12,

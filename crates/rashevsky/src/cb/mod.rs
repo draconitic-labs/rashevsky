@@ -68,8 +68,8 @@ pub(crate) fn finite_bounds(model: &Model, backend: &dyn Backend) -> Result<Vec<
 }
 
 pub use deletion::{
-    Deletion, double_gene_deletion, double_reaction_deletion, single_gene_deletion, single_reaction_deletion,
-    synthetic_lethal_genes,
+    Deletion, double_gene_deletion, double_reaction_deletion, single_gene_deletion, single_gene_deletion_with,
+    single_reaction_deletion, synthetic_lethal_genes,
 };
 pub use dfba::{DfbaOptions, DfbaResult, Substrate, dfba};
 pub use envelope::{EnvelopePoint, production_envelope};

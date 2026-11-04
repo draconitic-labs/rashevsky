@@ -142,7 +142,7 @@ async function openHuman() {
     const path = await invoke('download_model', { name: 'Human-GEM' });
     refs.status.textContent = 'Opening Human-GEM';
     const model = await invoke('open_file', { path });
-    setModel(model);
+    setModel(model, path);
     await solve();
     await load();
   } catch (error) {

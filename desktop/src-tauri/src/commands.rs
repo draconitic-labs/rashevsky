@@ -9,6 +9,7 @@ use rashevsky::lp::{self, Sense, Status};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
@@ -17,7 +18,7 @@ use tauri::State;
 
 const ICH360_XML: &[u8] = include_bytes!("../../../models/ich360/iCH360.xml.gz");
 const ICH360_LAYOUT: &str = include_str!("../../../models/ich360/layout.json");
-// The model the drawn map belongs to, also when it is opened from a file.
+// The model the drawn map was made for.
 const MAPPED_MODEL: &str = "iCH360";
 // The MIT license of iCH360 asks for its notice in every copy, and this binary is one.
 const TERMS: &[(&str, &str)] = &[
@@ -103,9 +104,31 @@ pub async fn open_bundled(state: State<'_, AppState>, name: String) -> Reply<Mod
     }
     let doc = rashevsky::sbml::read::read_bytes(ICH360_XML).map_err(text)?;
     let model = Model::from_document(&doc).map_err(text)?;
-    let view = model_view(&model, model.id == MAPPED_MODEL);
+    let view = model_view(&model, true);
     *state.model.lock().map_err(text)? = Some(Arc::new(model));
     Ok(view)
+}
+
+/// A model's reactions with their stoichiometry, whatever order the file lists them in.
+fn network(model: &Model) -> BTreeMap<&str, BTreeMap<&str, u64>> {
+    model
+        .reactions
+        .iter()
+        .map(|r| {
+            let terms = r.stoichiometry.iter().map(|&(i, c)| (model.metabolites[i].id.as_str(), c.to_bits())).collect();
+            (r.id.as_str(), terms)
+        })
+        .collect()
+}
+
+/// The drawn map fits only the network it was drawn for, so an edited copy gets an automatic layout.
+fn fits_the_drawn_map(model: &Model) -> Reply<bool> {
+    if model.id != MAPPED_MODEL {
+        return Ok(false);
+    }
+    let doc = rashevsky::sbml::read::read_bytes(ICH360_XML).map_err(text)?;
+    let bundled = Model::from_document(&doc).map_err(text)?;
+    Ok(network(model) == network(&bundled))
 }
 
 /// Opens an SBML file as a constraint-based model.
@@ -114,7 +137,7 @@ pub async fn open_file(state: State<'_, AppState>, path: String) -> Reply<ModelV
     let path2 = path.clone();
     let (model, view) = tauri::async_runtime::spawn_blocking(move || {
         let model = Model::read_sbml(&path2).map_err(text)?;
-        let view = model_view(&model, model.id == MAPPED_MODEL);
+        let view = model_view(&model, fits_the_drawn_map(&model)?);
         Ok::<_, String>((model, view))
     })
     .await
@@ -123,23 +146,54 @@ pub async fn open_file(state: State<'_, AppState>, path: String) -> Reply<ModelV
     Ok(view)
 }
 
-const SOURCES: &[(&str, &str, &str)] = &[
-    ("e_coli_core", "http://bigg.ucsd.edu/static/models/e_coli_core.xml.gz", "e_coli_core.xml.gz"),
-    ("iML1515", "http://bigg.ucsd.edu/static/models/iML1515.xml.gz", "iML1515.xml.gz"),
-    ("iJO1366", "http://bigg.ucsd.edu/static/models/iJO1366.xml.gz", "iJO1366.xml.gz"),
-    ("Recon3D", "http://bigg.ucsd.edu/static/models/Recon3D.xml.gz", "Recon3D.xml.gz"),
+/// Name, address, file name and SHA-256 digest of the models the application can fetch.
+const SOURCES: &[(&str, &str, &str, &str)] = &[
+    (
+        "e_coli_core",
+        "https://bigg.ucsd.edu/static/models/e_coli_core.xml.gz",
+        "e_coli_core.xml.gz",
+        "182a4dbb2a5899ea7e71134cc99f2e409d382f1c32c02984e27fe34e5e34ca79",
+    ),
+    (
+        "iML1515",
+        "https://bigg.ucsd.edu/static/models/iML1515.xml.gz",
+        "iML1515.xml.gz",
+        "2555e0f7e55a8cb8e770b9bb29cdaeb5db171941c414e7a232ff2d8e0228e308",
+    ),
+    (
+        "iJO1366",
+        "https://bigg.ucsd.edu/static/models/iJO1366.xml.gz",
+        "iJO1366.xml.gz",
+        "9140aca37cd25f7fd6be56be0cb2ceae06a89d7b3c7dc7087d1c348f3ccd25f6",
+    ),
+    (
+        "Recon3D",
+        "https://bigg.ucsd.edu/static/models/Recon3D.xml.gz",
+        "Recon3D.xml.gz",
+        "f45f88f908a1ed1a262148bbf327d34f1d20a36383e68a67d6078d626a6774d8",
+    ),
     (
         "Human-GEM",
-        "https://raw.githubusercontent.com/SysBioChalmers/Human-GEM/main/model/Human-GEM.xml",
+        "https://raw.githubusercontent.com/SysBioChalmers/Human-GEM/v2.1.1/model/Human-GEM.xml",
         "Human-GEM.xml",
+        "dc0efd8009a8b680bde7040440f2e3592027dd118833445092ebd8d7bc425ddf",
     ),
 ];
+
+/// SHA-256 of a file, in lowercase hexadecimal.
+fn file_digest(path: &Path) -> Result<String, String> {
+    let mut file = std::fs::File::open(path).map_err(text)?;
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut file, &mut hasher).map_err(text)?;
+    Ok(hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect())
+}
 
 /// Downloads a published model once into the user's data folder and returns its path.
 #[tauri::command]
 pub async fn download_model(name: String) -> Reply<String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let (_, url, file) = SOURCES.iter().find(|s| s.0 == name).ok_or_else(|| format!("unknown model {name}"))?;
+        let (_, url, file, pinned) =
+            SOURCES.iter().find(|s| s.0 == name).ok_or_else(|| format!("unknown model {name}"))?;
         let dir = data_dir();
         std::fs::create_dir_all(&dir).map_err(text)?;
         let path = dir.join(file);
@@ -150,6 +204,10 @@ pub async fn download_model(name: String) -> Reply<String> {
         let temporary = dir.join(format!("{file}.part"));
         let mut out = std::fs::File::create(&temporary).map_err(text)?;
         std::io::copy(&mut reply.body_mut().as_reader(), &mut out).map_err(text)?;
+        if file_digest(&temporary)? != *pinned {
+            std::fs::remove_file(&temporary).map_err(text)?;
+            return Err(format!("{url} is not the file this release was checked against"));
+        }
         std::fs::rename(&temporary, &path).map_err(text)?;
         Ok(path.display().to_string())
     })
@@ -302,8 +360,7 @@ pub async fn layout(
             (0..m.reactions.len()).filter(|&j| m.reactions[j].subsystem.as_deref() == Some(sub.as_str())).collect()
         } else {
             let values = fluxes.unwrap_or_default();
-            let mut order: Vec<usize> =
-                (0..m.reactions.len()).filter(|&j| !m.reactions[j].id.starts_with("BIOMASS")).collect();
+            let mut order: Vec<usize> = (0..m.reactions.len()).filter(|&j| !m.reactions[j].is_biomass()).collect();
             order.sort_by(|&a, &b| {
                 let (x, y) = (values.get(a).copied().unwrap_or(0.0).abs(), values.get(b).copied().unwrap_or(0.0).abs());
                 y.partial_cmp(&x).unwrap_or(std::cmp::Ordering::Equal)
@@ -810,7 +867,7 @@ pub async fn export_escher(
     let m = current(&state)?;
     tauri::async_runtime::spawn_blocking(move || {
         let chosen: Vec<usize> = (0..m.reactions.len())
-            .filter(|&j| !m.reactions[j].id.starts_with("BIOMASS"))
+            .filter(|&j| !m.reactions[j].is_biomass())
             .filter(|&j| subsystem.as_ref().is_none_or(|s| m.reactions[j].subsystem.as_ref() == Some(s)))
             .collect();
         let layout = rashevsky::io::layout::force_layout(&m, &chosen, 1, 400);
@@ -865,6 +922,8 @@ mod tests {
             "Copyright (c) 2024 marco-corrao",
             "Permission is hereby granted, free of charge",
             "THE SOFTWARE IS PROVIDED \"AS IS\"",
+            "Copyright (c) 2019 The Regents of the University of California",
+            "Those desiring to incorporate BiGG Models into commercial products",
         ] {
             assert!(notice.contains(part), "{part}");
         }
@@ -887,6 +946,46 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn no_line_on_the_bundled_map_ends_in_mid_air() {
+        let layout: Value = serde_json::from_str(ICH360_LAYOUT).unwrap();
+        for (id, entry) in layout["reactions"].as_object().unwrap() {
+            if entry["boundary"] == true || entry["biomass"] == true {
+                continue;
+            }
+            let side = |name: &str| !entry[name].as_array().unwrap().is_empty();
+            assert!(side("s") && side("p"), "{id} has a side with nothing drawn");
+        }
+    }
+
+    #[test]
+    fn only_the_bundled_network_gets_the_drawn_map() {
+        let doc = rashevsky::sbml::read::read_bytes(ICH360_XML).unwrap();
+        let mut model = Model::from_document(&doc).unwrap();
+        assert!(fits_the_drawn_map(&model).unwrap());
+        // The order of a file does not matter, the chemistry does.
+        model.reactions.reverse();
+        assert!(fits_the_drawn_map(&model).unwrap());
+        let pgi = model.reaction_index("PGI").unwrap();
+        for term in &mut model.reactions[pgi].stoichiometry {
+            term.1 = -term.1;
+        }
+        assert!(!fits_the_drawn_map(&model).unwrap());
+    }
+
+    #[test]
+    fn every_fetched_model_is_pinned_and_comes_over_tls() {
+        for (name, url, _, digest) in SOURCES {
+            assert!(url.starts_with("https://"), "{name}");
+            assert_eq!(digest.len(), 64, "{name}");
+        }
+        let path = std::env::temp_dir().join(format!("rashevsky-digest-{}", std::process::id()));
+        std::fs::write(&path, "abc").unwrap();
+        let found = file_digest(&path).unwrap();
+        std::fs::remove_file(&path).unwrap();
+        assert_eq!(found, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
     }
 
     #[test]

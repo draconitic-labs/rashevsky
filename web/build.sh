@@ -14,6 +14,7 @@ cp "$here/index.html" "$here/demo.js" "$here/demo.css" "$here/dist/"
 # The MIT license of iCH360 asks for its notice in every copy, and the demo is one.
 cp "$root/models/ich360/NOTICE" "$here/dist/NOTICE-iCH360.txt"
 cp "$root/LICENSE" "$here/dist/LICENSE.txt"
+cp "$root/THIRD-PARTY-NOTICES.md" "$here/dist/THIRD-PARTY-NOTICES.txt"
 cp "$root/desktop/ui/js/fluxmap.js" "$root/desktop/ui/js/core.js" "$here/dist/"
 cp "$root/desktop/ui/fonts/public-sans-wght-normal.woff2" "$root/desktop/ui/fonts/public-sans-OFL.txt" "$here/dist/fonts/"
 ls -la "$here/dist"

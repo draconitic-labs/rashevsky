@@ -8,7 +8,7 @@
     "method": "bdf",
     "passed": 1700,
     "percent": 100.0,
-    "seconds": 21.0921893119812,
+    "seconds": 24.1513614654541,
     "total_cases": 1823
   },
   "case_00003_exact_law_check": {
@@ -90,7 +90,7 @@
     "method": "rodas4",
     "passed": 1700,
     "percent": 100.0,
-    "seconds": 89.36723971366882,
+    "seconds": 93.20372724533081,
     "total_cases": 1823
   },
   "stochastic": {

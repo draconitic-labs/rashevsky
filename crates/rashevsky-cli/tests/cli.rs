@@ -113,3 +113,16 @@ fn malformed_ranges_and_tables_are_errors_with_a_message() {
     assert!(!bad_table.status.success());
     assert!(String::from_utf8_lossy(&bad_table.stderr).contains("time,symbol,value,sigma"));
 }
+
+#[test]
+fn an_automatic_map_leaves_out_biomass_whatever_its_case() {
+    let folder = std::env::temp_dir().join(format!("rashevsky-cli-escher-{}", std::process::id()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let (map, data) = (folder.join("map.json"), folder.join("data.json"));
+    run(&["escher", CORE, "--map", map.to_str().unwrap(), "--data", data.to_str().unwrap()]);
+    let drawn = std::fs::read_to_string(&map).unwrap();
+    std::fs::remove_file(&map).unwrap();
+    std::fs::remove_file(&data).unwrap();
+    std::fs::remove_dir(&folder).unwrap();
+    assert!(!drawn.contains("\"bigg_id\":\"Biomass\""));
+}

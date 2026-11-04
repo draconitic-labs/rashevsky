@@ -87,6 +87,7 @@ export class FluxMap {
     this.world = { w: W, h: H };
     this.reactions = [];
     this.indexOf = new Map();
+    this.biomass = null;
     const position = (id) => this.nodeById.get(id);
     reactionIds.forEach((id, modelIndex) => {
       const entry = layout.reactions[id];
@@ -94,7 +95,7 @@ export class FluxMap {
       const subs = entry.s.map(position).filter(Boolean);
       const prods = entry.p.map(position).filter(Boolean);
       if (entry.biomass) {
-        this.biomass = { modelIndex, x: entry.m[0], y: entry.m[1], id };
+        this.biomass = { modelIndex, x: entry.m[0], y: entry.m[1], id, room: entry.r ?? Infinity };
         return;
       }
       const all = [...subs, ...prods];
@@ -426,7 +427,9 @@ export class FluxMap {
     for (const r of this.reactions) {
       const v = this.shown[r.modelIndex] ?? 0;
       if (Math.abs(v) < 1e-7 || this.disabled.has(r.id) || this.reachedByReveal(r.order) < 1) continue;
-      const edges = v > 0 ? r.outgoing : r.incoming;
+      // An exchange has its one edge on either list, and carries flux both ways along it.
+      const [ahead, behind] = v > 0 ? [r.outgoing, r.incoming] : [r.incoming, r.outgoing];
+      const edges = ahead.length ? ahead : behind;
       const m = this.magnitude(v);
       g.fillStyle = ramp(m);
       for (const e of edges) {
@@ -551,8 +554,7 @@ export class FluxMap {
       const reference = this.handlers.referenceGrowth?.() || value || 1;
       const share = Math.max(0, Math.min(1.2, value / reference));
       const shown = this.reachedByReveal(1);
-      // It stays readable with a whole large map on view.
-      const s = Math.max(1, 0.75 / k);
+      const s = this.ringScale();
       g.globalAlpha = shown;
       g.beginPath();
       g.arc(b.x, b.y, 44 * s, 0, Math.PI * 2);
@@ -566,13 +568,17 @@ export class FluxMap {
       g.lineWidth = 6 * s;
       g.strokeStyle = value > 1e-9 ? ramp(0.95) : CUT;
       g.stroke();
-      g.fillStyle = '#ece8df';
-      g.font = `600 ${20 * s}px "Public Sans", sans-serif`;
       g.textBaseline = 'middle';
-      g.fillText(value > 1e-9 ? value.toFixed(3) : '0', b.x, b.y - 3 * s);
-      g.font = `500 ${12 * s}px "Public Sans", sans-serif`;
-      g.fillStyle = '#a3a9b0';
-      g.fillText('biomass', b.x, b.y + 18 * s);
+      if (20 * s * k >= 7) {
+        g.fillStyle = '#ece8df';
+        g.font = `600 ${20 * s}px "Public Sans", sans-serif`;
+        g.fillText(value > 1e-9 ? value.toFixed(3) : '0', b.x, b.y - 3 * s);
+      }
+      if (12 * s * k >= 7) {
+        g.font = `500 ${12 * s}px "Public Sans", sans-serif`;
+        g.fillStyle = '#a3a9b0';
+        g.fillText('biomass', b.x, b.y + 18 * s);
+      }
       g.textBaseline = 'alphabetic';
       g.globalAlpha = 1;
     }
@@ -635,13 +641,18 @@ export class FluxMap {
     g.globalAlpha = 1;
   }
 
+  /** The ring stays readable with a whole large map on view, as far as the space around it allows. */
+  ringScale() {
+    return Math.min(this.biomass.room / 44, Math.max(1, 0.75 / this.view.k));
+  }
+
   pick(sx, sy) {
     const [x, y] = this.screenToWorld(sx, sy);
     const k = this.view.k;
     for (const n of this.nodes) {
       if (Math.hypot(n.x - x, n.y - y) < 13 / Math.max(0.5, k)) return { kind: 'metabolite', id: n.metabolite ?? n.id };
     }
-    if (this.biomass && Math.hypot(this.biomass.x - x, this.biomass.y - y) < 46 * Math.max(1, 0.75 / k)) return { kind: 'reaction', id: this.biomass.id };
+    if (this.biomass && Math.hypot(this.biomass.x - x, this.biomass.y - y) < 46 * this.ringScale()) return { kind: 'reaction', id: this.biomass.id };
     let best = null;
     let bestD = 11 / Math.max(0.5, k);
     for (const r of this.reactions) {

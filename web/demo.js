@@ -1,6 +1,7 @@
 // The flux map of iCH360, solved in the page.
 import init, { Core } from './rashevsky_wasm.js';
 import { FluxMap } from './fluxmap.js';
+import { fixed } from './core.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('map');
@@ -15,6 +16,14 @@ const references = new Map();
 let map;
 let reply = null;
 
+function solve(glucose, oxygen, list) {
+  try {
+    return JSON.parse(core.solve(glucose, oxygen, list));
+  } catch (error) {
+    return { growth: null, fluxes: new Array(reactions.length).fill(0), error: String(error.message ?? error) };
+  }
+}
+
 function compute() {
   // Any value on show is about to change.
   tip.hidden = true;
@@ -23,17 +32,23 @@ function compute() {
   const oxygen = oxygenValue >= 60 ? 1000 : oxygenValue;
   $('glcOut').textContent = glucose.toFixed(1);
   $('o2Out').textContent = oxygenValue >= 60 ? 'Unlimited' : oxygenValue.toFixed(0);
-  reply = JSON.parse(core.solve(glucose, oxygen, cut.join(',')));
+  reply = solve(glucose, oxygen, cut.join(','));
   // Growth with nothing deleted, kept for each pair of limits.
   const limits = `${glucose} ${oxygen}`;
-  if (cut.length === 0) references.set(limits, reply.growth);
-  else if (!references.has(limits)) references.set(limits, JSON.parse(core.solve(glucose, oxygen, '')).growth);
-  reference = references.get(limits);
+  if (cut.length === 0) {
+    if (!reply.error) references.set(limits, reply.growth);
+  } else if (!references.has(limits)) {
+    const whole = solve(glucose, oxygen, '');
+    if (!whole.error) references.set(limits, whole.growth);
+  }
+  reference = references.get(limits) ?? null;
   map.setFluxes(reply.fluxes, cut, reply.growth);
   const g = $('growth');
-  g.textContent = reply.growth === null ? 'None' : reply.growth.toFixed(4);
+  g.textContent = reply.growth === null ? 'None' : fixed(reply.growth, 4);
   g.classList.toggle('is-dead', !(reply.growth > 1e-9));
-  $('delta').textContent = reply.growth === null
+  $('delta').textContent = reply.error
+    ? `Solver stopped: ${reply.error}`
+    : reply.growth === null
     ? 'No steady state'
     : cut.length && reference > 1e-9
       ? `${reply.growth >= reference ? '+' : '−'}${Math.abs((100 * (reply.growth - reference)) / reference).toFixed(1)} % from unperturbed`
@@ -95,7 +110,7 @@ async function main() {
       const name = document.createElement('strong');
       name.textContent = reaction?.name ?? hit.id;
       const value = document.createElement('span');
-      value.textContent = reaction ? `${hit.id}, flux ${(reply?.fluxes[reaction.index] ?? 0).toFixed(2)}` : hit.id;
+      value.textContent = reaction ? `${hit.id}, flux ${fixed(reply?.fluxes[reaction.index] ?? 0, 2)}` : hit.id;
       tip.replaceChildren(name, value);
     },
   });

@@ -50,6 +50,19 @@ fn a_simplex_session_keeps_its_accuracy_over_many_solves() {
 }
 
 #[test]
+fn simplex_gene_deletions_match_highs() {
+    // A deletion that ends in failure counts as lethal, so a false verdict from a kept basis would read
+    // as a lethal gene.
+    let m = core();
+    let ours = rashevsky::cb::single_gene_deletion_with(&m, None, &rashevsky::lp::simplex::Simplex::default()).unwrap();
+    let highs = rashevsky::cb::single_gene_deletion(&m, None).unwrap();
+    for (a, b) in ours.iter().zip(&highs) {
+        assert_eq!(a.status, b.status, "{:?}", a.ids);
+        assert!((a.growth - b.growth).abs() < 1e-6, "{:?}: {} {}", a.ids, a.growth, b.growth);
+    }
+}
+
+#[test]
 fn fva_keeps_growth_fixed() {
     let m = core();
     let ranges = fva(&m, &FvaOptions::default()).unwrap();

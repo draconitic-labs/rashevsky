@@ -77,6 +77,8 @@ pub struct SimplexSession {
     moved_bounds: bool,
     /// Pivots since the inverse was last rebuilt, across solves.
     since_refactor: usize,
+    /// The next run starts from the logical basis, with nothing carried over.
+    cold: bool,
 }
 
 impl SimplexSession {
@@ -115,6 +117,7 @@ impl SimplexSession {
             dirty_basis: false,
             moved_bounds: false,
             since_refactor: 0,
+            cold: true,
         };
         session.reset_basis();
         session
@@ -131,6 +134,7 @@ impl SimplexSession {
         self.binv = -DMatrix::<f64>::identity(self.m, self.m);
         self.dirty_basis = false;
         self.since_refactor = 0;
+        self.cold = true;
     }
 
     /// Puts a nonbasic variable on the finite bound nearest zero, or at zero when free.
@@ -157,7 +161,7 @@ impl SimplexSession {
         let mut b = DMatrix::<f64>::zeros(self.m, self.m);
         for (k, &var) in self.basis.iter().enumerate() {
             for &(i, v) in &self.cols[var] {
-                b[(i, k)] = v;
+                b[(i, k)] += v;
             }
         }
         match b.lu().try_inverse() {
@@ -215,6 +219,7 @@ impl SimplexSession {
 
     /// Runs the simplex. The status is that of the final phase.
     fn run(&mut self) -> Status {
+        self.cold = false;
         if self.dirty_basis || self.moved_bounds {
             for j in 0..self.n + self.m {
                 if self.stat[j] != VarStat::Basic {
@@ -543,7 +548,14 @@ impl Session for SimplexSession {
                 return Ok(self.extract(Status::Infeasible));
             }
         }
-        let status = self.run();
+        let kept_basis = !self.cold;
+        let mut status = self.run();
+        // Rounding carried in a kept basis can end phase 1 a hair above its tolerance with nothing left
+        // to enter, which looks like infeasibility. Only a start from nothing may declare failure.
+        if status != Status::Optimal && kept_basis {
+            self.reset_basis();
+            status = self.run();
+        }
         Ok(self.extract(status))
     }
 }

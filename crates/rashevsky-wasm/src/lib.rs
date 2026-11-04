@@ -211,6 +211,72 @@ mod tests {
         assert!(no_state > 0 && no_state < 60, "{no_state} of the steps had no steady state");
     }
 
+    /// Compares a long session with a new one wherever the session reports no steady state, and on every
+    /// fiftieth step otherwise, since a new session costs far more than a kept one.
+    fn walk(moves: &[(f64, f64, String)]) {
+        let mut long = core();
+        for (step, (glucose, oxygen, cut)) in moves.iter().enumerate() {
+            let kept =
+                long.solve(*glucose, *oxygen, cut).map_err(|_| format!("step {step} threw: {glucose} {oxygen} {cut}"));
+            let kept = value(&kept.unwrap());
+            if kept["status"] != "optimal" || step % 50 == 0 {
+                let fresh = value(&core().solve(*glucose, *oxygen, cut).map_err(|_| "fresh").unwrap());
+                assert_eq!(
+                    kept["status"], fresh["status"],
+                    "step {step}: {glucose} {oxygen} {cut}: {}",
+                    fresh["growth"]
+                );
+                if let (Some(a), Some(b)) = (kept["growth"].as_f64(), fresh["growth"].as_f64()) {
+                    assert!((a - b).abs() < 1e-6, "step {step}: {a} {b}");
+                }
+            }
+        }
+    }
+
+    /// A small generator, so that the walks repeat exactly.
+    fn mulberry(state: &mut u32) -> f64 {
+        *state = state.wrapping_add(0x6D2B79F5);
+        let mut t = *state;
+        t = (t ^ (t >> 15)).wrapping_mul(t | 1);
+        t ^= t.wrapping_add((t ^ (t >> 7)).wrapping_mul(t | 61));
+        f64::from(t ^ (t >> 14)) / 4294967296.0
+    }
+
+    /// Dragging the sliders for a long time. Ended in a false verdict at step 3767 when a kept basis was
+    /// believed without a check.
+    #[test]
+    fn long_slider_walks_keep_the_right_verdict() {
+        let mut state = 21u32;
+        let (mut glucose, mut oxygen) = (10.0, 60.0);
+        let mut moves = Vec::new();
+        for _ in 0..4000 {
+            if mulberry(&mut state) < 0.6 {
+                glucose = (mulberry(&mut state) * 61.0).floor() * 0.5;
+            } else {
+                oxygen = (mulberry(&mut state) * 61.0).floor();
+            }
+            moves.push((glucose, if oxygen >= 60.0 { 1000.0 } else { oxygen }, String::new()));
+        }
+        walk(&moves);
+    }
+
+    /// Deleting each reaction in turn and restoring it. Ended in a false verdict at step 3327 when a kept
+    /// basis was believed without a check.
+    #[test]
+    fn deleting_every_reaction_in_turn_keeps_the_right_verdict() {
+        let ids: Vec<String> =
+            core().model.reactions.iter().map(|r| r.id.clone()).filter(|id| id != "Biomass").collect();
+        let mut moves = Vec::new();
+        for round in 0..8 {
+            let (glucose, oxygen) = ([10.0, 7.5, 12.0, 20.0][round % 4], [1000.0, 20.0, 1000.0, 8.0][round % 4]);
+            for id in &ids {
+                moves.push((glucose, oxygen, id.clone()));
+                moves.push((glucose, oxygen, String::new()));
+            }
+        }
+        walk(&moves);
+    }
+
     #[test]
     fn an_unknown_reaction_changes_nothing_in_the_session() {
         let mut core = core();

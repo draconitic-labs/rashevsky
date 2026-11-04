@@ -11,7 +11,7 @@
   "imbalanced_only_in_rashevsky": [],
   "imbalanced_reactions": 223,
   "internal_reactions": 11094,
-  "load_seconds": 0.5859193801879883,
+  "load_seconds": 0.8726596832275391,
   "model": {
     "compartments": 9,
     "exchanges": 1654,
@@ -30,8 +30,8 @@
   "pass": true,
   "raven_essential_passed": 57,
   "raven_verification_passed": 21,
-  "seconds_essential_rashevsky": 4.097366094589233,
-  "seconds_essential_raven_glpk": 30.5387442111969,
+  "seconds_essential_rashevsky": 4.811985969543457,
+  "seconds_essential_raven_glpk": 29.353697776794434,
   "verification_agree_with_raven": true,
   "verification_passed": 21,
   "verification_tasks": 21

@@ -1,7 +1,7 @@
 {
-  "concentration_control_max_abs_difference_vs_copasi": 2.2278952434007238e-06,
+  "concentration_control_max_abs_difference_vs_copasi": 1.3855887694702584e-06,
   "copasi_version": "4.48.311 (Source)",
-  "flux_control_max_abs_difference_vs_copasi": 4.270572694364816e-07,
+  "flux_control_max_abs_difference_vs_copasi": 3.418028313717514e-07,
   "pass": true,
   "roadrunner_version": "2.11.0",
   "steady_state_max_rel_difference_fluxes": 6.465336119743693e-15,

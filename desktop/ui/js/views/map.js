@@ -1,6 +1,6 @@
 // The flux map workspace: the network, what is deleted from it, and what it does in response.
 
-import { debounce, emit, fmt, h, icon, invoke, on, perturbation, pickSave, refreshReference, solve, state, toast } from '../core.js';
+import { debounce, emit, fixed, fmt, h, icon, invoke, on, perturbation, pickSave, refreshReference, solve, state, toast } from '../core.js';
 import { FluxMap } from '../fluxmap.js';
 
 const METHODS = [
@@ -56,7 +56,7 @@ function changed() {
 function growthReadout(reply) {
   const value = reply?.growth;
   const box = refs.growth;
-  box.value.textContent = value === null || value === undefined ? 'None' : value.toFixed(4);
+  box.value.textContent = value === null || value === undefined ? 'None' : fixed(value, 4);
   box.value.classList.toggle('is-dead', !(value > 1e-9));
   let delta = '';
   if (reply?.status !== 'Optimal') delta = 'No steady state';
@@ -297,6 +297,9 @@ function renderFind(query) {
   }
 }
 
+// The open model has no drawn map yet: an automatic layout waits for the fluxes it ranks reactions by.
+let layoutDue = false;
+
 async function loadLayout() {
   const model = state.model;
   if (!model) return;
@@ -425,12 +428,13 @@ export default {
       renderMedium();
       renderTray();
       renderInspector();
+      layoutDue = !state.curated;
       if (state.curated) await loadLayout();
     });
     on('solution', async (reply) => {
-      if (!state.curated && !map.layout?.forModel) {
+      if (layoutDue) {
+        layoutDue = false;
         await loadLayout();
-        if (map.layout) map.layout.forModel = true;
       }
       map.setFluxes(reply.fluxes, reply.disabled, reply.growth);
       growthReadout(reply);

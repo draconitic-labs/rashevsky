@@ -715,7 +715,7 @@ fn run(cli: Cli) -> Result<()> {
         Command::Escher { model, edits, map, data, subsystem, seed } => {
             let m = load(&model, &edits)?;
             let reactions: Vec<usize> = (0..m.reactions.len())
-                .filter(|&j| !m.reactions[j].id.starts_with("BIOMASS"))
+                .filter(|&j| !m.reactions[j].is_biomass())
                 .filter(|&j| subsystem.as_ref().is_none_or(|sub| m.reactions[j].subsystem.as_ref() == Some(sub)))
                 .collect();
             let layout = rashevsky::io::layout::force_layout(&m, &reactions, seed, 400);

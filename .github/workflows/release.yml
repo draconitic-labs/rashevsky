@@ -20,7 +20,7 @@ jobs:
       - name: Build the command line
         run: |
           cargo build --release -p rashevsky-cli
-          tar -czf rashevsky-cli-linux-x86_64.tar.gz -C target/release rashevsky -C ../.. LICENSE README.md
+          tar -czf rashevsky-cli-linux-x86_64.tar.gz -C target/release rashevsky -C ../.. LICENSE README.md THIRD-PARTY-NOTICES.md
       - name: Build the desktop packages
         working-directory: desktop/src-tauri
         env:

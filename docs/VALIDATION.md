@@ -37,8 +37,8 @@ The bundled model. `validation/v13_ich360_cobrapy.py` runs every comparison of `
 | Loopless objective | 0.865627 | 0.865627 | pass |
 | CycleFreeFlux exchanges | | difference 3.4e-13 | pass |
 | Single gene deletions (356) | | difference 1.3e-10 | pass |
-| Single reaction deletions (349) | | difference 2.7e-12 | pass |
-| Double gene deletions (63,190) | | difference 7.2e-10 | pass |
+| Single reaction deletions (349) | | difference 1.4e-12 | pass |
+| Double gene deletions (63,190) | | difference 5.3e-10 | pass |
 | MOMA distance after deleting PGI | 373.4473 (OSQP) | 373.4477 (HiGHS QP) | pass |
 | Linear MOMA distance | 98.218743 | 98.218743 | pass |
 | ROOM objective | 29 | 29 | pass |
@@ -89,7 +89,7 @@ Reference: Monk et al. 2017, Supplementary Note 4 and Supplementary Data 11, wit
 
 `validation/v03_human_gem.py`
 
-Human-GEM v2.1.1: 12,748 reactions, 8,374 metabolites, 2,870 genes, read in 0.59 s. Essential tasks of Robinson et al. 2020: 57 of 57 pass, with the verdict on every task equal to that of RAVEN's Python port on the same files (4.1 s against 30.5 s with GLPK). The verification list gives 21 of 21, same verdicts.
+Human-GEM v2.1.1: 12,748 reactions, 8,374 metabolites, 2,870 genes, read in 0.87 s. Essential tasks of Robinson et al. 2020: 57 of 57 pass, with the verdict on every task equal to that of RAVEN's Python port on the same files (4.8 s against 29.4 s with GLPK). The verification list gives 21 of 21, same verdicts.
 
 Of 11,094 internal reactions, 10,863 (97.9 %) balance in elements and charge and 223 do not, the same set as COBRApy's `check_mass_balance`. Another 8 involve a metabolite without a formula. This engine reports those as undetermined, and COBRApy counts them as imbalanced.
 
@@ -147,7 +147,7 @@ Reference values: Table 4 of Teusink et al. 2000 as reproduced by the BioModels 
 | NAD | 1.55 | 1.55 | 1.5456 | pass |
 | NADH | 0.04 | 0.04 | 0.0444 | pass |
 
-The same file in libRoadRunner gives the same steady state: largest relative difference 8.1e-15 over species and 6.5e-15 over fluxes. Scaled control coefficients match COPASI: largest difference 4.3e-07 for flux and 2.2e-06 for concentration, COPASI's being computed with finite-difference elasticities. libRoadRunner's own control matrices raise an exception on this model. The Rust test `control_coefficient_matches_a_perturbation` also checks a coefficient against a direct perturbation of the transporter's Vmax.
+The same file in libRoadRunner gives the same steady state: largest relative difference 8.1e-15 over species and 6.5e-15 over fluxes. Scaled control coefficients match COPASI: largest difference 3.4e-07 for flux and 1.4e-06 for concentration, COPASI's being computed with finite-difference elasticities. libRoadRunner's own control matrices raise an exception on this model. The Rust test `control_coefficient_matches_a_perturbation` also checks a coefficient against a direct perturbation of the transporter's Vmax.
 
 ![Steady state against the curators' table](figures/teusink.png)
 
@@ -171,8 +171,8 @@ Semantic cases: 1,823 in the suite, 1,700 applicable. The 123 left out use the `
 
 | Integrator | Passed | Percent | Seconds |
 | --- | --- | --- | --- |
-| Rodas4 | 1,700 of 1,700 | 100.00 | 89 |
-| BDF | 1,700 of 1,700 | 100.00 | 21 |
+| Rodas4 | 1,700 of 1,700 | 100.00 | 93 |
+| BDF | 1,700 of 1,700 | 100.00 | 24 |
 
 Of these, 34 are flux balance cases and 35 use fast reactions, simulated by the singular perturbation of `docs/MODEL.md`. Random tie-breaking between events uses a fixed seed.
 
@@ -214,13 +214,13 @@ The other cases of the stochastic folder test the `distrib` package, which this 
 
 | Comparison | Largest difference of means, in flux SD | Reaction |
 | --- | --- | --- |
-| CHRR against COBRApy OptGP | 0.092 | NADH16 |
-| OptGP against COBRApy OptGP | 0.063 | PPC |
-| CHRR against OptGP | 0.047 | ACALD |
+| CHRR against COBRApy OptGP | 0.081 | NADH16 |
+| OptGP against COBRApy OptGP | 0.074 | NADTRHD |
+| CHRR against OptGP | 0.048 | ACALD |
 
-iCH360, the same way, a polytope of dimension 45, 309 reactions compared: CHRR against COBRApy 0.098, OptGP against COBRApy 0.095, CHRR against OptGP 0.043. COBRApy's OptGP is run with all its warmup points: by default it discards those it finds redundant, and on iCH360 that freezes `ASNS1` at exactly 0 and `ASNS2` near 0.19, a difference of 125 flux standard deviations from the other two samplers, when their split is free.
+iCH360, the same way, a polytope of dimension 45, 309 reactions compared: CHRR against COBRApy 0.098, OptGP against COBRApy 0.095, CHRR against OptGP 0.043. COBRApy's OptGP is run here with all its warmup points: by default it discards those it finds redundant, and on iCH360 that holds `ASNS1` at 0 in all 1,500 samples, against a mean of 0.091 with CHRR, and puts `ASNS2` 128 flux standard deviations from CHRR. `e_coli_core` runs stock COBRApy.
 
-Diagnostics: CHRR split R-hat 1.002, smallest effective sample size 1410, largest Geweke z 3.8, in 0.40 s. OptGP R-hat 1.001, effective size 2852, Geweke z 3.4, in 1.58 s. A Rust test checks uniformity on a simplex against its exact mean and variance, and convergence on `e_coli_core` for several seeds.
+Diagnostics: CHRR split R-hat 1.002, smallest effective sample size 1410, largest Geweke z 3.8, in 0.42 s. OptGP R-hat 1.001, effective size 2852, Geweke z 3.4, in 1.63 s. A Rust test checks uniformity on a simplex against its exact mean and variance, and convergence on iCH360 for several seeds.
 
 ## Outputs
 
@@ -286,12 +286,12 @@ Rust tests, with Python and command-line tests of the same calls. Local sensitiv
 
 | Task | Rashevsky | COBRApy |
 | --- | --- | --- |
-| Read iCH360 | 0.03 s | 0.43 s |
-| Read e_coli_core | 0.01 s | 0.13 s |
-| Read iML1515 | 0.14 s | 2.38 s |
-| Read Human-GEM | 0.65 s | 10.17 s |
-| FVA of iML1515, 2,712 reactions | 2.8 s | 7.7 s |
-| All single gene deletions of iML1515 | 4.5 s | 2.6 s |
+| Read iCH360 | 0.03 s | 0.41 s |
+| Read e_coli_core | 0.01 s | 0.11 s |
+| Read iML1515 | 0.15 s | 2.31 s |
+| Read Human-GEM | 0.57 s | 9.65 s |
+| FVA of iML1515, 2,712 reactions | 2.1 s | 5.8 s |
+| All single gene deletions of iML1515 | 2.9 s | 3.0 s |
 
-FVA of iML1515 agrees with COBRApy to 1.8e-06. Essential tasks of Human-GEM take 5.5 s, a 100-minute time course of the Teusink model at 1,000 points 0.20 s, and 10,000 CHRR samples of `e_coli_core` 0.46 s, each including reading the file.
+FVA of iML1515 agrees with COBRApy to 1.8e-06. Essential tasks of Human-GEM take 4.0 s, a 100-minute time course of the Teusink model at 1,000 points 0.14 s, and 10,000 CHRR samples of `e_coli_core` 0.44 s, each including reading the file.
 

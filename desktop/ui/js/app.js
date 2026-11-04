@@ -65,7 +65,7 @@ async function start() {
   try {
     if (state.startup.file) {
       const view = await invoke('open_file', { path: state.startup.file });
-      setModel(view);
+      setModel(view, state.startup.file);
     } else {
       const view = await invoke('open_bundled', { name: 'iCH360' });
       setModel(view);
