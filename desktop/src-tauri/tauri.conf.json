@@ -3,7 +3,7 @@
   "productName": "Rashevsky",
   "mainBinaryName": "rashevsky-desktop",
   "version": "0.1.0",
-  "identifier": "com.flintglade.rashevsky",
+  "identifier": "com.draconiticlabs.rashevsky",
   "build": {
     "frontendDist": "../ui"
   },

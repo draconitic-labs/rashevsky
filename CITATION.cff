@@ -3,9 +3,9 @@ message: "If you use this software, please cite it, along with the method papers
 title: "Rashevsky: genome-scale constraint-based and kinetic metabolic modelling"
 type: software
 authors:
-  - name: "Flintglade"
+  - name: "Draconitic Labs"
 license: MIT
 version: 0.1.0
 date-released: 2026-11-04
 repository-code: "https://github.com/draconitic-labs/rashevsky"
-keywords: [metabolism, flux balance analysis, metabolic control analysis, SBML, systems biology]
+keywords: [metabolism, flux balance analysis, genome-scale metabolic model, constraint-based modelling, kinetic modelling, metabolic control analysis, metabolic engineering, SBML, systems biology]

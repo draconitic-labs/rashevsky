@@ -1,10 +1,17 @@
 # Rashevsky
 
-Genome-scale constraint-based modelling and detailed kinetic modelling of metabolism, in one engine.
+[![CI](https://github.com/draconitic-labs/rashevsky/actions/workflows/ci.yml/badge.svg)](https://github.com/draconitic-labs/rashevsky/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/draconitic-labs/rashevsky)](https://github.com/draconitic-labs/rashevsky/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Live demo](https://img.shields.io/badge/demo-live-ff1745)](https://draconitic-labs.github.io/rashevsky/)
+
+Genome-scale constraint-based modelling and detailed kinetic modelling of metabolism, in one engine, for systems biology and metabolic engineering.
+
+**[Try it in your browser](https://draconitic-labs.github.io/rashevsky/):** delete reactions from a model of *E. coli* and watch the fluxes reroute, solved in the page.
 
 Which gene knockouts raise product yield? Which enzymes control a pathway's flux? What can a cell do on given nutrients, within thermodynamics? Rashevsky answers these from SBML models through a Rust library, a command line, Python bindings and a desktop workbench.
 
-![The flux map of E. coli central metabolism](docs/screenshots/map.png)
+![The flux map of the iCH360 model of E. coli, drawn by the desktop workbench](docs/screenshots/map.png)
 
 Named after Nicolas Rashevsky (1899-1972), founder of mathematical biophysics.
 
@@ -37,7 +44,9 @@ Each row is a named published result or another tool on the same input, with the
 
 ## Install
 
-The desktop application, on Linux with WebKitGTK 4.1:
+Linux packages (rpm and deb), the command-line binary and Python wheels are on the [releases page](https://github.com/draconitic-labs/rashevsky/releases/latest).
+
+To build the desktop application from source, on Linux with WebKitGTK 4.1:
 
 ```
 sudo dnf install webkit2gtk4.1-devel gtk3-devel cmake clang-libs   # or the equivalents for your system
@@ -112,6 +121,20 @@ let growth = cb::fba(&model)?.objective;
 | ![Control coefficients of yeast glycolysis](docs/screenshots/control.png) | ![Human-GEM on the human metabolism atlas](docs/screenshots/atlas.png) |
 
 Keys: `1` to `8` change workspace, `/` finds a reaction, `k` deletes the selected reaction, `0` fits the map, `Esc` closes the panel. Double-click a reaction on the map to delete it.
+
+## Known limits
+
+- Not implemented: the `comp`, `distrib` and other SBML packages, which are refused when required and in use. FBC version 3 user constraints and quadratic objectives are refused for flux analyses.
+- Not attempted: community models, ME-models, 13C flux analysis.
+- Table 4 of Teusink et al. 2000 was read from the BioModels curators' notes, because the publisher's site returned 403.
+- Tau-leaping is first-order, and a low-copy species with fast turnover beside a large population is biased whatever `epsilon` is (1.45 here and 1.81 in GillesPy2, true mean 1). The direct method is right there.
+- A window on the time narrower than the finest grid, in a form not affine in the time, can be missed. A state-driven trigger window narrower than a sixteenth of a step can too.
+- Stochastic models with rate rules are approximate. Rates that vary continuously with the time are refused.
+- `fit` is a local method. A profile reports when it finds a lower point than the fit, and does not search further.
+- Energies for thermodynamic flux analysis are exported for iCH360 only (186 reactions), by `scripts/export_thermo.py`.
+- The dense simplex, used by the browser demo, can overshoot a row when a rate falls under its pivot tolerance of 1e-8. Where its dual bound then proves nothing, it reports `Unknown`, not infeasible. HiGHS, the default, answers there.
+- The default sampling run in the desktop application, seed 1, shows one red tile: largest Geweke z 5.3 against a limit of 5. It is one chain of 4 on `EAR120x` and `EAR120y`, skewed fluxes near zero. Every other series is under 3.2, R-hat is 1.004, and five other seeds give 2.8 to 3.8. The diagnostic is left as it is.
+- Only Linux has been built and run. No AppImage is built: one would carry some 190 system libraries with terms of their own, while the rpm and deb use the system's copies.
 
 ## Repository
 

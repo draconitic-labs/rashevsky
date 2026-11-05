@@ -10,7 +10,7 @@ wasm-bindgen --target web --no-typescript --out-dir "$here/dist" "$target/wasm32
 if command -v wasm-opt > /dev/null; then
   wasm-opt -O3 --enable-bulk-memory --enable-nontrapping-float-to-int "$here/dist/rashevsky_wasm_bg.wasm" -o "$here/dist/rashevsky_wasm_bg.wasm"
 fi
-cp "$here/index.html" "$here/demo.js" "$here/demo.css" "$here/dist/"
+cp "$here/index.html" "$here/demo.js" "$here/demo.css" "$here/social.png" "$here/dist/"
 # The MIT license of iCH360 asks for its notice in every copy, and the demo is one.
 cp "$root/models/ich360/NOTICE" "$here/dist/NOTICE-iCH360.txt"
 cp "$root/LICENSE" "$here/dist/LICENSE.txt"

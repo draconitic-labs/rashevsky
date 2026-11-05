@@ -3,7 +3,7 @@ name = "rashevsky-desktop"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-authors = ["Flintglade"]
+authors = ["Draconitic Labs"]
 description = "Desktop workbench of the Rashevsky metabolic modelling engine"
 publish = false
 

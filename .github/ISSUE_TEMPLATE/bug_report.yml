@@ -1,0 +1,26 @@
+name: Bug report
+description: A wrong result, a crash or a build failure
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+      description: For a wrong number, say what the reference is, such as a paper or another tool on the same file.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce it
+      description: The command or code, and a link to the model file if it is public.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version and system
+      placeholder: Rashevsky 0.1.0, Fedora 44
+    validations:
+      required: true

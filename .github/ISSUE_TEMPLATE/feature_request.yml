@@ -1,0 +1,15 @@
+name: Feature request
+description: A method, format or model you would like supported
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you are trying to do
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference
+      description: A paper or tool defining the method. New numerics need a published result to validate against.

@@ -3,7 +3,7 @@
   "productName": "Rashevsky demo preview",
   "mainBinaryName": "rashevsky-web-preview",
   "version": "0.1.0",
-  "identifier": "com.flintglade.rashevsky.webpreview",
+  "identifier": "com.draconiticlabs.rashevsky.webpreview",
   "build": { "frontendDist": "../dist" },
   "app": {
     "windows": [{ "label": "main", "title": "Rashevsky demo preview", "width": 1280, "height": 800, "backgroundColor": "#14171a" }],

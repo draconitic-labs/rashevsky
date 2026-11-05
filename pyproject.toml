@@ -10,8 +10,8 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 license-files = ["LICENSE", "THIRD-PARTY-NOTICES.md"]
-authors = [{ name = "Flintglade" }]
-keywords = ["metabolism", "flux balance analysis", "sbml", "systems biology", "kinetics"]
+authors = [{ name = "Draconitic Labs" }]
+keywords = ["metabolism", "flux balance analysis", "genome-scale metabolic model", "constraint-based modelling", "metabolic engineering", "sbml", "systems biology", "kinetics"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Rust",
