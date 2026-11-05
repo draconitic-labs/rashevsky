@@ -26,7 +26,7 @@ jobs:
         env:
           NO_STRIP: "true"
         run: npx --yes @tauri-apps/cli@2 build
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: |
             rashevsky-cli-linux-x86_64.tar.gz
@@ -44,7 +44,7 @@ jobs:
           manylinux: "2_28"
           before-script-linux: |
             (yum install -y cmake clang clang-devel || (apt-get update && apt-get install -y cmake clang libclang-dev))
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist/*
 
@@ -60,6 +60,6 @@ jobs:
           cargo install wasm-bindgen-cli --version "$version" --locked
           ./web/build.sh
           tar -czf rashevsky-labs-demo.tar.gz -C web/dist .
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: rashevsky-labs-demo.tar.gz
