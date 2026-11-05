@@ -39,7 +39,7 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y cmake clang libclang-dev
       - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Build and test the bindings
@@ -86,7 +86,7 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y cmake clang libclang-dev
       - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: cargo build --release -p rashevsky-cli
