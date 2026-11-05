@@ -34,7 +34,7 @@ jobs:
           version=$(sed -n 's/^wasm-bindgen = "=\(.*\)"$/\1/p' crates/rashevsky-wasm/Cargo.toml)
           cargo install wasm-bindgen-cli --version "$version" --locked
           ./web/build.sh
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: web/dist
 
