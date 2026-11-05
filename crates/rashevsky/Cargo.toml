@@ -19,10 +19,10 @@ parallel = ["dep:rayon"]
 [dependencies]
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
 highs-sys = { version = "1.15", optional = true }
-nalgebra = { version = "0.34", default-features = false, features = ["std"] }
-quick-xml = "0.38"
+nalgebra = { version = "0.35", default-features = false, features = ["std"] }
+quick-xml = "0.41"
 rand = { version = "0.9", default-features = false, features = ["std", "small_rng"] }
-rand_chacha = { version = "0.9", default-features = false }
+rand_chacha = { version = "0.10", default-features = false }
 rayon = { version = "1", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
