@@ -130,6 +130,8 @@ async function load() {
     fit();
     draw();
   } catch (error) {
+    // Another model has taken over, with a request of its own.
+    if (state.model !== model) return;
     refs.status.textContent = '';
     toast(String(error));
     // What is on view is about another model or other conditions.

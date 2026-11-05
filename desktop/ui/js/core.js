@@ -94,6 +94,7 @@ export function deletionNote() {
   };
   note.hidden = true;
   on('solution', render);
+  on('solve-failed', render);
   on('model', render);
   return note;
 }

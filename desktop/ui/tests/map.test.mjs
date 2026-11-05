@@ -71,6 +71,8 @@ let open = null;
 // The layout of this model waits for this promise, as it does on a large model.
 let gatedModel = null;
 let layoutGate = null;
+let layoutFailure = null;
+let saveAsked = false;
 const calls = [];
 function automaticLayout(model) {
   const nodes = {};
@@ -90,6 +92,7 @@ globalThis.window = {
         if (command === 'layout') {
           const model = open;
           if (model === gatedModel) await layoutGate;
+          if (layoutFailure) throw layoutFailure;
           return args.curated ? bundled : automaticLayout(model);
         }
         if (command === 'solve') {
@@ -104,7 +107,13 @@ globalThis.window = {
         return null;
       },
     },
-    dialog: { open: async () => '/models/picked.xml', save: async () => '/out/map.json' },
+    dialog: {
+      open: async () => '/models/picked.xml',
+      save: async () => {
+        saveAsked = true;
+        return '/out/map.json';
+      },
+    },
   },
   matchMedia: () => ({ matches: true }),
   addEventListener() {},
@@ -223,6 +232,79 @@ test('a model that cannot be solved takes the last map off view and draws its ow
   map.last = 0;
   map.frame(16);
   assert.deepEqual(map.shown, [0, 0]);
+});
+
+test('a failed solve after deletions keeps them on view', async () => {
+  await openModel('a');
+  core.state.reactions = ['PFK'];
+  core.state.genes = ['g1'];
+  const solvable = open;
+  open = models.unsolvable;
+  await core.solve();
+  await settle();
+  assert.equal(core.state.solution, null);
+  assert.ok(map.disabled.has('PFK'));
+  assert.ok(!words(withClass('tray')).includes('reactions off'));
+  open = solvable;
+  core.state.reactions = [];
+  core.state.genes = [];
+});
+
+test('after a failed first solve, the first reply ranks the map by its fluxes', async () => {
+  await openModel('unsolvable');
+  // The same model, solvable from now on.
+  open = { ...models.a, reactions: models.unsolvable.reactions };
+  calls.length = 0;
+  await core.solve();
+  await settle();
+  assert.ok(calls.some((c) => c.command === 'layout' && c.args.fluxes !== null));
+  assert.equal(map.target.length, 2);
+});
+
+test('one failed layout does not stop the next reply reaching the map', async () => {
+  await openModel('iCH360');
+  layoutFailure = new Error('the layout failed');
+  open = models.a;
+  core.setModel(open);
+  await core.solve();
+  await settle();
+  layoutFailure = null;
+  core.state.reactions = ['FBA'];
+  await core.solve();
+  await settle();
+  assert.equal(withClass('growth-value').textContent, '0.5000');
+  core.state.reactions = [];
+});
+
+test('another model opening hides nothing behind a failed reply', async () => {
+  await openModel('iCH360');
+  let release;
+  layoutGate = new Promise((resolve) => { release = resolve; });
+  gatedModel = models.unsolvable;
+  open = models.unsolvable;
+  core.setModel(open);
+  await core.solve();
+  await settle();
+  gatedModel = null;
+  open = models.b;
+  core.setModel(open);
+  release();
+  await settle();
+  // Its own reply has not come in yet, so nothing is claimed about it.
+  assert.equal(withClass('growth-delta').textContent, '');
+  await core.solve();
+  await settle();
+  assert.equal(withClass('growth-value').textContent, '0.5000');
+});
+
+test('an export before any result says so, before asking where to save', async () => {
+  await openModel('unsolvable');
+  calls.length = 0;
+  saveAsked = false;
+  await button(page, 'Fluxes as CSV').listeners.click();
+  await button(page, 'Escher map with data').listeners.click();
+  assert.equal(saveAsked, false);
+  assert.ok(!calls.some((c) => c.command.startsWith('export')));
 });
 
 test('a reply that is not optimal says what happened', async () => {

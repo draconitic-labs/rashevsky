@@ -28,8 +28,8 @@ impl Core {
         let model = Model::from_document(&doc).map_err(|e| JsError::new(&e.to_string()))?;
         let problem = split_problem(&model);
         let growth_row = problem.n_rows() - 1;
-        // Far above what this model needs, and short enough that a stuck solve cannot hang the page.
-        let solver = Simplex { max_iterations: 50_000, ..Simplex::default() };
+        // A cold solve of this model takes some hundreds of iterations. This lets a stuck one end in seconds.
+        let solver = Simplex { max_iterations: 10_000, ..Simplex::default() };
         let session = solver.open(&problem).map_err(|e| JsError::new(&e.to_string()))?;
         let applied = model.reactions.iter().map(|r| (r.lb, r.ub)).collect();
         Ok(Core { model, session, applied, growth_row })

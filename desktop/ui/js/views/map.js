@@ -84,7 +84,7 @@ function renderTray() {
     tray.append(h('button', { class: 'chip chip-cut', type: 'button', title: `Restore ${item.title}`, onclick: item.undo }, item.label, h('span', { class: 'chip-x', 'aria-hidden': 'true' }, '×')));
   }
   const silent = (state.solution?.disabled.length ?? 0) - state.reactions.length;
-  if (state.genes.length) tray.append(h('span', { class: 'tray-note' }, `${state.solution?.disabled.length ?? 0} reactions off`));
+  if (state.genes.length && state.solution) tray.append(h('span', { class: 'tray-note' }, `${state.solution.disabled.length} reactions off`));
   void silent;
   tray.append(h('button', { class: 'link', type: 'button', onclick: () => { state.genes = []; state.reactions = []; changed(); } }, 'Restore all'));
 }
@@ -140,7 +140,7 @@ async function renderInspector() {
   try {
     const [low, high] = await invoke('reaction_range', { id: r.id, fraction: 1, perturbation: perturbation() });
     rangeOut.textContent = `${fmt.flux(low)} to ${fmt.flux(high)}`;
-    const span = Math.max(Math.abs(lb), Math.abs(ub), Math.abs(low), Math.abs(high), 1e-9);
+    const span = Math.max(...[lb, ub, low, high].filter(Number.isFinite).map((v) => Math.abs(v)), 1e-9);
     const pos = (v) => `${50 + (50 * v) / span}%`;
     rangeBar.querySelector('.range-fill').style.left = pos(low);
     rangeBar.querySelector('.range-fill').style.width = `${(50 * (high - low)) / span}%`;
@@ -328,16 +328,22 @@ async function loadLayout() {
   }
 }
 
+function startLayout() {
+  return loadLayout().catch((error) => toast(String(error)));
+}
+
 /** A solve has ended, with a reply or, when `reply` is null, without one. */
 async function solved(reply, tooltip) {
+  const model = state.model;
   if (layoutDue) {
-    layoutDue = false;
-    layoutReady = loadLayout();
+    // With no reply there are no fluxes to rank reactions by, so the next reply lays out again.
+    layoutDue = !reply;
+    layoutReady = startLayout();
   }
   await layoutReady;
   // A newer reply, or another model, has taken over in the meantime.
-  if (state.solution !== reply) return;
-  map.setFluxes(reply?.fluxes ?? state.model.reactions.map(() => 0), reply?.disabled ?? [], reply?.growth ?? null);
+  if (state.model !== model || state.solution !== reply) return;
+  map.setFluxes(reply?.fluxes ?? model.reactions.map(() => 0), reply?.disabled ?? state.reactions, reply?.growth ?? null);
   growthReadout(reply);
   tooltip.hidden = true;
   renderTray();
@@ -460,7 +466,7 @@ export default {
       refs.growth.delta.textContent = '';
       refs.growth.time.textContent = '';
       layoutDue = !state.curated;
-      layoutReady = state.curated ? loadLayout() : Promise.resolve();
+      layoutReady = state.curated ? startLayout() : Promise.resolve();
     });
     on('solution', (reply) => solved(reply, tooltip));
     on('solve-failed', () => solved(null, tooltip));
@@ -513,6 +519,10 @@ function legend() {
 }
 
 async function exportFluxes(kind) {
+  if (!state.solution) {
+    toast('Not solved, so there are no fluxes to export');
+    return;
+  }
   const path = await pickSave('Export fluxes', `${state.model.id}-fluxes.${kind}`, [kind]);
   if (!path) return;
   try {
@@ -524,6 +534,10 @@ async function exportFluxes(kind) {
 }
 
 async function exportEscher() {
+  if (!state.solution) {
+    toast('Not solved, so there are no fluxes to export');
+    return;
+  }
   const path = await pickSave('Export Escher map', `${state.model.id}-map.json`, ['json']);
   if (!path) return;
   try {

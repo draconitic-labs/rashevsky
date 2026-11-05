@@ -4,7 +4,7 @@
     "max_split_rhat": 1.0020541248026944,
     "min_ess": 1410.2515848369042
   },
-  "chrr_seconds": 0.429506566,
+  "chrr_seconds": 0.487057412,
   "cobrapy_valid_samples": 10000,
   "ich360": {
     "chrr_diagnostics": {
@@ -12,7 +12,7 @@
       "max_split_rhat": 1.0012040713132286,
       "min_ess": 3984.87147355581
     },
-    "chrr_seconds": 5.280335136,
+    "chrr_seconds": 5.263923598,
     "cobrapy_valid_samples": 10000,
     "limit": 0.15,
     "max_mean_difference_in_flux_sd": {
@@ -34,7 +34,7 @@
       "max_split_rhat": 1.0007765863570672,
       "min_ess": 4636.818576608965
     },
-    "optgp_seconds": 94.329879572,
+    "optgp_seconds": 96.230428952,
     "pass": true,
     "polytope_dimension": 45,
     "reactions_compared": 309,
@@ -69,7 +69,7 @@
     "max_split_rhat": 1.0010131695486302,
     "min_ess": 2852.4193181205014
   },
-  "optgp_seconds": 1.4939078989999999,
+  "optgp_seconds": 1.533073385,
   "pass": true,
   "polytope_dimension": 24,
   "reactions_compared": 87

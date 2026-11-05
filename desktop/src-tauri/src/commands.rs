@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
@@ -194,28 +194,29 @@ fn file_digest(path: &Path) -> Result<String, String> {
     Ok(hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect())
 }
 
-/// Numbers the temporary files, so that two downloads of one model never share one.
-static DOWNLOADS: AtomicU64 = AtomicU64::new(0);
+/// One download at a time: the temporary file has one writer, and a second request for a model finds it ready.
+static DOWNLOAD: Mutex<()> = Mutex::new(());
 
 /// Keeps a file only if it has the pinned digest. Anything else in its place, such as a broken transfer
-/// or a file from another release, is fetched again.
+/// or a file from another release, is fetched again from `source`.
 fn pinned_file<R: std::io::Read>(
     path: &Path,
     pinned: &str,
+    source: &str,
     fetch: impl FnOnce() -> Result<R, String>,
 ) -> Result<(), String> {
+    let _only = DOWNLOAD.lock().map_err(text)?;
     if path.exists() && file_digest(path)? == pinned {
         return Ok(());
     }
     let mut reply = fetch()?;
-    let temporary =
-        path.with_extension(format!("{}.{}.part", std::process::id(), DOWNLOADS.fetch_add(1, Ordering::Relaxed)));
+    let temporary = path.with_extension("part");
     let kept = (|| {
         let mut out = std::fs::File::create(&temporary).map_err(text)?;
         std::io::copy(&mut reply, &mut out).map_err(text)?;
         out.sync_all().map_err(text)?;
         if file_digest(&temporary)? != pinned {
-            return Err("is not the file this release was checked against".to_string());
+            return Err(format!("{source} is not the file this release was checked against"));
         }
         std::fs::rename(&temporary, path).map_err(text)
     })();
@@ -234,11 +235,10 @@ pub async fn download_model(name: String) -> Reply<String> {
         let dir = data_dir();
         std::fs::create_dir_all(&dir).map_err(text)?;
         let path = dir.join(file);
-        pinned_file(&path, pinned, || {
+        pinned_file(&path, pinned, url, || {
             let reply = ureq::get(*url).call().map_err(|e| format!("could not download {name}: {e}"))?;
             Ok(reply.into_body().into_reader())
-        })
-        .map_err(|e| format!("{url}: {e}"))?;
+        })?;
         Ok(path.display().to_string())
     })
     .await
@@ -531,7 +531,11 @@ pub async fn start_screen(state: State<'_, AppState>, request: ScreenRequest) ->
                     session.set_objective(sense, &objective).map_err(text)?;
                     session.set_row_bounds(retention, f64::NEG_INFINITY, f64::INFINITY).map_err(text)?;
                     let s = session.solve().map_err(text)?;
-                    let growth = if s.status == Status::Optimal { s.objective } else { 0.0 };
+                    let growth = match s.status {
+                        Status::Optimal => s.objective,
+                        Status::Infeasible => 0.0,
+                        other => return Err(format!("the solver stopped with {other:?} on {}", ids.join(", "))),
+                    };
                     let (mut guaranteed, mut possible) = (None, None);
                     if let (Some(t), Status::Optimal) = (target, s.status) {
                         // A warm start can find the exact optimum just out of reach by rounding. The table
@@ -1025,14 +1029,16 @@ mod tests {
         let good: &[u8] = b"the right file";
         std::fs::write(&path, good).unwrap();
         let pinned = file_digest(&path).unwrap();
-        pinned_file(&path, &pinned, || -> Result<&[u8], String> { panic!("fetched a good file again") }).unwrap();
+        pinned_file(&path, &pinned, "here", || -> Result<&[u8], String> { panic!("fetched a good file again") })
+            .unwrap();
         // A broken transfer in its place is replaced.
         std::fs::write(&path, b"half a fi").unwrap();
-        pinned_file(&path, &pinned, || Ok(good)).unwrap();
+        pinned_file(&path, &pinned, "here", || Ok(good)).unwrap();
         assert_eq!(std::fs::read(&path).unwrap(), good);
         // A wrong download is refused and leaves nothing of itself behind.
         std::fs::remove_file(&path).unwrap();
-        assert!(pinned_file(&path, &pinned, || Ok(&b"another file"[..])).is_err());
+        let refused = pinned_file(&path, &pinned, "here", || Ok(&b"another file"[..])).unwrap_err();
+        assert_eq!(refused, "here is not the file this release was checked against");
         assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
         std::fs::remove_dir(&dir).unwrap();
     }

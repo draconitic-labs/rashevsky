@@ -629,7 +629,7 @@ fn namespaces_keep_to_the_element_that_declares_them() {
 }
 
 #[test]
-fn a_coefficient_under_the_pivot_tolerance_never_reads_as_infeasible() {
+fn a_step_that_overshoots_under_the_pivot_tolerance_never_reads_as_infeasible() {
     use rashevsky::lp::simplex::Simplex;
     use rashevsky::lp::{Backend, Problem, Sense, Status};
     // Growth needs an enzyme at 1e-10 per unit, and the enzyme is limited to 1e-9: growth 10.
@@ -650,7 +650,23 @@ fn a_coefficient_under_the_pivot_tolerance_never_reads_as_infeasible() {
         simplex.status,
         simplex.objective
     );
-    // Without a coefficient that small, a dead end still is a verdict.
+    // No coefficient is that small here, but the basis makes one: 5e-8 over 100. Growth 20.
+    let mut scaled = Problem { sense: Some(Sense::Maximize), ..Problem::default() };
+    let supply = scaled.add_col(0.0, 0.0, 0.01000001, false);
+    let demand = scaled.add_col(0.0, 1.0, 1.0, false);
+    let grow = scaled.add_col(1.0, 0.0, 1000.0, false);
+    scaled.add_row(0.0, 0.0, vec![(supply, 100.0), (demand, -1.0), (grow, -5e-8)]);
+    let highs = rashevsky::lp::default_backend().open(&scaled).unwrap().solve().unwrap();
+    assert!((highs.objective - 20.0).abs() < 1e-4, "{}", highs.objective);
+    let simplex = Simplex::default().open(&scaled).unwrap().solve().unwrap();
+    assert!(
+        simplex.status == Status::Unknown
+            || (simplex.status == Status::Optimal && (simplex.objective - 20.0).abs() < 1e-4),
+        "{:?} {}",
+        simplex.status,
+        simplex.objective
+    );
+    // A dead end with no such move left still is a verdict.
     let mut none = Problem { sense: Some(Sense::Maximize), ..Problem::default() };
     let x = none.add_col(1.0, 1.0, 2.0, false);
     none.add_row(0.0, 0.0, vec![(x, 1.0)]);

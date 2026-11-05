@@ -97,7 +97,9 @@ export default {
     refs.empty = h('div', { class: 'empty' }, h('h2', {}, 'Sample what the network can do'), h('p', {}, 'Each reaction gets a distribution of fluxes over the feasible space, with convergence checks.'));
     refs.stale = h('span', { class: 'stale-note', hidden: true }, 'Deletions or uptake limits changed since this run');
     refs.stale.hidden = true;
-    on('solution', () => { refs.stale.hidden = ranUnder === null || ranUnder === conditionsKey(); });
+    const markStale = () => { refs.stale.hidden = ranUnder === null || ranUnder === conditionsKey(); };
+    on('solution', markStale);
+    on('solve-failed', markStale);
     el.append(
       h('header', { class: 'view-head' },
         h('div', { class: 'view-title' }, h('h1', {}, 'Flux samples'), deletionNote(), refs.stale),

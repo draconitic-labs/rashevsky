@@ -22,6 +22,7 @@ HIGHS_PARTS = [
     ("IPX", "IPX, Copyright (c) 2018-2020  ERGO-Code\nUsed in Rashevsky under the MIT license.", "https://github.com/ERGO-Code/IPX"),
     ("BASICLU", "BASICLU Copyright (c) 2016-2020  ERGO-Code\nUsed in Rashevsky under the MIT license.", "https://github.com/ERGO-Code/basiclu"),
     ("cuPDLP", "", "https://github.com/COPT-Public/cuPDLP-C"),
+    ("FeasibilityJump", "", "https://github.com/sintef/feasibilityjump"),
 ]
 # A crate that publishes no file of its own, and the crate of the same repository and holder that does.
 SAME_TEXT_AS = {"alloc-stdlib": "alloc-no-stdlib"}
@@ -151,7 +152,14 @@ def main() -> int:
     ]
     for text, labels in sorted(groups.items(), key=lambda item: item[1][0]):
         lines += [f"### {', '.join(labels)}", "", "````text", text, "````", ""]
-    lines += ["## Compiled in with HiGHS", "", "Parts of the HiGHS source tree that `highs-sys` builds, which carry no license file there.", ""]
+    lines += [
+        "## Compiled in with HiGHS",
+        "",
+        "Parts of the HiGHS source tree that `highs-sys` builds, which carry no license file there.",
+        "",
+        "`ipm/ipx/sparse_utils.h` and `ipm/basiclu/lu_dfs.c` each credit one routine as adapted from CSparse by Timothy A. Davis, which is under LGPL 2.1 or later. The authors of IPX and BASICLU release both packages under the terms below.",
+        "",
+    ]
     for name, statement, source in HIGHS_PARTS:
         text = (ROOT / "licenses" / f"{name}.txt").read_text().strip()
         lines += [f"### {name}", "", *([statement.replace("\n", "  \n"), ""] if statement else []), f"Source: {source}", "", "````text", text, "````", ""]

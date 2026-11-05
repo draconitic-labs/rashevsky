@@ -8921,6 +8921,8 @@ freely, subject to the following restrictions:
 
 Parts of the HiGHS source tree that `highs-sys` builds, which carry no license file there.
 
+`ipm/ipx/sparse_utils.h` and `ipm/basiclu/lu_dfs.c` each credit one routine as adapted from CSparse by Timothy A. Davis, which is under LGPL 2.1 or later. The authors of IPX and BASICLU release both packages under the terms below.
+
 ### IPX
 
 IPX, Copyright (c) 2018-2020  ERGO-Code  
@@ -9090,9 +9092,35 @@ Source: https://github.com/COPT-Public/cuPDLP-C
 ````text
 MIT License
 
-Copyright (c) 2026 Dongdong Ge
-
 Copyright (c) 2023 COPT-Public
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+````
+
+### FeasibilityJump
+
+Source: https://github.com/sintef/feasibilityjump
+
+````text
+MIT License
+
+Copyright (c) 2022 SINTEF
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

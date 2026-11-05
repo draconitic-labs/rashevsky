@@ -197,7 +197,9 @@ export default {
     refs.empty = h('div', { class: 'empty' }, h('h2', {}, 'Rank every deletion for a product'), h('p', {}, 'Choose what to delete and a target, then run the screen.'));
     refs.stale = h('span', { class: 'stale-note', hidden: true }, 'Deletions or uptake limits changed since this run');
     refs.stale.hidden = true;
-    on('solution', () => { refs.stale.hidden = ranUnder === null || ranUnder === conditionsKey(); });
+    const markStale = () => { refs.stale.hidden = ranUnder === null || ranUnder === conditionsKey(); };
+    on('solution', markStale);
+    on('solve-failed', markStale);
     el.append(
       h('header', { class: 'view-head' },
         h('div', { class: 'view-title' }, h('h1', {}, 'Knockout screen'), deletionNote(), refs.stale),

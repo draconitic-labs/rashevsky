@@ -3,7 +3,7 @@
 //! A gene deletion disables each reaction whose rule evaluates to false (Thiele and Palsson 2010).
 //! Workers keep one solver session and restart from the previous basis after each change of bounds.
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::lp::{self, Backend, Session, Status};
 use crate::model::Model;
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,8 @@ pub struct Deletion {
     pub ids: Vec<String>,
     /// Solver status.
     pub status: Status,
-    /// Objective value; 0 when the deletion makes the model infeasible, infinite when it is unbounded.
+    /// Objective value; 0 when the deletion makes the model infeasible, infinite when it is unbounded,
+    /// and not a number when the solver gave no verdict.
     pub growth: f64,
 }
 
@@ -134,7 +135,13 @@ pub fn synthetic_lethal_genes(model: &Model, threshold: f64) -> Result<Vec<Delet
         )));
     }
     let singles = single_gene_deletion(model, None)?;
+    if let Some(open) = singles.iter().find(|d| d.growth.is_nan()) {
+        return Err(Error::Solver(format!("no verdict on deleting {}", open.ids.join(", "))));
+    }
     let viable: Vec<usize> = singles.iter().enumerate().filter(|(_, d)| d.growth > threshold).map(|(g, _)| g).collect();
     let doubles = double_gene_deletion(model, Some(&viable))?;
+    if let Some(open) = doubles.iter().find(|d| d.growth.is_nan()) {
+        return Err(Error::Solver(format!("no verdict on deleting {}", open.ids.join(", "))));
+    }
     Ok(doubles.into_iter().filter(|d| d.growth <= threshold).collect())
 }

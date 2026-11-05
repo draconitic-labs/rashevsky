@@ -12,20 +12,20 @@
   ],
   "cobrapy_same_file": {
     "Glucose": {
-      "cobrapy_b3564": 0.8217979336266026,
-      "cobrapy_seconds_4_processes": 2.761965036392212,
+      "cobrapy_b3564": 0.8217979336266027,
+      "cobrapy_seconds_4_processes": 2.281677007675171,
       "genes": 1516,
-      "max_abs_difference_vs_cobrapy": 4.925942463036327e-11,
+      "max_abs_difference_vs_cobrapy": 4.9261255430312855e-11,
       "rashevsky_b3564": 0.8217979336265874,
-      "worst_gene": "b2687"
+      "worst_gene": "b0159"
     },
     "Xylose": {
-      "cobrapy_b3564": 0.717125971340659,
-      "cobrapy_seconds_4_processes": 3.2354509830474854,
+      "cobrapy_b3564": 0.717125971340652,
+      "cobrapy_seconds_4_processes": 2.628174304962158,
       "genes": 1516,
-      "max_abs_difference_vs_cobrapy": 8.750056235129477e-12,
+      "max_abs_difference_vs_cobrapy": 2.646153209181034e-11,
       "rashevsky_b3564": 0.7171259713406438,
-      "worst_gene": "b3732"
+      "worst_gene": "b0421"
     }
   },
   "counts": {
@@ -34,7 +34,7 @@
     "TN": 2843,
     "TP": 19233
   },
-  "elapsed_seconds": 45.77425718307495,
+  "elapsed_seconds": 50.81424808502197,
   "genes_in_table_not_in_model": [],
   "growth_abs_diff_vs_published": {
     "max": 0.7171259713406438,

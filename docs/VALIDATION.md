@@ -37,8 +37,8 @@ The bundled model. `validation/v13_ich360_cobrapy.py` runs every comparison of `
 | Loopless objective | 0.865627 | 0.865627 | pass |
 | CycleFreeFlux exchanges | | difference 3.4e-13 | pass |
 | Single gene deletions (356) | | difference 1.3e-10 | pass |
-| Single reaction deletions (349) | | difference 1.4e-12 | pass |
-| Double gene deletions (63,190) | | difference 5.3e-10 | pass |
+| Single reaction deletions (349) | | difference 3.6e-12 | pass |
+| Double gene deletions (63,190) | | difference 5.1e-10 | pass |
 | MOMA distance after deleting PGI | 373.4473 (OSQP) | 373.4477 (HiGHS QP) | pass |
 | Linear MOMA distance | 98.218743 | 98.218743 | pass |
 | ROOM objective | 29 | 29 | pass |
@@ -57,8 +57,8 @@ The textbook model, fetched from BiGG Models. `validation/v01_core_cobrapy.py`
 | pFBA total flux | 518.422086 | 518.422086 | pass |
 | Loopless objective | 0.873922 | 0.873922 | pass |
 | CycleFreeFlux exchanges | | difference 1.2e-13 | pass |
-| Single gene deletions (137) | | difference 1.1e-14 | pass |
-| Single reaction deletions (95) | | difference 1.4e-14 | pass |
+| Single gene deletions (137) | | difference 9.8e-15 | pass |
+| Single reaction deletions (95) | | difference 9.8e-15 | pass |
 | Double gene deletions (9,316) | | difference 8.9e-12 | pass |
 | MOMA distance after deleting PGI | 220.4801 (OSQP) | 220.4805 (HiGHS QP) | pass |
 | Linear MOMA distance | 70.964998 | 70.964998 | pass |
@@ -89,7 +89,7 @@ Reference: Monk et al. 2017, Supplementary Note 4 and Supplementary Data 11, wit
 
 `validation/v03_human_gem.py`
 
-Human-GEM v2.1.1: 12,748 reactions, 8,374 metabolites, 2,870 genes, read in 0.87 s. Essential tasks of Robinson et al. 2020: 57 of 57 pass, with the verdict on every task equal to that of RAVEN's Python port on the same files (4.8 s against 29.4 s with GLPK). The verification list gives 21 of 21, same verdicts.
+Human-GEM v2.1.1: 12,748 reactions, 8,374 metabolites, 2,870 genes, read in 0.58 s. Essential tasks of Robinson et al. 2020: 57 of 57 pass, with the verdict on every task equal to that of RAVEN's Python port on the same files (4.4 s against 31.9 s with GLPK). The verification list gives 21 of 21, same verdicts.
 
 Of 11,094 internal reactions, 10,863 (97.9 %) balance in elements and charge and 223 do not, the same set as COBRApy's `check_mass_balance`. Another 8 involve a metabolite without a formula. This engine reports those as undetermined, and COBRApy counts them as imbalanced.
 
@@ -171,8 +171,8 @@ Semantic cases: 1,823 in the suite, 1,700 applicable. The 123 left out use the `
 
 | Integrator | Passed | Percent | Seconds |
 | --- | --- | --- | --- |
-| Rodas4 | 1,700 of 1,700 | 100.00 | 93 |
-| BDF | 1,700 of 1,700 | 100.00 | 24 |
+| Rodas4 | 1,700 of 1,700 | 100.00 | 110 |
+| BDF | 1,700 of 1,700 | 100.00 | 23 |
 
 Of these, 34 are flux balance cases and 35 use fast reactions, simulated by the singular perturbation of `docs/MODEL.md`. Random tie-breaking between events uses a fixed seed.
 
@@ -220,7 +220,7 @@ The other cases of the stochastic folder test the `distrib` package, which this 
 
 iCH360, the same way, a polytope of dimension 45, 309 reactions compared: CHRR against COBRApy 0.098, OptGP against COBRApy 0.095, CHRR against OptGP 0.043. COBRApy's OptGP is run here with all its warmup points: by default it discards those it finds redundant, and on iCH360 that holds `ASNS1` at 0 in all 1,500 samples, against a mean of 0.091 with CHRR, narrows `ASNS2` to a standard deviation of 0.0007 against 0.054 with CHRR, and moves its mean by 1.7 of CHRR's standard deviations. `e_coli_core` runs stock COBRApy.
 
-Diagnostics on `e_coli_core`: CHRR split R-hat 1.002, smallest effective sample size 1410, largest Geweke z 3.8, in 0.43 s. OptGP R-hat 1.001, effective size 2852, Geweke z 3.4, in 1.49 s. On iCH360: CHRR R-hat 1.001, effective size 3985, Geweke z 3.0, in 5.3 s. OptGP R-hat 1.001, effective size 4637, Geweke z 3.1, in 94 s. A Rust test checks uniformity on a simplex against its exact mean and variance, and convergence on iCH360 for several seeds.
+Diagnostics on `e_coli_core`: CHRR split R-hat 1.002, smallest effective sample size 1410, largest Geweke z 3.8, in 0.49 s. OptGP R-hat 1.001, effective size 2852, Geweke z 3.4, in 1.53 s. On iCH360: CHRR R-hat 1.001, effective size 3985, Geweke z 3.0, in 5.3 s. OptGP R-hat 1.001, effective size 4637, Geweke z 3.1, in 96 s. A Rust test checks uniformity on a simplex against its exact mean and variance, and convergence on iCH360 for several seeds.
 
 ## Outputs
 
@@ -286,12 +286,12 @@ Rust tests, with Python and command-line tests of the same calls. Local sensitiv
 
 | Task | Rashevsky | COBRApy |
 | --- | --- | --- |
-| Read iCH360 | 0.03 s | 0.41 s |
+| Read iCH360 | 0.04 s | 0.43 s |
 | Read e_coli_core | 0.01 s | 0.11 s |
-| Read iML1515 | 0.15 s | 2.31 s |
-| Read Human-GEM | 0.57 s | 9.65 s |
-| FVA of iML1515, 2,712 reactions | 2.1 s | 5.8 s |
-| All single gene deletions of iML1515 | 2.9 s | 3.0 s |
+| Read iML1515 | 0.16 s | 2.21 s |
+| Read Human-GEM | 0.59 s | 9.50 s |
+| FVA of iML1515, 2,712 reactions | 2.3 s | 6.6 s |
+| All single gene deletions of iML1515 | 3.4 s | 2.5 s |
 
-FVA of iML1515 agrees with COBRApy to 1.8e-06. Essential tasks of Human-GEM take 4.0 s, a 100-minute time course of the Teusink model at 1,000 points 0.14 s, and 10,000 CHRR samples of `e_coli_core` 0.44 s, each including reading the file.
+FVA of iML1515 agrees with COBRApy to 1.8e-06. Essential tasks of Human-GEM take 4.4 s, a 100-minute time course of the Teusink model at 1,000 points 0.14 s, and 10,000 CHRR samples of `e_coli_core` 0.42 s, each including reading the file.
 

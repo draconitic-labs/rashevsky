@@ -14,6 +14,8 @@ use nalgebra::DMatrix;
 
 const REFACTOR_EVERY: usize = 64;
 const STALL_BEFORE_BLAND: usize = 200;
+/// A reduced cost under this is rounding, not a move that could help.
+const PRICING_NOISE: f64 = 1e-12;
 
 /// Settings of the dense simplex.
 #[derive(Clone, Debug)]
@@ -79,9 +81,6 @@ pub struct SimplexSession {
     since_refactor: usize,
     /// The next run starts from the logical basis, with nothing carried over.
     cold: bool,
-    /// A coefficient at or under the pivot tolerance exists. The ratio test skips it, so a step can
-    /// overshoot its row with no way back in phase 1, and a dead end there proves nothing.
-    tiny: bool,
 }
 
 impl SimplexSession {
@@ -102,7 +101,6 @@ impl SimplexSession {
         lb.extend_from_slice(&p.row_lb);
         ub.extend_from_slice(&p.row_ub);
         let negate = p.sense == Some(Sense::Maximize);
-        let tiny = p.rows.iter().any(|row| row.iter().any(|&(_, v)| under_pivot_tolerance(v, &opts)));
         let mut cost: Vec<f64> = p.obj.iter().map(|&c| if negate { -c } else { c }).collect();
         cost.resize(n + m, 0.0);
         let mut session = Self {
@@ -122,7 +120,6 @@ impl SimplexSession {
             moved_bounds: false,
             since_refactor: 0,
             cold: true,
-            tiny,
         };
         session.reset_basis();
         session
@@ -276,6 +273,8 @@ impl SimplexSession {
             let bland = degenerate >= STALL_BEFORE_BLAND;
             let mut entering: Option<(usize, f64)> = None;
             let mut best = 0.0;
+            // How far the violations could still fall through moves priced under the tolerance.
+            let mut unpriced = 0.0;
             for j in 0..self.n + self.m {
                 let stat = self.stat[j];
                 if stat == VarStat::Basic || self.lb[j] == self.ub[j] {
@@ -285,27 +284,36 @@ impl SimplexSession {
                 for &(i, v) in &self.cols[j] {
                     d -= y[i] * v;
                 }
-                let dir = match stat {
-                    VarStat::AtLower if d < -dtol => 1.0,
-                    VarStat::AtUpper if d > dtol => -1.0,
-                    VarStat::Free if d.abs() > dtol => -d.signum(),
-                    _ => continue,
+                let (dir, gain) = match stat {
+                    VarStat::AtLower => (1.0, -d),
+                    VarStat::AtUpper => (-1.0, d),
+                    VarStat::Free => (-d.signum(), d.abs()),
+                    VarStat::Basic => continue,
                 };
+                if gain <= dtol {
+                    if phase1 && gain > PRICING_NOISE {
+                        unpriced += gain * (self.ub[j] - self.lb[j]);
+                    }
+                    continue;
+                }
                 if bland {
                     entering = Some((j, dir));
                     break;
                 }
-                if d.abs() > best {
-                    best = d.abs();
+                if gain > best {
+                    best = gain;
                     entering = Some((j, dir));
                 }
             }
             let Some((enter, dir)) = entering else {
-                return match (phase1, self.tiny) {
-                    (false, _) => Status::Optimal,
-                    (true, false) => Status::Infeasible,
-                    (true, true) => Status::Unknown,
-                };
+                if !phase1 {
+                    return Status::Optimal;
+                }
+                // The multipliers bound the violations from below at every point within bounds: what is
+                // left now, less what the moves under the tolerance could remove. Only a bound above zero
+                // proves that no solution exists. The ratio test skips rates under the pivot tolerance, so
+                // a step can overshoot a row with only such a move left to undo it.
+                return if self.infeasibility() > unpriced { Status::Infeasible } else { Status::Unknown };
             };
             let alpha = self.column_ftran(enter);
             // Two-pass ratio test: the largest pivot among the blocking steps within tolerance.
@@ -531,7 +539,6 @@ impl Session for SimplexSession {
     }
 
     fn add_row(&mut self, lb: f64, ub: f64, coefs: &[(usize, f64)]) -> Result<usize> {
-        self.tiny |= coefs.iter().any(|&(_, v)| under_pivot_tolerance(v, &self.opts));
         // Logical variables sit behind the structural ones, so insert at the end of the logicals.
         let row = self.m;
         self.m += 1;
@@ -569,10 +576,6 @@ impl Session for SimplexSession {
         self.cold = false;
         Ok(self.extract(status))
     }
-}
-
-fn under_pivot_tolerance(value: f64, opts: &Simplex) -> bool {
-    value != 0.0 && value.abs() <= opts.pivot_tolerance
 }
 
 #[cfg(test)]
