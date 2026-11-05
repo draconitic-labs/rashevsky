@@ -191,7 +191,7 @@ impl Model {
                             Some(crate::kinetic::compile::eval(&c, &km.initial, 0.0, &crate::kinetic::compile::NoDelay))
                         });
                         let value = from_math
-                            .or_else(|| sr.id.as_deref().and_then(&initial_value))
+                            .or_else(|| sr.id.as_deref().and_then(initial_value))
                             .or(sr.stoichiometry)
                             .unwrap_or(1.0);
                         *merged.entry(i).or_insert(0.0) += sign * value;

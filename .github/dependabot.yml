@@ -1,15 +1,9 @@
+# Cargo version bumps are left out: each changes the lock file, so THIRD-PARTY-NOTICES.md has to be
+# regenerated with it, and CI checks that. Security updates still come through Dependabot alerts.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
-  - package-ecosystem: cargo
-    directory: /
-    schedule: { interval: monthly }
     groups:
-      rust: { patterns: ["*"] }
-  - package-ecosystem: cargo
-    directory: /desktop/src-tauri
-    schedule: { interval: monthly }
-    groups:
-      desktop: { patterns: ["*"] }
+      actions: { patterns: ["*"] }

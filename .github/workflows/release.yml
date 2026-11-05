@@ -11,7 +11,7 @@ jobs:
   cli-and-desktop:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -26,7 +26,7 @@ jobs:
         env:
           NO_STRIP: "true"
         run: npx --yes @tauri-apps/cli@2 build
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: |
             rashevsky-cli-linux-x86_64.tar.gz
@@ -36,7 +36,7 @@ jobs:
   wheels:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: PyO3/maturin-action@v1
         with:
           command: build
@@ -44,14 +44,14 @@ jobs:
           manylinux: "2_28"
           before-script-linux: |
             (yum install -y cmake clang clang-devel || (apt-get update && apt-get install -y cmake clang libclang-dev))
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist/*
 
   demo:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
@@ -60,6 +60,6 @@ jobs:
           cargo install wasm-bindgen-cli --version "$version" --locked
           ./web/build.sh
           tar -czf rashevsky-labs-demo.tar.gz -C web/dist .
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: rashevsky-labs-demo.tar.gz
