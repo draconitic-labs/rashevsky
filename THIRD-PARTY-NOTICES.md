@@ -220,7 +220,7 @@ Where a crate offers a choice of licenses, this project takes MIT if offered, an
 | pyo3-ffi | 0.30.1 | MIT OR Apache-2.0 |
 | pyo3-macros | 0.30.1 | MIT OR Apache-2.0 |
 | pyo3-macros-backend | 0.30.1 | MIT OR Apache-2.0 |
-| quick-xml | 0.38.4 | MIT |
+| quick-xml | 0.41.0 | MIT |
 | quick-xml | 0.42.0 | MIT |
 | quote | 1.0.47 | MIT OR Apache-2.0 |
 | rand | 0.9.5 | MIT OR Apache-2.0 |
@@ -6574,7 +6574,7 @@ TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 END OF TERMS AND CONDITIONS
 ````
 
-### quick-xml 0.38.4, quick-xml 0.42.0
+### quick-xml 0.41.0, quick-xml 0.42.0
 
 ````text
 The MIT License (MIT)

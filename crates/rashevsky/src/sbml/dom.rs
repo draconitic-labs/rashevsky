@@ -1,8 +1,8 @@
 //! A small XML tree. SBML is deeply nested and read whole, so a tree keeps the reader simple.
 
 use crate::error::{Error, Result};
-use quick_xml::Reader;
 use quick_xml::events::{BytesStart, Event};
+use quick_xml::{Reader, XmlVersion};
 
 /// An XML element. Names and attribute keys use canonical package prefixes (`fbc:`, `groups:`).
 #[derive(Clone, Debug, Default)]
@@ -122,7 +122,7 @@ fn open_node(start: &BytesStart<'_>, names: &mut Names, packages: &mut Vec<Strin
     for attr in start.attributes() {
         let attr = attr.map_err(|e| bad(&e))?;
         let key = std::str::from_utf8(attr.key.as_ref()).map_err(|e| bad(&e))?.to_string();
-        let value = attr.unescape_value().map_err(|e| bad(&e))?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0).map_err(|e| bad(&e))?.into_owned();
         let prefix = if key == "xmlns" { Some("") } else { key.strip_prefix("xmlns:") };
         if let Some(prefix) = prefix {
             names.bindings.push((names.depth, prefix.to_string(), canonical_namespace(&value, prefix)));
