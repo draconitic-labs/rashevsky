@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Downloads the reference data the validation scripts compare against, and checks its digests.
 
-None of this data is in the repository: each file keeps its own license, listed in docs/DATA.md.
+The CC0 BioModels inputs are bundled; other references are downloaded.
+Each file keeps its own license, listed in docs/DATA.md.
 Usage: fetch_data.py [--dir PATH]. The default folder is $RASHEVSKY_DATA, or `.data` in the repository.
 """
 from __future__ import annotations
@@ -11,6 +12,7 @@ import hashlib
 import json
 import os
 import pathlib
+import shutil
 import sys
 import urllib.request
 import zipfile
@@ -39,15 +41,20 @@ def main() -> None:
         path = folder / item["file"]
         path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists():
-            print(f"downloading {item['file']}", flush=True)
-            request = urllib.request.Request(item["url"], headers={"User-Agent": "rashevsky-validation"})
-            with urllib.request.urlopen(request, timeout=600) as reply, open(path, "wb") as out:
-                out.write(reply.read())
+            if item.get("bundled"):
+                print(f"copying bundled {item['file']}", flush=True)
+                shutil.copyfile(ROOT / item["bundled"], path)
+            else:
+                print(f"downloading {item['file']}", flush=True)
+                request = urllib.request.Request(item["url"], headers={"User-Agent": "rashevsky-validation"})
+                with urllib.request.urlopen(request, timeout=600) as reply, open(path, "wb") as out:
+                    out.write(reply.read())
         found = digest(path)
         if found != item["sha256"]:
             # A changed upstream file changes the results, so it must not pass silently.
             print(f"DIGEST DIFFERS for {item['file']}: found {found}, pinned {item['sha256']}")
             differing.append(item["file"])
+            continue
         else:
             print(f"ok {item['file']}")
         if item.get("unzip"):
