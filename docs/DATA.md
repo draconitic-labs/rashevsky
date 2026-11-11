@@ -9,6 +9,7 @@ The engine's code is under the MIT license, and it opens any model a user gives 
 | `models/ich360/iCH360.xml.gz` | Corrao et al. 2025, repository `marco-corrao/iCH360` | MIT from its authors, with the question below. See its `NOTICE`. |
 | `models/ich360/layout.json` | Converted from the authors' Escher map by `scripts/make_ich360_layout.py` | As the model. See the same `NOTICE`. |
 | `models/teusink/BIOMD0000000064.xml` | BioModels; Teusink et al. 2000 | CC0 1.0 |
+| `validation/fixtures/biomodels/BIOMD*.xml` | BioModels; pinned validation references | CC0 1.0 |
 | `data/thermo/ich360.json` | Computed from eQuilibrator | CC BY 4.0 |
 | `data/biochemistry/*` | Atlas of Human Biochemistry, Apache 2.0; science from Reactome release 97, whose data is CC0 | See its `NOTICE`. |
 | `desktop/ui/fonts/*` | Public Sans, JetBrains Mono | SIL Open Font License 1.1 |
@@ -21,6 +22,13 @@ iCH360 makes the desktop application and the WebAssembly demo work on first star
 ## Fetched by `scripts/fetch_data.py`
 
 `validation/data-manifest.json` lists each file with its source and its SHA-256 digest. A file whose digest differs stops the script, since a changed upstream file changes the results.
+
+The five CC0 BioModels references are copied from the bundled paths in that
+manifest and checked against the same pinned digests. This keeps validation
+independent of BioModels blocking requests from hosted CI runners. Teusink reuses
+`models/teusink/BIOMD0000000064.xml`; the other four files are under
+`validation/fixtures/biomodels/`. Other reference data is still fetched under the
+terms below.
 
 | File | Source | Terms |
 | --- | --- | --- |
