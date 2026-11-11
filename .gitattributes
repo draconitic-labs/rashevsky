@@ -1,0 +1,3 @@
+# Preserve the original bytes of checksum-pinned scientific reference inputs.
+models/teusink/BIOMD0000000064.xml -text
+validation/fixtures/biomodels/*.xml -text
