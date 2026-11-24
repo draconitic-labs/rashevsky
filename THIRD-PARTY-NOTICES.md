@@ -44,7 +44,7 @@ Where a crate offers a choice of licenses, this project takes MIT if offered, an
 | clap_derive | 4.6.7 | MIT OR Apache-2.0 |
 | clap_lex | 1.1.1 | MIT OR Apache-2.0 |
 | colorchoice | 1.0.5 | MIT OR Apache-2.0 |
-| cookie | 0.18.2 | MIT OR Apache-2.0 |
+| cookie | 0.18.3 | MIT OR Apache-2.0 |
 | cpufeatures | 0.2.17 | MIT OR Apache-2.0 |
 | crc32fast | 1.5.4 | MIT OR Apache-2.0 |
 | crossbeam-channel | 0.5.17 | MIT OR Apache-2.0 |
@@ -86,7 +86,7 @@ Where a crate offers a choice of licenses, this project takes MIT if offered, an
 | flate2 | 1.1.10 | MIT OR Apache-2.0 |
 | fnv | 1.0.7 | Apache-2.0 / MIT |
 | foldhash | 0.2.0 | Zlib |
-| form_urlencoded | 1.2.2 | MIT OR Apache-2.0 |
+| form_urlencoded | 1.2.3 | MIT OR Apache-2.0 |
 | futures-channel | 0.3.34 | MIT OR Apache-2.0 |
 | futures-core | 0.3.34 | MIT OR Apache-2.0 |
 | futures-executor | 0.3.34 | MIT OR Apache-2.0 |
@@ -315,7 +315,7 @@ Where a crate offers a choice of licenses, this project takes MIT if offered, an
 | untrusted | 0.9.0 | ISC |
 | ureq | 3.5.1 | MIT OR Apache-2.0 |
 | ureq-proto | 0.7.1 | MIT OR Apache-2.0 |
-| url | 2.5.8 | MIT OR Apache-2.0 |
+| url | 2.5.9 | MIT OR Apache-2.0 |
 | urlpattern | 0.6.0 | MIT |
 | utf8-zero | 0.8.1 | MIT OR Apache-2.0 |
 | utf8_iter | 1.1.0 | Apache-2.0 OR MIT |
@@ -1304,7 +1304,7 @@ limitations under the License.
 ~~~~
 ````
 
-### cookie 0.18.2
+### cookie 0.18.3
 
 ````text
 Copyright (c) 2017 Sergio Benitez
@@ -3663,7 +3663,7 @@ the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 ````
 
-### form_urlencoded 1.2.2
+### form_urlencoded 1.2.3
 
 ````text
 Copyright (c) 2013-2016 The rust-url developers
@@ -4352,7 +4352,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### idna 1.1.0, percent-encoding 2.3.2, url 2.5.8
+### idna 1.1.0, percent-encoding 2.3.2, url 2.5.9
 
 ````text
 Copyright (c) 2013-2025 The rust-url developers
